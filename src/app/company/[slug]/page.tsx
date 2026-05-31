@@ -8,6 +8,8 @@ import { tradeLabel, tradesFromJson } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
 import { ListingCard } from "@/components/ListingCard";
 import { ownerInclude } from "@/lib/listings";
+import { FollowButton } from "@/components/FollowButton";
+import { isFollowing } from "@/lib/follows";
 
 export default async function CompanyPage({
   params,
@@ -38,6 +40,10 @@ export default async function CompanyPage({
   const isOwner = company.memberships.some(
     (m) => m.userId === viewer?.id && m.role === "owner",
   );
+  const followingCompany =
+    viewer && !isOwner
+      ? await isFollowing(viewer.id, "company", company.id)
+      : false;
 
   return (
     <main className="flex-1">
@@ -83,9 +89,19 @@ export default async function CompanyPage({
                 You own this page
               </span>
             ) : (
-              <span className="cursor-not-allowed rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white opacity-50">
-                Contact (coming in messaging)
-              </span>
+              <>
+                {viewer && (
+                  <FollowButton
+                    targetType="company"
+                    targetValue={company.id}
+                    following={followingCompany}
+                    path={`/company/${company.slug}`}
+                  />
+                )}
+                <span className="cursor-not-allowed rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white opacity-50">
+                  Contact (coming in messaging)
+                </span>
+              </>
             )}
           </div>
         </section>

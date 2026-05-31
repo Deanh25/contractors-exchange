@@ -19,8 +19,10 @@ export default async function NewCompanyPage({
           Create a company page
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          A company page is the business that sells, holds the storefront, and
-          (later) the payment/commission account. You&apos;ll be set as the owner.
+          A company page is an optional business identity — a storefront with its
+          own listings and team. You can sell, bid, and trade as yourself too;
+          individuals and companies use the same tools and pay the same commission.
+          You&apos;ll be set as the owner.
         </p>
 
         {error === "name" && (

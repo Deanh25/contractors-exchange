@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { ProfileHeader } from "@/components/ProfileHeader";
 import { Avatar } from "@/components/Avatar";
+import { FollowButton } from "@/components/FollowButton";
+import { isFollowing } from "@/lib/follows";
 
 export default async function PublicProfilePage({
   params,
@@ -23,6 +25,8 @@ export default async function PublicProfilePage({
 
   if (!user) notFound();
   const isOwn = viewer?.id === user.id;
+  const followingUser =
+    viewer && !isOwn ? await isFollowing(viewer.id, "user", user.id) : false;
 
   return (
     <main className="flex-1">
@@ -39,9 +43,19 @@ export default async function PublicProfilePage({
                 Edit profile
               </Link>
             ) : (
-              <span className="cursor-not-allowed rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white opacity-50">
-                Contact (coming in messaging)
-              </span>
+              <>
+                {viewer && (
+                  <FollowButton
+                    targetType="user"
+                    targetValue={user.id}
+                    following={followingUser}
+                    path={`/u/${user.id}`}
+                  />
+                )}
+                <span className="cursor-not-allowed rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white opacity-50">
+                  Contact (coming in messaging)
+                </span>
+              </>
             )}
           </div>
         </section>

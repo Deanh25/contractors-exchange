@@ -25,7 +25,12 @@ export async function SiteHeader() {
           >
             Marketplace
           </Link>
-          <span className="cursor-not-allowed rounded-md px-3 py-1.5 opacity-50">Feed</span>
+          <Link
+            href="/feed"
+            className="rounded-md px-3 py-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          >
+            Feed
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">

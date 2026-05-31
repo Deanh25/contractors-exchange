@@ -26,6 +26,7 @@ export async function signInAction(formData: FormData) {
   }
 
   let user = await prisma.user.findUnique({ where: { email } });
+  let isNew = false;
   if (!user) {
     if (!name) {
       redirect(
@@ -33,10 +34,13 @@ export async function signInAction(formData: FormData) {
       );
     }
     user = await prisma.user.create({ data: { email, name } });
+    isNew = true;
   }
 
   await setSession(user.id);
-  redirect(next);
+  // Send brand-new accounts through onboarding (PRD §5) unless they were headed
+  // somewhere specific (e.g. a "List something" link set next to a real path).
+  redirect(isNew && next === "/me" ? "/welcome" : next);
 }
 
 export async function signOutAction() {

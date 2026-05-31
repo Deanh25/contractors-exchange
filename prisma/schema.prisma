@@ -37,6 +37,8 @@ model User {
 
   memberships Membership[]
   listings    Listing[] // listings owned as a sole operator
+  posts       Post[] // discussion posts authored as an individual
+  follows     Follow[] // trades/locations/companies/people this user follows
 }
 
 model Company {
@@ -57,6 +59,7 @@ model Company {
 
   memberships Membership[]
   listings    Listing[] // the company storefront
+  posts       Post[] // discussion posts authored as the company
 }
 
 enum MembershipRole {
@@ -144,4 +147,56 @@ model Listing {
   @@index([ownerUserId])
   @@index([ownerCompanyId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Community + Feed (PRD §4–§5). Discussion posts are light, text-first content
+// tagged by trade and/or region. Follows shape the unified feed: a user follows
+// trades, locations, companies, and people; the feed mixes listings + posts from
+// what they follow, reverse-chronologically (NOT an algorithmic ranking).
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Post {
+  id String @id @default(cuid())
+  // Polymorphic author (mirrors Listing's owner): a User or a Company, one set.
+  authorUserId    String?
+  authorCompanyId String?
+
+  body      String  @db.Text
+  imageUrl  String?
+  tradeTag  String? // optional trade slug (controlled vocab in src/lib/trades.ts)
+  regionTag String? // optional region: a state code (e.g. "AZ") for simple matching
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorUser    User?    @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  authorCompany Company? @relation(fields: [authorCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([tradeTag])
+  @@index([regionTag])
+  @@index([authorUserId])
+  @@index([authorCompanyId])
+  @@index([createdAt])
+}
+
+enum FollowTargetType {
+  trade // targetValue = trade slug
+  location // targetValue = state code (e.g. "AZ")
+  company // targetValue = Company id
+  user // targetValue = User id
+}
+
+model Follow {
+  id             String           @id @default(cuid())
+  followerUserId String
+  targetType     FollowTargetType
+  targetValue    String
+  createdAt      DateTime         @default(now())
+
+  follower User @relation(fields: [followerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([followerUserId, targetType, targetValue]) // follow each target once
+  @@index([followerUserId])
+  @@index([targetType, targetValue])
 }
