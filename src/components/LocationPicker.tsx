@@ -107,14 +107,12 @@ export function LocationPicker({
         </label>
       )}
 
+      {/* Standardized values. lat/lng are emitted in both modes: input forms
+          store them, and the filter uses them as the center for radius search. */}
       <input type="hidden" name="state" value={state} />
       <input type="hidden" name="city" value={selectedCity?.city ?? ""} />
-      {mode === "input" && (
-        <>
-          <input type="hidden" name="lat" value={selectedCity ? String(selectedCity.lat) : ""} />
-          <input type="hidden" name="lng" value={selectedCity ? String(selectedCity.lng) : ""} />
-        </>
-      )}
+      <input type="hidden" name="lat" value={selectedCity ? String(selectedCity.lat) : ""} />
+      <input type="hidden" name="lng" value={selectedCity ? String(selectedCity.lng) : ""} />
 
       <div className="grid grid-cols-2 gap-3">
         {/* State */}

@@ -8,6 +8,7 @@ import {
 } from "@/lib/listings";
 import { tradeLabel } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
+import { formatMiles } from "@/lib/geo";
 
 /** A short line describing the price/terms for the listing's type. */
 function terms(listing: ListingWithOwner): string {
@@ -16,7 +17,13 @@ function terms(listing: ListingWithOwner): string {
   return listing.tradeKind === "service" ? "Service swap" : "Goods swap";
 }
 
-export function ListingCard({ listing }: { listing: ListingWithOwner }) {
+export function ListingCard({
+  listing,
+  distanceMi,
+}: {
+  listing: ListingWithOwner;
+  distanceMi?: number;
+}) {
   const badge = listingBadge(listing.type, listing.tradeKind);
   const photo = photosFromJson(listing.photos)[0];
   const owner = listingOwner(listing);
@@ -57,6 +64,11 @@ export function ListingCard({ listing }: { listing: ListingWithOwner }) {
             {tradeLabel(listing.tradeCategory)}
           </span>
           {location && <span>📍 {location}</span>}
+          {distanceMi !== undefined && (
+            <span className="font-medium text-brand-700">
+              ~{formatMiles(distanceMi)}
+            </span>
+          )}
         </div>
         {owner && (
           <p className="mt-2 truncate text-xs text-slate-400">{owner.name}</p>

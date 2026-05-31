@@ -5,6 +5,7 @@ import { ListingCard } from "@/components/ListingCard";
 import { tradesByCategory } from "@/lib/trades";
 import { LocationPicker } from "@/components/LocationPicker";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
+import { haversineMiles, boundingBox } from "@/lib/geo";
 import type { Prisma } from "@/generated/prisma/client";
 
 type Search = {
@@ -13,7 +14,12 @@ type Search = {
   city?: string;
   state?: string;
   type?: string;
+  lat?: string;
+  lng?: string;
+  radius?: string;
 };
+
+const RADII = [10, 25, 50, 100, 250];
 
 /** Translate the four UI type choices into a Prisma where fragment. */
 function typeWhere(choice: string): Prisma.ListingWhereInput {
@@ -45,26 +51,73 @@ export default async function ListingsPage({
   const state = (sp.state ?? "").trim();
   const type = (sp.type ?? "").trim();
 
-  const where: Prisma.ListingWhereInput = {
+  const lat = Number(sp.lat);
+  const lng = Number(sp.lng);
+  const radius = Number(sp.radius);
+  // Radius search needs a center: a chosen city (with its coordinates).
+  const radiusActive =
+    !!city &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Number.isFinite(radius) &&
+    radius > 0;
+
+  const baseWhere: Prisma.ListingWhereInput = {
     status: "active",
     ...(q ? { title: { contains: q } } : {}),
     ...(trade ? { tradeCategory: trade } : {}),
-    ...(city ? { city: { contains: city } } : {}),
-    ...(state ? { state: state.toUpperCase() } : {}),
     ...(type ? typeWhere(type) : {}),
   };
 
-  const [listings, viewer] = await Promise.all([
+  // With a radius, match by a lat/lng bounding box (cheap DB prefilter) and rank
+  // by exact distance below. Otherwise match the city/state directly.
+  const where: Prisma.ListingWhereInput = radiusActive
+    ? (() => {
+        const bb = boundingBox(lat, lng, radius);
+        return {
+          ...baseWhere,
+          lat: { gte: bb.minLat, lte: bb.maxLat },
+          lng: { gte: bb.minLng, lte: bb.maxLng },
+        };
+      })()
+    : {
+        ...baseWhere,
+        ...(city ? { city: { contains: city } } : {}),
+        ...(state ? { state: state.toUpperCase() } : {}),
+      };
+
+  const [raw, viewer] = await Promise.all([
     prisma.listing.findMany({
       where,
       include: ownerInclude,
       orderBy: { createdAt: "desc" },
-      take: 60,
+      take: radiusActive ? 300 : 60,
     }),
     getCurrentUser(),
   ]);
 
-  const hasFilters = !!(q || trade || city || state || type);
+  type Row = { listing: (typeof raw)[number]; distanceMi?: number };
+  const rows: Row[] = radiusActive
+    ? raw
+        .flatMap((l) => {
+          if (l.lat === null || l.lng === null) return [];
+          const d = haversineMiles(lat, lng, l.lat, l.lng);
+          return d <= radius ? [{ listing: l, distanceMi: d }] : [];
+        })
+        .sort((a, b) => (a.distanceMi ?? 0) - (b.distanceMi ?? 0))
+        .slice(0, 60)
+    : raw.map((l) => ({ listing: l }));
+
+  const hasFilters = !!(q || trade || city || state || type || radiusActive);
+  const radiusNoCenter = !!sp.radius && !city;
+  const centerLabel = city && state ? `${city}, ${state}` : city;
+
+  const countText =
+    rows.length === 0
+      ? "No listings match."
+      : radiusActive
+        ? `${rows.length} listing${rows.length === 1 ? "" : "s"} within ${radius} mi of ${centerLabel}`
+        : `${rows.length} listing${rows.length === 1 ? "" : "s"}`;
 
   return (
     <main className="flex-1">
@@ -86,10 +139,10 @@ export default async function ListingsPage({
           </Link>
         </div>
 
-        {/* Filters (GET form → shareable, server-rendered) */}
+        {/* Filters (GET form, shareable, server-rendered) */}
         <form
           method="get"
-          className="mt-6 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-6"
+          className="mt-6 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-7"
         >
           <div className="lg:col-span-2">
             <label className="mb-1 block text-xs font-medium text-slate-600">
@@ -133,38 +186,51 @@ export default async function ListingsPage({
             </select>
           </div>
           <div className="lg:col-span-2">
-            <LocationPicker
-              mode="filter"
-              defaultCity={city}
-              defaultState={state}
-            />
+            <LocationPicker mode="filter" defaultCity={city} defaultState={state} />
           </div>
-          <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-6">
-            <button
-              type="submit"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-            >
-              Apply filters
-            </button>
-            {hasFilters && (
-              <Link
-                href="/listings"
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white"
-              >
-                Clear
-              </Link>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">
+              Distance
+            </label>
+            <select name="radius" defaultValue={sp.radius ?? ""} className={inputCls}>
+              <option value="">Any distance</option>
+              {RADII.map((r) => (
+                <option key={r} value={r}>
+                  Within {r} mi
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-7">
+            {radiusNoCenter && (
+              <p className="mb-2 text-xs text-amber-600">
+                Pick a city above to use it as the center for distance search.
+              </p>
             )}
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+              >
+                Apply filters
+              </button>
+              {hasFilters && (
+                <Link
+                  href="/listings"
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+                >
+                  Clear
+                </Link>
+              )}
+            </div>
           </div>
         </form>
 
         {/* Results */}
-        <p className="mt-6 text-sm text-slate-500">
-          {listings.length === 0
-            ? "No listings match."
-            : `${listings.length} listing${listings.length === 1 ? "" : "s"}`}
-        </p>
+        <p className="mt-6 text-sm text-slate-500">{countText}</p>
 
-        {listings.length === 0 ? (
+        {rows.length === 0 ? (
           <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
             {hasFilters ? (
               <>
@@ -195,8 +261,12 @@ export default async function ListingsPage({
           </div>
         ) : (
           <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {listings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
+            {rows.map((row) => (
+              <ListingCard
+                key={row.listing.id}
+                listing={row.listing}
+                distanceMi={row.distanceMi}
+              />
             ))}
           </div>
         )}
