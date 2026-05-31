@@ -1,33 +1,27 @@
 import data from "@/lib/data/us-cities.json";
+import { US_STATES, stateName, isValidState, type StateOption } from "@/lib/us-states";
 
 /**
- * US city/state lookup for the location picker (PRD §10). Backed by a bundled
- * dataset (src/lib/data/us-cities.json, regenerated via scripts/gen-cities.cjs)
- * so locations are standardized - same city always resolves to the same
- * state + coordinates - with no external API. Swappable for Google Places later.
+ * US city lookup for the location picker (PRD §10). Backed by a bundled dataset
+ * (src/lib/data/us-cities.json, regenerated via scripts/gen-cities.cjs) so
+ * locations are standardized - same city always resolves to the same state +
+ * coordinates - with no external API. Server-side only (the dataset is large);
+ * the client gets results through GET /api/cities. Swappable for Google Places.
+ *
+ * State helpers live in src/lib/us-states.ts (client-safe) and are re-exported
+ * here so existing server imports keep working.
  */
 
-export type StateOption = { code: string; name: string };
+export type { StateOption };
+export { stateName, isValidState };
 export type CityResult = { city: string; state: string; lat: number; lng: number };
 
 // Stored compactly as [name, stateCode, lat, lng].
 type Row = [string, string, number, number];
-
-const STATES = data.states as StateOption[];
 const CITIES = data.cities as Row[];
-const STATE_NAMES = new Map(STATES.map((s) => [s.code, s.name]));
 
 export function usStates(): StateOption[] {
-  return STATES;
-}
-
-export function stateName(code?: string | null): string {
-  if (!code) return "";
-  return STATE_NAMES.get(code.toUpperCase()) ?? code;
-}
-
-export function isValidState(code?: string | null): boolean {
-  return !!code && STATE_NAMES.has(code.toUpperCase());
+  return US_STATES;
 }
 
 /**

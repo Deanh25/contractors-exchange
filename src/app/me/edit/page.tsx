@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { updateProfileAction } from "@/app/actions/profile";
 import { TradeCheckboxes } from "@/components/TradeCheckboxes";
-import { CityField } from "@/components/CityField";
+import { LocationPicker } from "@/components/LocationPicker";
 import { tradesFromJson } from "@/lib/trades";
 
 export default async function EditProfilePage({
@@ -59,8 +59,8 @@ export default async function EditProfilePage({
             <TradeCheckboxes selected={tradesFromJson(user.trades)} />
           </div>
 
-          <CityField
-            label="Your area"
+          <LocationPicker
+            heading="Your area"
             defaultCity={user.city}
             defaultState={user.state}
             defaultLat={user.lat}

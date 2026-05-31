@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/ListingCard";
 import { tradesByCategory } from "@/lib/trades";
-import { usStates } from "@/lib/cities";
-import { CityField } from "@/components/CityField";
+import { LocationPicker } from "@/components/LocationPicker";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -133,24 +132,12 @@ export default async function ListingsPage({
               ))}
             </select>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
-              City
-            </label>
-            <CityField name="city" emitState={false} defaultCity={city} />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
-              State
-            </label>
-            <select name="state" defaultValue={state} className={inputCls}>
-              <option value="">All states</option>
-              {usStates().map((s) => (
-                <option key={s.code} value={s.code}>
-                  {s.code} - {s.name}
-                </option>
-              ))}
-            </select>
+          <div className="lg:col-span-2">
+            <LocationPicker
+              mode="filter"
+              defaultCity={city}
+              defaultState={state}
+            />
           </div>
           <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-6">
             <button

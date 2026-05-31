@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createCompanyAction } from "@/app/actions/company";
 import { TradeCheckboxes } from "@/components/TradeCheckboxes";
-import { CityField } from "@/components/CityField";
+import { LocationPicker } from "@/components/LocationPicker";
 
 export default async function NewCompanyPage({
   searchParams,
@@ -52,8 +52,8 @@ export default async function NewCompanyPage({
             <TradeCheckboxes />
           </div>
 
-          <CityField
-            label="Primary location"
+          <LocationPicker
+            heading="Primary location"
             hint="The city your company is based in or primarily serves."
           />
 

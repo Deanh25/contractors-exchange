@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createListingAction } from "@/app/actions/listing";
 import { ListingTypeFields } from "@/components/ListingTypeFields";
-import { CityField } from "@/components/CityField";
+import { LocationPicker } from "@/components/LocationPicker";
 import { SearchSelect } from "@/components/SearchSelect";
 import { tradeOptions } from "@/lib/trades";
 
@@ -98,8 +98,8 @@ export default async function NewListingPage({
           </div>
 
           {/* Location */}
-          <CityField
-            label="Location"
+          <LocationPicker
+            heading="Location"
             hint="Where the item or work is located."
           />
 

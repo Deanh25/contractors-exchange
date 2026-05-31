@@ -37,13 +37,22 @@ for (const c of City.getCitiesOfCountry("US")) {
 }
 cities.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
 
-const out = { states, cities };
 const dir = path.resolve(__dirname, "..", "src", "lib", "data");
 fs.mkdirSync(dir, { recursive: true });
-const file = path.join(dir, "us-cities.json");
-fs.writeFileSync(file, JSON.stringify(out));
+
+// Full dataset (server-only: cities are the bulk of the size).
+const citiesFile = path.join(dir, "us-cities.json");
+fs.writeFileSync(citiesFile, JSON.stringify({ states, cities }));
+
+// Tiny states-only file, safe to import into client components (the city
+// dataset must never ship to the browser).
+const statesFile = path.join(dir, "us-states.json");
+fs.writeFileSync(statesFile, JSON.stringify(states));
+
 console.log(
-  `Wrote ${cities.length} cities, ${states.length} states -> ${file} (${(
-    fs.statSync(file).size / 1024
-  ).toFixed(0)} KB)`,
+  `Wrote ${cities.length} cities (${(
+    fs.statSync(citiesFile).size / 1024
+  ).toFixed(0)} KB) and ${states.length} states (${(
+    fs.statSync(statesFile).size / 1024
+  ).toFixed(1)} KB)`,
 );
