@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { completeOnboardingAction } from "@/app/actions/onboarding";
 import { TradeCheckboxes } from "@/components/TradeCheckboxes";
-import { LocationFields } from "@/components/LocationFields";
+import { CityField } from "@/components/CityField";
 import { tradesFromJson } from "@/lib/trades";
 
 export default async function WelcomePage() {
@@ -19,7 +19,7 @@ export default async function WelcomePage() {
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           Pick the trades you work in and your area. We&apos;ll follow them for you
-          so your feed shows relevant listings and discussion right away — you can
+          so your feed shows relevant listings and discussion right away - you can
           change these anytime.
         </p>
 
@@ -32,13 +32,14 @@ export default async function WelcomePage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Your area
-            </label>
-            <LocationFields city={user.city} state={user.state} />
-            <p className="mt-1 text-xs text-slate-400">
-              We follow your state so nearby activity shows up in your feed.
-            </p>
+            <CityField
+              label="Your area"
+              defaultCity={user.city}
+              defaultState={user.state}
+              defaultLat={user.lat}
+              defaultLng={user.lng}
+              hint="We follow your state so nearby activity shows up in your feed."
+            />
           </div>
 
           <div className="flex items-center gap-3 pt-2">

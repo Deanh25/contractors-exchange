@@ -9,7 +9,7 @@ const STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60],
 ];
 
-/** "3 hours ago", "yesterday", "just now" — for feed timestamps. */
+/** "3 hours ago", "yesterday", "just now" - for feed timestamps. */
 export function timeAgo(date: Date, now: Date = new Date()): string {
   const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
   const abs = Math.abs(seconds);

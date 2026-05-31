@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { normalizeTrades } from "@/lib/trades";
+import { parseCoord } from "@/lib/form";
 import { slugify } from "@/lib/slug";
 
 async function uniqueSlug(base: string): Promise<string> {
@@ -27,6 +28,8 @@ export async function createCompanyAction(formData: FormData) {
   const serviceArea = String(formData.get("serviceArea") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const state = String(formData.get("state") ?? "").trim();
+  const lat = parseCoord(formData.get("lat"));
+  const lng = parseCoord(formData.get("lng"));
   const trades = normalizeTrades(formData.getAll("trades").map(String));
 
   if (!name) {
@@ -44,6 +47,8 @@ export async function createCompanyAction(formData: FormData) {
       serviceArea: serviceArea || null,
       city: city || null,
       state: state || null,
+      lat,
+      lng,
       trades,
       memberships: {
         create: { userId: user.id, role: "owner" },

@@ -17,7 +17,7 @@ export default async function SignInPage({
     error === "email"
       ? "Please enter a valid email address."
       : error === "name"
-        ? "Looks like you're new here — please add your name to create your account."
+        ? "Looks like you're new here - please add your name to create your account."
         : null;
 
   return (
@@ -28,7 +28,7 @@ export default async function SignInPage({
         </h1>
         <p className="mt-2 text-sm text-slate-500">
           Dev sign-in: enter your email to continue. New here? Add your name and
-          we&apos;ll create your account — no password needed.
+          we&apos;ll create your account - no password needed.
         </p>
 
         {message && (

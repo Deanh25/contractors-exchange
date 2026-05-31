@@ -3,8 +3,9 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createListingAction } from "@/app/actions/listing";
 import { ListingTypeFields } from "@/components/ListingTypeFields";
-import { LocationFields } from "@/components/LocationFields";
-import { TRADES } from "@/lib/trades";
+import { CityField } from "@/components/CityField";
+import { SearchSelect } from "@/components/SearchSelect";
+import { tradeOptions } from "@/lib/trades";
 
 const ERRORS: Record<string, string> = {
   title: "A title is required.",
@@ -40,7 +41,7 @@ export default async function NewListingPage({
           List something
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Sell, auction, or trade — tagged by trade and location so the right
+          Sell, auction, or trade - tagged by trade and location so the right
           contractors find it. Takes under 2 minutes.
         </p>
 
@@ -79,7 +80,7 @@ export default async function NewListingPage({
               name="title"
               required
               autoFocus
-              placeholder="2019 Bobcat S650 skid steer — 1,200 hrs"
+              placeholder="2019 Bobcat S650 skid steer - 1,200 hrs"
               className={inputCls}
             />
           </div>
@@ -89,20 +90,18 @@ export default async function NewListingPage({
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Trade category
             </label>
-            <select name="tradeCategory" required defaultValue="" className={inputCls}>
-              <option value="" disabled>
-                Choose a trade…
-              </option>
-              {TRADES.map((t) => (
-                <option key={t.slug} value={t.slug}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              name="tradeCategory"
+              options={tradeOptions()}
+              placeholder="Search a trade…"
+            />
           </div>
 
           {/* Location */}
-          <LocationFields />
+          <CityField
+            label="Location"
+            hint="Where the item or work is located."
+          />
 
           {/* Listing type + conditional fields */}
           <div>

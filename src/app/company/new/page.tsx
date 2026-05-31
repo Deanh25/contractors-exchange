@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createCompanyAction } from "@/app/actions/company";
 import { TradeCheckboxes } from "@/components/TradeCheckboxes";
-import { LocationFields } from "@/components/LocationFields";
+import { CityField } from "@/components/CityField";
 
 export default async function NewCompanyPage({
   searchParams,
@@ -19,7 +19,7 @@ export default async function NewCompanyPage({
           Create a company page
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          A company page is an optional business identity — a storefront with its
+          A company page is an optional business identity - a storefront with its
           own listings and team. You can sell, bid, and trade as yourself too;
           individuals and companies use the same tools and pay the same commission.
           You&apos;ll be set as the owner.
@@ -52,7 +52,10 @@ export default async function NewCompanyPage({
             <TradeCheckboxes />
           </div>
 
-          <LocationFields />
+          <CityField
+            label="Primary location"
+            hint="The city your company is based in or primarily serves."
+          />
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">

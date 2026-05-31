@@ -1,4 +1,4 @@
-// Contractors Exchange — Prisma schema.
+// Contractors Exchange - Prisma schema.
 // Provider is MySQL/MariaDB (local via XAMPP). To move to Postgres later: change
 // `provider` below, swap the driver adapter in src/lib/prisma.ts, update DATABASE_URL.
 // Docs: https://pris.ly/d/prisma-schema
@@ -12,10 +12,10 @@ datasource db {
   provider = "mysql"
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Identity (PRD §2 — the spine): dual identity. A User is a person; a Company is
+// -----------------------------------------------------------------------------
+// Identity (PRD §2 - the spine): dual identity. A User is a person; a Company is
 // a business. Membership links people to companies and carries permissions.
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 model User {
   id        String   @id @default(cuid())
@@ -81,11 +81,11 @@ model Membership {
   @@index([companyId])
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // Marketplace (PRD §3). Every listing carries a single trade category and a
 // location, owned by either a User (sole operator) or a Company (storefront).
-// Exactly one of ownerUserId / ownerCompanyId is set — enforced in the action.
-// ─────────────────────────────────────────────────────────────────────────────
+// Exactly one of ownerUserId / ownerCompanyId is set - enforced in the action.
+// -----------------------------------------------------------------------------
 
 // Four UI choices collapse to three types: a "trade" listing is further split by
 // tradeKind into goods vs. services. Field exclusivity (price vs. bid vs. trade)
@@ -93,7 +93,7 @@ model Membership {
 enum ListingType {
   price // fixed "buy now" price
   bid // starting/reserve bid + close date
-  trade // swap goods or services (no escrow — see PRD §6)
+  trade // swap goods or services (no escrow - see PRD §6)
 }
 
 enum TradeKind {
@@ -123,7 +123,7 @@ model Listing {
   lng           Float?
   description   String? @db.Text
   unit          String? // e.g. "per ton", "each", "per pallet"
-  freightNote   String? // free-text only in v1 (PRD §9 — no freight calc)
+  freightNote   String? // free-text only in v1 (PRD §9 - no freight calc)
   photos        Json? // JSON array of public URL strings (see src/lib/storage.ts)
 
   type ListingType
@@ -149,12 +149,12 @@ model Listing {
   @@index([createdAt])
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Community + Feed (PRD §4–§5). Discussion posts are light, text-first content
+// -----------------------------------------------------------------------------
+// Community + Feed (PRD §4-§5). Discussion posts are light, text-first content
 // tagged by trade and/or region. Follows shape the unified feed: a user follows
 // trades, locations, companies, and people; the feed mixes listings + posts from
 // what they follow, reverse-chronologically (NOT an algorithmic ranking).
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 model Post {
   id String @id @default(cuid())

@@ -21,7 +21,7 @@ export default function Home() {
           The community marketplace for the construction industry.
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-slate-600">
-          Buy, sell, auction, or trade goods and services — organized by trade and
+          Buy, sell, auction, or trade goods and services - organized by trade and
           location, inside one feed that mixes listings with industry discussion.
         </p>
 
@@ -85,7 +85,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-slate-200">
         <div className="mx-auto max-w-5xl px-6 py-6 text-xs text-slate-400">
-          Contractors Exchange — running locally at localhost:3000. Payments are
+          Contractors Exchange - running locally at localhost:3000. Payments are
           stubbed in v1.
         </div>
       </footer>

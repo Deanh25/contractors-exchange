@@ -56,10 +56,10 @@ export default async function ListingDetailPage({
   }
 
   // The on-platform completion action surfaces in messaging/transactions (Steps
-  // 5–6). For now it's a labelled placeholder so the flow reads correctly (PRD §7).
+  // 5-6). For now it's a labelled placeholder so the flow reads correctly (PRD §7).
   const primaryAction =
     listing.type === "price"
-      ? "Buy now — escrow protected"
+      ? "Buy now - escrow protected"
       : listing.type === "bid"
         ? "Place a bid"
         : "Arrange exchange";

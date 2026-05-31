@@ -76,7 +76,7 @@ export default async function MyProfilePage() {
           {memberships.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
               You&apos;re not part of any company yet. A company page is an
-              optional business storefront — you can sell, bid, and trade as
+              optional business storefront - you can sell, bid, and trade as
               yourself too.{" "}
               <Link href="/company/new" className="font-semibold text-slate-700 underline">
                 Create one →

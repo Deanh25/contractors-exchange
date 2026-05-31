@@ -2,8 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/ListingCard";
-import { TRADES } from "@/lib/trades";
-import { METROS } from "@/lib/locations";
+import { tradesByCategory } from "@/lib/trades";
+import { usStates } from "@/lib/cities";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -108,10 +108,14 @@ export default async function ListingsPage({
             </label>
             <select name="trade" defaultValue={trade} className={inputCls}>
               <option value="">All trades</option>
-              {TRADES.map((t) => (
-                <option key={t.slug} value={t.slug}>
-                  {t.label}
-                </option>
+              {tradesByCategory().map((g) => (
+                <optgroup key={g.category} label={g.category}>
+                  {g.trades.map((t) => (
+                    <option key={t.slug} value={t.slug}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -135,27 +139,22 @@ export default async function ListingsPage({
             <input
               name="city"
               defaultValue={city}
-              list="metro-cities"
               placeholder="Phoenix"
               className={inputCls}
             />
-            <datalist id="metro-cities">
-              {METROS.map((m) => (
-                <option key={m.label} value={m.city} />
-              ))}
-            </datalist>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">
               State
             </label>
-            <input
-              name="state"
-              defaultValue={state}
-              maxLength={2}
-              placeholder="AZ"
-              className={`${inputCls} uppercase`}
-            />
+            <select name="state" defaultValue={state} className={inputCls}>
+              <option value="">All states</option>
+              {usStates().map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.code} - {s.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-6">
             <button

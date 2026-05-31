@@ -92,7 +92,7 @@ export function ListingTypeFields({
 
       {(choice === "trade-goods" || choice === "trade-services") && (
         <p className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-800">
-          Trades connect both parties to arrange directly — no escrow or buyer
+          Trades connect both parties to arrange directly - no escrow or buyer
           protection applies (reputation matters here). Describe what you have and
           what you&apos;re after in the description below.
         </p>

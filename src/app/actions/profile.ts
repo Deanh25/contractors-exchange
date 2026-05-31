@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { normalizeTrades } from "@/lib/trades";
+import { parseCoord } from "@/lib/form";
 
 export async function updateProfileAction(formData: FormData) {
   const user = await requireUser();
@@ -14,6 +15,8 @@ export async function updateProfileAction(formData: FormData) {
   const bio = String(formData.get("bio") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const state = String(formData.get("state") ?? "").trim();
+  const lat = parseCoord(formData.get("lat"));
+  const lng = parseCoord(formData.get("lng"));
   const trades = normalizeTrades(formData.getAll("trades").map(String));
 
   if (!name) {
@@ -28,6 +31,8 @@ export async function updateProfileAction(formData: FormData) {
       bio: bio || null,
       city: city || null,
       state: state || null,
+      lat,
+      lng,
       trades,
     },
   });

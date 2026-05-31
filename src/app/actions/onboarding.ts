@@ -5,11 +5,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { normalizeTrades } from "@/lib/trades";
+import { parseCoord } from "@/lib/form";
 import type { Prisma } from "@/generated/prisma/client";
 
 /**
  * Onboarding (PRD §5): capture the user's trade(s) + location and auto-follow
- * them, so the unified feed is relevant on first visit. Idempotent — re-running
+ * them, so the unified feed is relevant on first visit. Idempotent - re-running
  * just adds any new follows (existing ones are skipped).
  */
 export async function completeOnboardingAction(formData: FormData) {
@@ -21,6 +22,8 @@ export async function completeOnboardingAction(formData: FormData) {
     .trim()
     .toUpperCase()
     .slice(0, 2);
+  const lat = parseCoord(formData.get("lat"));
+  const lng = parseCoord(formData.get("lng"));
 
   await prisma.user.update({
     where: { id: user.id },
@@ -28,6 +31,8 @@ export async function completeOnboardingAction(formData: FormData) {
       trades,
       city: city || null,
       state: state || null,
+      lat,
+      lng,
     },
   });
 

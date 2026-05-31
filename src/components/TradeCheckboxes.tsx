@@ -1,25 +1,19 @@
-import { TRADES } from "@/lib/trades";
+import { SearchSelect } from "@/components/SearchSelect";
+import { tradeOptions } from "@/lib/trades";
 
-/** Multi-select trade checkboxes for forms. Submits as repeated `trades` fields. */
+/**
+ * Multi-select trade picker (searchable, grouped by category). Submits the
+ * chosen trade slugs as repeated `trades` fields - same contract the profile,
+ * company, and onboarding actions already read via formData.getAll("trades").
+ */
 export function TradeCheckboxes({ selected = [] }: { selected?: string[] }) {
-  const set = new Set(selected);
   return (
-    <div className="flex flex-wrap gap-2">
-      {TRADES.map((t) => (
-        <label
-          key={t.slug}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-300 px-3 py-1.5 text-sm text-slate-700 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800"
-        >
-          <input
-            type="checkbox"
-            name="trades"
-            value={t.slug}
-            defaultChecked={set.has(t.slug)}
-            className="accent-brand-600"
-          />
-          {t.label}
-        </label>
-      ))}
-    </div>
+    <SearchSelect
+      name="trades"
+      multiple
+      options={tradeOptions()}
+      defaultValue={selected}
+      placeholder="Search trades (e.g. electrical, paving)…"
+    />
   );
 }

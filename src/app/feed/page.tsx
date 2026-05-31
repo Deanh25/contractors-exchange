@@ -5,7 +5,8 @@ import { PostComposer } from "@/components/PostComposer";
 import { PostCard } from "@/components/PostCard";
 import { FeedListingCard } from "@/components/FeedListingCard";
 import { FollowButton } from "@/components/FollowButton";
-import { TRADES, tradeLabel } from "@/lib/trades";
+import { toggleFollowAction } from "@/app/actions/follow";
+import { tradeLabel, tradesByCategory } from "@/lib/trades";
 import { authorInclude } from "@/lib/posts";
 import { ownerInclude } from "@/lib/listings";
 import {
@@ -61,7 +62,7 @@ export default async function FeedPage({
     viewer ? getUserCompanies(viewer.id) : Promise.resolve([]),
   ]);
 
-  // Merge the two streams and sort reverse-chronologically (PRD §5 — no ranking).
+  // Merge the two streams and sort reverse-chronologically (PRD §5 - no ranking).
   const items = [
     ...listings.map((l) => ({ kind: "listing" as const, at: l.createdAt, l })),
     ...posts.map((p) => ({ kind: "post" as const, at: p.createdAt, p })),
@@ -82,7 +83,7 @@ export default async function FeedPage({
     <main className="flex-1">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
-          {/* ── Main column ─────────────────────────────────────────────── */}
+          {/* -- Main column ----------------------------------------------- */}
           <div className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -178,27 +179,71 @@ export default async function FeedPage({
             </div>
           </div>
 
-          {/* ── Sidebar ─────────────────────────────────────────────────── */}
+          {/* -- Sidebar --------------------------------------------------- */}
           <aside className="space-y-6">
             <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <h2 className="text-sm font-semibold text-slate-900">Follow trades</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Tap a trade to add it to your feed.
-              </p>
+              <h2 className="text-sm font-semibold text-slate-900">Trades you follow</h2>
               {viewer ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {TRADES.map((t) => (
-                    <FollowButton
-                      key={t.slug}
-                      targetType="trade"
-                      targetValue={t.slug}
-                      following={follows.trades.includes(t.slug)}
-                      path="/feed"
-                      label={t.label}
-                      pill
-                    />
-                  ))}
-                </div>
+                <>
+                  {follows.trades.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {follows.trades.map((slug) => (
+                        <FollowButton
+                          key={slug}
+                          targetType="trade"
+                          targetValue={slug}
+                          following
+                          path="/feed"
+                          label={tradeLabel(slug)}
+                          pill
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-500">
+                      You&apos;re not following any trades yet.
+                    </p>
+                  )}
+
+                  <form action={toggleFollowAction} className="mt-3 flex gap-2">
+                    <input type="hidden" name="targetType" value="trade" />
+                    <input type="hidden" name="path" value="/feed" />
+                    <select
+                      name="targetValue"
+                      defaultValue=""
+                      required
+                      className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                    >
+                      <option value="" disabled>
+                        Add a trade…
+                      </option>
+                      {tradesByCategory().map((g) => {
+                        const avail = g.trades.filter(
+                          (t) => !follows.trades.includes(t.slug),
+                        );
+                        if (avail.length === 0) return null;
+                        return (
+                          <optgroup key={g.category} label={g.category}>
+                            {avail.map((t) => (
+                              <option key={t.slug} value={t.slug}>
+                                {t.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                    <button
+                      type="submit"
+                      className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-600"
+                    >
+                      Add
+                    </button>
+                  </form>
+                  <p className="mt-2 text-xs text-slate-400">
+                    Tap a trade above to unfollow.
+                  </p>
+                </>
               ) : (
                 <p className="mt-3 text-xs text-slate-500">
                   <Link href="/signin?next=/feed" className="font-medium text-brand-700 underline">

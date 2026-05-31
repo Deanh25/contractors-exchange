@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { saveImages } from "@/lib/storage";
 import { TRADES } from "@/lib/trades";
+import { parseCoord } from "@/lib/form";
 import type {
   ListingType,
   TradeKind,
@@ -40,18 +41,20 @@ export async function createListingAction(formData: FormData) {
   const tradeCategory = String(formData.get("tradeCategory") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const state = String(formData.get("state") ?? "").trim();
+  const lat = parseCoord(formData.get("lat"));
+  const lng = parseCoord(formData.get("lng"));
   const description = String(formData.get("description") ?? "").trim();
   const unit = String(formData.get("unit") ?? "").trim();
   const freightNote = String(formData.get("freightNote") ?? "").trim();
   const owner = String(formData.get("owner") ?? "self");
   const choice = String(formData.get("type") ?? "") as ListingChoice;
 
-  // ── Required-field validation ────────────────────────────────────────────
+  // -- Required-field validation --------------------------------------------
   if (!title) fail("title");
   if (!TRADE_SLUGS.has(tradeCategory)) fail("trade");
   if (!CHOICES.has(choice)) fail("type");
 
-  // ── Resolve the polymorphic owner (self, or a company the user owns) ───────
+  // -- Resolve the polymorphic owner (self, or a company the user owns) -------
   let ownerUserId: string | null = null;
   let ownerCompanyId: string | null = null;
   if (owner === "self") {
@@ -65,7 +68,7 @@ export async function createListingAction(formData: FormData) {
     ownerCompanyId = owner;
   }
 
-  // ── Resolve type-exclusive fields (PRD §10 constraint) ─────────────────────
+  // -- Resolve type-exclusive fields (PRD §10 constraint) ---------------------
   let type: ListingType;
   let tradeKind: TradeKind | null = null;
   let price: number | null = null;
@@ -89,7 +92,7 @@ export async function createListingAction(formData: FormData) {
     tradeKind = choice === "trade-services" ? "service" : "goods";
   }
 
-  // ── Photos → local filesystem (abstracted in src/lib/storage.ts) ───────────
+  // -- Photos → local filesystem (abstracted in src/lib/storage.ts) -----------
   const files = formData
     .getAll("photos")
     .filter((f): f is File => f instanceof File && f.size > 0);
@@ -100,6 +103,8 @@ export async function createListingAction(formData: FormData) {
     tradeCategory,
     city: city || null,
     state: state || null,
+    lat,
+    lng,
     description: description || null,
     unit: unit || null,
     freightNote: freightNote || null,

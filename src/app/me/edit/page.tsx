@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { updateProfileAction } from "@/app/actions/profile";
 import { TradeCheckboxes } from "@/components/TradeCheckboxes";
-import { LocationFields } from "@/components/LocationFields";
+import { CityField } from "@/components/CityField";
 import { tradesFromJson } from "@/lib/trades";
 
 export default async function EditProfilePage({
@@ -20,7 +20,7 @@ export default async function EditProfilePage({
           Edit your profile
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          This is your individual profile — the person. Companies you sell through
+          This is your individual profile - the person. Companies you sell through
           are separate pages.
         </p>
 
@@ -59,7 +59,14 @@ export default async function EditProfilePage({
             <TradeCheckboxes selected={tradesFromJson(user.trades)} />
           </div>
 
-          <LocationFields city={user.city} state={user.state} />
+          <CityField
+            label="Your area"
+            defaultCity={user.city}
+            defaultState={user.state}
+            defaultLat={user.lat}
+            defaultLng={user.lng}
+            hint="Search and pick your city so others can find you locally."
+          />
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">

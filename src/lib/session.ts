@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * Minimal, fully-offline session for local dev (PRD §10 "simple dev credential
- * flow"). We store the signed user id in an httpOnly cookie — no third-party SaaS,
+ * flow"). We store the signed user id in an httpOnly cookie - no third-party SaaS,
  * no DB session table. The cookie is HMAC-signed with AUTH_SECRET so it can't be
  * forged. This is intentionally simple; swap in Auth.js later without touching callers.
  */

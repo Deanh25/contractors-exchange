@@ -1,9 +1,8 @@
 import { createPostAction } from "@/app/actions/post";
 import { Avatar } from "@/components/Avatar";
-import { TRADES } from "@/lib/trades";
-import { METROS } from "@/lib/locations";
+import { tradesByCategory } from "@/lib/trades";
+import { usStates } from "@/lib/cities";
 
-const STATES = [...new Set(METROS.map((m) => m.state))];
 const selectCls =
   "rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-700";
 
@@ -52,18 +51,22 @@ export function PostComposer({
 
             <select name="tradeTag" defaultValue="" className={selectCls}>
               <option value="">Trade (optional)</option>
-              {TRADES.map((t) => (
-                <option key={t.slug} value={t.slug}>
-                  {t.label}
-                </option>
+              {tradesByCategory().map((group) => (
+                <optgroup key={group.category} label={group.category}>
+                  {group.trades.map((t) => (
+                    <option key={t.slug} value={t.slug}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
 
             <select name="regionTag" defaultValue="" className={selectCls}>
               <option value="">Region (optional)</option>
-              {STATES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
+              {usStates().map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.code} - {s.name}
                 </option>
               ))}
             </select>

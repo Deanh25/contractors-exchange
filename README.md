@@ -1,12 +1,12 @@
 # Contractors Exchange (CX)
 
-A community marketplace for the construction industry — "LinkedIn meets a B2B
+A community marketplace for the construction industry - "LinkedIn meets a B2B
 marketplace" for contractors across all trades. Users (individuals **and**
 companies) can sell, auction (bid), or trade/exchange goods and services,
 organized by trade and location, inside a unified feed that mixes marketplace
 listings with industry discussion. See [PRD.md](PRD.md) for the full spec.
 
-> **v1 status:** payments are **stubbed** — transactions create records and
+> **v1 status:** payments are **stubbed** - transactions create records and
 > notify the seller, but no money moves (see PRD §7).
 
 ## Stack (local-first)
@@ -15,8 +15,8 @@ listings with industry discussion. See [PRD.md](PRD.md) for the full spec.
 - **Tailwind CSS v4**
 - **Prisma 7** ORM → **local MySQL/MariaDB** (via XAMPP) using the
   `@prisma/adapter-mariadb` driver adapter
-- **Auth.js / NextAuth** dev sign-in (from Step 2) — works fully offline
-- Local filesystem image storage (`/public/uploads`) — abstracted for cloud later
+- **Auth.js / NextAuth** dev sign-in (from Step 2) - works fully offline
+- Local filesystem image storage (`/public/uploads`) - abstracted for cloud later
 
 The data layer is kept swappable: to move to Postgres later, change the
 `datasource` provider in `prisma/schema.prisma`, swap the driver adapter in
