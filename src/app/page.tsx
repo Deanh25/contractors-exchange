@@ -10,26 +10,9 @@ const TRADES = ["Paving", "Concrete", "Electrical", "Plumbing", "HVAC", "Roofing
 export default function Home() {
   return (
     <main className="flex-1">
-      {/* Header */}
-      <header className="border-b border-slate-200">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-md bg-amber-500 font-black text-white">
-              CX
-            </span>
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              Contractors Exchange
-            </span>
-          </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-            Local dev · v1
-          </span>
-        </div>
-      </header>
-
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 py-16 sm:py-24">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-amber-600">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-600">
           LinkedIn meets a B2B marketplace
         </p>
         <h1 className="max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
@@ -41,7 +24,7 @@ export default function Home() {
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <span className="cursor-not-allowed rounded-md bg-slate-900 px-5 py-3 text-sm font-semibold text-white opacity-60">
+          <span className="cursor-not-allowed rounded-md bg-brand-500 px-5 py-3 text-sm font-semibold text-white opacity-60">
             Browse the marketplace →
           </span>
           <span className="cursor-not-allowed rounded-md border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 opacity-60">

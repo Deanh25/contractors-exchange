@@ -10,6 +10,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* CX brand = HPT orange (logo, primary buttons, accents) */
+  --color-brand-50: #fff5e8;
+  --color-brand-100: #ffe6c2;
+  --color-brand-200: #ffd092;
+  --color-brand-300: #ffb455;
+  --color-brand-400: #fb9d33;
+  --color-brand-500: #f7941e; /* HPT orange */
+  --color-brand-600: #e07d05;
+  --color-brand-700: #b35f00;
+  --color-brand-800: #7a4300;
 }
 
 body {

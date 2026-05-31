@@ -1,7 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Contractors Exchange — Prisma schema.
+// Provider is MySQL/MariaDB (local via XAMPP). To move to Postgres later: change
+// `provider` below, swap the driver adapter in src/lib/prisma.ts, update DATABASE_URL.
+// Docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +10,68 @@ generator client {
 
 datasource db {
   provider = "mysql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity (PRD §2 — the spine): dual identity. A User is a person; a Company is
+// a business. Membership links people to companies and carries permissions.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  title     String? // role / title, e.g. "Owner", "Estimator"
+  bio       String?  @db.Text
+  // Trade slugs (controlled vocabulary in src/lib/trades.ts). MySQL has no scalar
+  // arrays, so we store a JSON array of strings; null is treated as []. Portable to Postgres.
+  trades    Json?
+  city      String?
+  state     String?
+  lat       Float?
+  lng       Float?
+  avatarUrl String?
+  verified  Boolean  @default(false) // manual trust flag (PRD §7)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  trades      Json? // JSON array of trade slugs (see note on User.trades)
+  serviceArea String? // free-text service area description
+  city        String?
+  state       String?
+  lat         Float?
+  lng         Float?
+  logoUrl     String?
+  description String?  @db.Text
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships Membership[]
+}
+
+enum MembershipRole {
+  owner
+  member
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  userId    String
+  companyId String
+  role      MembershipRole @default(member)
+  createdAt DateTime       @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId]) // a person belongs to a company at most once
+  @@index([companyId])
 }
