@@ -4,6 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { US_STATES } from "@/lib/us-states";
 
 type CityResult = { city: string; state: string; lat: number; lng: number };
+// A confirmed selection. Coords may be null when a default city was supplied
+// without coordinates (e.g. an older record) - we then submit blank lat/lng
+// rather than a bogus 0,0.
+type Selected = { city: string; state: string; lat: number | null; lng: number | null };
+
+const numOrNull = (x?: number | null) =>
+  typeof x === "number" && Number.isFinite(x) ? x : null;
 
 /**
  * Linked State + City location control (PRD §10). The two fields stay in sync so
@@ -33,13 +40,13 @@ export function LocationPicker({
   defaultLng?: number | null;
 }) {
   const [state, setState] = useState(defaultState ?? "");
-  const [selectedCity, setSelectedCity] = useState<CityResult | null>(
+  const [selectedCity, setSelectedCity] = useState<Selected | null>(
     defaultCity
       ? {
           city: defaultCity,
           state: defaultState ?? "",
-          lat: defaultLat ?? 0,
-          lng: defaultLng ?? 0,
+          lat: numOrNull(defaultLat),
+          lng: numOrNull(defaultLng),
         }
       : null,
   );
@@ -111,8 +118,16 @@ export function LocationPicker({
           store them, and the filter uses them as the center for radius search. */}
       <input type="hidden" name="state" value={state} />
       <input type="hidden" name="city" value={selectedCity?.city ?? ""} />
-      <input type="hidden" name="lat" value={selectedCity ? String(selectedCity.lat) : ""} />
-      <input type="hidden" name="lng" value={selectedCity ? String(selectedCity.lng) : ""} />
+      <input
+        type="hidden"
+        name="lat"
+        value={selectedCity?.lat != null ? String(selectedCity.lat) : ""}
+      />
+      <input
+        type="hidden"
+        name="lng"
+        value={selectedCity?.lng != null ? String(selectedCity.lng) : ""}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         {/* State */}
