@@ -1,12 +1,22 @@
 import Link from "next/link";
 import { requireUser, getUserCompanies } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { ProfileHeader } from "@/components/ProfileHeader";
 import { Avatar } from "@/components/Avatar";
+import { ListingCard } from "@/components/ListingCard";
 import { tradesFromJson } from "@/lib/trades";
+import { ownerInclude } from "@/lib/listings";
 
 export default async function MyProfilePage() {
   const user = await requireUser("/me");
-  const memberships = await getUserCompanies(user.id);
+  const [memberships, listings] = await Promise.all([
+    getUserCompanies(user.id),
+    prisma.listing.findMany({
+      where: { ownerUserId: user.id },
+      include: ownerInclude,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const incomplete =
     !user.title && !user.bio && tradesFromJson(user.trades).length === 0;
@@ -93,6 +103,36 @@ export default async function MyProfilePage() {
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+
+        {/* Your listings (personal / sole-operator) */}
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Your listings
+            </h2>
+            <Link
+              href="/listings/new"
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              + List something
+            </Link>
+          </div>
+
+          {listings.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              You haven&apos;t listed anything yet.{" "}
+              <Link href="/listings/new" className="font-semibold text-slate-700 underline">
+                Sell, auction, or trade →
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
           )}
         </section>
       </div>

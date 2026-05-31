@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const FOUR_TYPES = [
   { label: "Set price", blurb: "Fixed price, buy now.", tone: "bg-emerald-100 text-emerald-800" },
   { label: "Open for bid", blurb: "Starting bid + close date.", tone: "bg-amber-100 text-amber-800" },
@@ -24,15 +26,21 @@ export default function Home() {
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <span className="cursor-not-allowed rounded-md bg-brand-500 px-5 py-3 text-sm font-semibold text-white opacity-60">
+          <Link
+            href="/listings"
+            className="rounded-md bg-brand-500 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-600"
+          >
             Browse the marketplace →
-          </span>
-          <span className="cursor-not-allowed rounded-md border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 opacity-60">
+          </Link>
+          <Link
+            href="/listings/new"
+            className="rounded-md border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
             List something
-          </span>
+          </Link>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          Buttons activate as each module ships. Up next: identity &amp; accounts.
+          Up next: a unified feed of listings &amp; industry posts.
         </p>
       </section>
 

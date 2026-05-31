@@ -1,0 +1,102 @@
+"use client";
+
+import { useState } from "react";
+import { LISTING_CHOICES, type ListingChoice } from "@/lib/listings";
+
+const inputCls =
+  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+
+/**
+ * The four listing-type choices plus the fields that only apply to the selected
+ * one (PRD §3). Conditional inputs are mounted only when active, so the browser's
+ * `required` validation naturally applies to just the relevant fields and the
+ * server never receives stale values from a hidden type.
+ */
+export function ListingTypeFields({
+  defaultChoice = "price",
+}: {
+  defaultChoice?: ListingChoice;
+}) {
+  const [choice, setChoice] = useState<ListingChoice>(defaultChoice);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {LISTING_CHOICES.map((c) => (
+          <label
+            key={c.value}
+            className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-300 p-3 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50"
+          >
+            <input
+              type="radio"
+              name="type"
+              value={c.value}
+              checked={choice === c.value}
+              onChange={() => setChoice(c.value)}
+              className="mt-1 accent-brand-600"
+            />
+            <span>
+              <span
+                className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${c.tone}`}
+              >
+                {c.label}
+              </span>
+              <span className="mt-1 block text-xs text-slate-500">{c.blurb}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+
+      {choice === "price" && (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Price (USD)
+          </label>
+          <input
+            name="price"
+            required
+            inputMode="decimal"
+            placeholder="2500.00"
+            className={inputCls}
+          />
+        </div>
+      )}
+
+      {choice === "bid" && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Starting / reserve bid (USD)
+            </label>
+            <input
+              name="startReserve"
+              required
+              inputMode="decimal"
+              placeholder="1000.00"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Closes at
+            </label>
+            <input
+              name="closesAt"
+              required
+              type="datetime-local"
+              className={inputCls}
+            />
+          </div>
+        </div>
+      )}
+
+      {(choice === "trade-goods" || choice === "trade-services") && (
+        <p className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-800">
+          Trades connect both parties to arrange directly — no escrow or buyer
+          protection applies (reputation matters here). Describe what you have and
+          what you&apos;re after in the description below.
+        </p>
+      )}
+    </div>
+  );
+}

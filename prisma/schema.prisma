@@ -36,6 +36,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   memberships Membership[]
+  listings    Listing[] // listings owned as a sole operator
 }
 
 model Company {
@@ -55,6 +56,7 @@ model Company {
   updatedAt   DateTime @updatedAt
 
   memberships Membership[]
+  listings    Listing[] // the company storefront
 }
 
 enum MembershipRole {
@@ -74,4 +76,72 @@ model Membership {
 
   @@unique([userId, companyId]) // a person belongs to a company at most once
   @@index([companyId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Marketplace (PRD §3). Every listing carries a single trade category and a
+// location, owned by either a User (sole operator) or a Company (storefront).
+// Exactly one of ownerUserId / ownerCompanyId is set — enforced in the action.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Four UI choices collapse to three types: a "trade" listing is further split by
+// tradeKind into goods vs. services. Field exclusivity (price vs. bid vs. trade)
+// is enforced at the validation layer (PRD §10 constraint).
+enum ListingType {
+  price // fixed "buy now" price
+  bid // starting/reserve bid + close date
+  trade // swap goods or services (no escrow — see PRD §6)
+}
+
+enum TradeKind {
+  goods
+  service
+}
+
+enum ListingStatus {
+  active
+  sold // a set-price listing that completed
+  awarded // a bid listing that closed with a winner
+  closed // withdrawn / expired
+}
+
+model Listing {
+  id String @id @default(cuid())
+  // Polymorphic owner via two optional FKs (exactly one is set). This keeps clean
+  // Prisma relations / `include` while matching the PRD's owner_type/owner_id intent.
+  ownerUserId    String?
+  ownerCompanyId String?
+
+  title         String
+  tradeCategory String // single trade slug (controlled vocab in src/lib/trades.ts)
+  city          String?
+  state         String?
+  lat           Float?
+  lng           Float?
+  description   String? @db.Text
+  unit          String? // e.g. "per ton", "each", "per pallet"
+  freightNote   String? // free-text only in v1 (PRD §9 — no freight calc)
+  photos        Json? // JSON array of public URL strings (see src/lib/storage.ts)
+
+  type ListingType
+
+  // Type-exclusive fields (null unless the matching type is selected):
+  price        Decimal?   @db.Decimal(12, 2) // type=price
+  startReserve Decimal?   @db.Decimal(12, 2) // type=bid (starting/reserve amount)
+  closesAt     DateTime? // type=bid
+  tradeKind    TradeKind? // type=trade
+
+  status    ListingStatus @default(active)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  ownerUser    User?    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerCompany Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([tradeCategory])
+  @@index([type])
+  @@index([status])
+  @@index([ownerUserId])
+  @@index([ownerCompanyId])
+  @@index([createdAt])
 }

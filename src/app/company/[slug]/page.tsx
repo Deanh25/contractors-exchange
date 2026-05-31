@@ -6,6 +6,8 @@ import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { tradeLabel, tradesFromJson } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
+import { ListingCard } from "@/components/ListingCard";
+import { ownerInclude } from "@/lib/listings";
 
 export default async function CompanyPage({
   params,
@@ -24,6 +26,12 @@ export default async function CompanyPage({
   ]);
 
   if (!company) notFound();
+
+  const listings = await prisma.listing.findMany({
+    where: { ownerCompanyId: company.id, status: "active" },
+    include: ownerInclude,
+    orderBy: { createdAt: "desc" },
+  });
 
   const trades = tradesFromJson(company.trades);
   const location = metroLabel(company.city, company.state);
@@ -82,15 +90,41 @@ export default async function CompanyPage({
           </div>
         </section>
 
-        {/* Storefront placeholder (listings land here in Step 3) */}
+        {/* Storefront */}
         <section className="mt-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Storefront
-          </h2>
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-            Listings from this company will appear here once the marketplace ships
-            (Step 3).
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Storefront
+            </h2>
+            {isOwner && (
+              <Link
+                href="/listings/new"
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                + New listing
+              </Link>
+            )}
           </div>
+          {listings.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              {isOwner ? (
+                <>
+                  No active listings yet.{" "}
+                  <Link href="/listings/new" className="font-semibold underline">
+                    Add the first →
+                  </Link>
+                </>
+              ) : (
+                "No active listings yet."
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Team */}

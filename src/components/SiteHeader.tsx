@@ -19,15 +19,24 @@ export async function SiteHeader() {
         </Link>
 
         <nav className="flex items-center gap-1 text-sm font-medium text-slate-500">
-          <span className="cursor-not-allowed rounded-md px-3 py-1.5 opacity-50">
+          <Link
+            href="/listings"
+            className="rounded-md px-3 py-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          >
             Marketplace
-          </span>
+          </Link>
           <span className="cursor-not-allowed rounded-md px-3 py-1.5 opacity-50">Feed</span>
         </nav>
 
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              <Link
+                href="/listings/new"
+                className="hidden rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:block"
+              >
+                + List
+              </Link>
               <Link
                 href="/me"
                 className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 hover:bg-slate-100"
