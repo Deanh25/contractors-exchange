@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/ListingCard";
 import { tradesByCategory } from "@/lib/trades";
 import { usStates } from "@/lib/cities";
+import { CityField } from "@/components/CityField";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -136,12 +137,7 @@ export default async function ListingsPage({
             <label className="mb-1 block text-xs font-medium text-slate-600">
               City
             </label>
-            <input
-              name="city"
-              defaultValue={city}
-              placeholder="Phoenix"
-              className={inputCls}
-            />
+            <CityField name="city" emitState={false} defaultCity={city} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">

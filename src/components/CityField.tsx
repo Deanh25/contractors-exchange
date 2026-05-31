@@ -6,13 +6,20 @@ type CityResult = { city: string; state: string; lat: number; lng: number };
 
 /**
  * Standardized US city picker (PRD §10). Type-to-search against /api/cities;
- * choosing a result locks in a canonical city + state + lat/lng via hidden
- * inputs (`city`, `state`, `lat`, `lng`) so every form stores the same value for
- * the same place. Typing without choosing submits no location (kept blank rather
- * than free-text), which keeps location data clean for content matching.
+ * choosing a result locks in a canonical city (+ state/lat/lng) via hidden
+ * inputs so every form and filter stores/queries the same value for the same
+ * place. Typing without choosing submits nothing (kept blank rather than
+ * free-text), which keeps location data clean for content matching.
+ *
+ * - Input forms (profile, company, listing, onboarding): default mode emits
+ *   `city`, `state`, `lat`, `lng`.
+ * - Filters (marketplace): set emitState={false} to emit only `city`, so it can
+ *   sit beside a separate State dropdown without clashing on the `state` field.
  */
 export function CityField({
-  label = "City & state",
+  label,
+  name = "city",
+  emitState = true,
   defaultCity,
   defaultState,
   defaultLat,
@@ -20,26 +27,30 @@ export function CityField({
   hint,
 }: {
   label?: string;
+  name?: string;
+  emitState?: boolean;
   defaultCity?: string | null;
   defaultState?: string | null;
   defaultLat?: number | null;
   defaultLng?: number | null;
   hint?: string;
 }) {
-  const initial: CityResult | null =
-    defaultCity && defaultState
-      ? {
-          city: defaultCity,
-          state: defaultState,
-          lat: defaultLat ?? 0,
-          lng: defaultLng ?? 0,
-        }
-      : null;
+  const initial: CityResult | null = defaultCity
+    ? {
+        city: defaultCity,
+        state: defaultState ?? "",
+        lat: defaultLat ?? 0,
+        lng: defaultLng ?? 0,
+      }
+    : null;
+  const initialQuery = initial
+    ? initial.state
+      ? `${initial.city}, ${initial.state}`
+      : initial.city
+    : "";
 
   const [selected, setSelected] = useState<CityResult | null>(initial);
-  const [query, setQuery] = useState(
-    initial ? `${initial.city}, ${initial.state}` : "",
-  );
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<CityResult[]>([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -88,12 +99,20 @@ export function CityField({
         if (!containerRef.current?.contains(e.relatedTarget as Node)) setOpen(false);
       }}
     >
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      {label && (
+        <label className="mb-1 block text-sm font-medium text-slate-700">
+          {label}
+        </label>
+      )}
 
-      <input type="hidden" name="city" value={selected?.city ?? ""} />
-      <input type="hidden" name="state" value={selected?.state ?? ""} />
-      <input type="hidden" name="lat" value={selected ? String(selected.lat) : ""} />
-      <input type="hidden" name="lng" value={selected ? String(selected.lng) : ""} />
+      <input type="hidden" name={name} value={selected?.city ?? ""} />
+      {emitState && (
+        <>
+          <input type="hidden" name="state" value={selected?.state ?? ""} />
+          <input type="hidden" name="lat" value={selected ? String(selected.lat) : ""} />
+          <input type="hidden" name="lng" value={selected ? String(selected.lng) : ""} />
+        </>
+      )}
 
       <input
         type="text"
@@ -109,12 +128,10 @@ export function CityField({
         className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
       />
 
-      {hint && !needsPick && (
-        <p className="mt-1 text-xs text-slate-400">{hint}</p>
-      )}
+      {hint && !needsPick && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
       {needsPick && (
         <p className="mt-1 text-xs text-amber-600">
-          Choose a city from the list to set your location.
+          Choose a city from the list to set the location.
         </p>
       )}
 
