@@ -4,6 +4,7 @@ import {
   listingBadge,
   photosFromJson,
   listingOwner,
+  isVideoUrl,
   type ListingWithOwner,
 } from "@/lib/listings";
 import { tradeLabel } from "@/lib/trades";
@@ -28,10 +29,19 @@ export function FeedListingCard({ listing }: { listing: ListingWithOwner }) {
       href={`/listings/${listing.id}`}
       className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
     >
-      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-28 sm:w-28">
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-28 sm:w-28">
         {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt={listing.title} className="h-full w-full object-cover" />
+          isVideoUrl(photo) ? (
+            <>
+              <video src={photo} muted className="h-full w-full object-cover" />
+              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[9px] font-medium text-white">
+                ▶
+              </span>
+            </>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt={listing.title} className="h-full w-full object-cover" />
+          )
         ) : (
           <div className="grid h-full w-full place-items-center text-3xl text-slate-300">
             🏗️

@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { messageAboutListingAction } from "@/app/actions/message";
 import { createTransactionAction } from "@/app/actions/transaction";
+import { updateListingStatusAction } from "@/app/actions/listing";
 import { resolveListingRecipient, canonicalPair } from "@/lib/messaging";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
@@ -16,7 +17,31 @@ import {
   photosFromJson,
   listingOwner,
   ownerInclude,
+  isVideoUrl,
 } from "@/lib/listings";
+
+function StatusBtn({
+  id,
+  status,
+  label,
+}: {
+  id: string;
+  status: string;
+  label: string;
+}) {
+  return (
+    <form action={updateListingStatusAction} className="flex-1">
+      <input type="hidden" name="listingId" value={id} />
+      <input type="hidden" name="status" value={status} />
+      <button
+        type="submit"
+        className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+      >
+        {label}
+      </button>
+    </form>
+  );
+}
 
 function closesLabel(date: Date | null): string {
   if (!date) return "";
@@ -103,12 +128,20 @@ export default async function ListingDetailPage({
           <div>
             <div className="aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
               {photos[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photos[0]}
-                  alt={listing.title}
-                  className="h-full w-full object-cover"
-                />
+                isVideoUrl(photos[0]) ? (
+                  <video
+                    src={photos[0]}
+                    controls
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photos[0]}
+                    alt={listing.title}
+                    className="h-full w-full object-cover"
+                  />
+                )
               ) : (
                 <div className="grid h-full w-full place-items-center text-slate-300">
                   <span className="text-6xl">🏗️</span>
@@ -117,15 +150,24 @@ export default async function ListingDetailPage({
             </div>
             {photos.length > 1 && (
               <div className="mt-3 grid grid-cols-4 gap-2">
-                {photos.slice(1, 5).map((src) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={src}
-                    src={src}
-                    alt={listing.title}
-                    className="aspect-square w-full rounded-md border border-slate-200 object-cover"
-                  />
-                ))}
+                {photos.slice(1, 5).map((src) =>
+                  isVideoUrl(src) ? (
+                    <video
+                      key={src}
+                      src={src}
+                      muted
+                      className="aspect-square w-full rounded-md border border-slate-200 object-cover"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={src}
+                      src={src}
+                      alt={listing.title}
+                      className="aspect-square w-full rounded-md border border-slate-200 object-cover"
+                    />
+                  ),
+                )}
               </div>
             )}
           </div>
@@ -198,13 +240,30 @@ export default async function ListingDetailPage({
                   <span className="block rounded-md bg-brand-50 px-3 py-2 text-center text-sm font-medium text-brand-800">
                     This is your listing · status: {listing.status}
                   </span>
-                  <Link
-                    href="/orders"
-                    className="block rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    View requests
-                    {pendingCount > 0 ? ` (${pendingCount} pending)` : ""}
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/listings/${listing.id}/edit`}
+                      className="flex-1 rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
+                    >
+                      Edit listing
+                    </Link>
+                    <Link
+                      href="/orders"
+                      className="flex-1 rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Requests{pendingCount > 0 ? ` (${pendingCount})` : ""}
+                    </Link>
+                  </div>
+                  <div className="flex gap-2">
+                    {listing.status === "active" ? (
+                      <>
+                        <StatusBtn id={listing.id} status="sold" label="Mark sold" />
+                        <StatusBtn id={listing.id} status="closed" label="Close" />
+                      </>
+                    ) : (
+                      <StatusBtn id={listing.id} status="active" label="Reactivate" />
+                    )}
+                  </div>
                 </>
               ) : (
                 <>

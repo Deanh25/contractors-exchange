@@ -4,6 +4,7 @@ import {
   listingBadge,
   photosFromJson,
   listingOwner,
+  isVideoUrl,
   type ListingWithOwner,
 } from "@/lib/listings";
 import { tradeLabel } from "@/lib/trades";
@@ -36,12 +37,21 @@ export function ListingCard({
     >
       <div className="relative aspect-[4/3] bg-slate-100">
         {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photo}
-            alt={listing.title}
-            className="h-full w-full object-cover"
-          />
+          isVideoUrl(photo) ? (
+            <>
+              <video src={photo} muted className="h-full w-full object-cover" />
+              <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white">
+                ▶ video
+              </span>
+            </>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt={listing.title}
+              className="h-full w-full object-cover"
+            />
+          )
         ) : (
           <div className="grid h-full w-full place-items-center text-slate-300">
             <span className="text-4xl">🏗️</span>

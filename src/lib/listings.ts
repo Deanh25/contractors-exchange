@@ -77,10 +77,18 @@ export function formatMoney(value: unknown): string {
   return Number.isFinite(n) ? USD.format(n) : "";
 }
 
-/** Read a Listing.photos JSON column into a string[]. */
+/** Read a Listing.photos JSON column into a string[] (media URLs). */
 export function photosFromJson(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((v): v is string => typeof v === "string");
+}
+
+const VIDEO_EXTS = new Set(["mp4", "webm", "mov"]);
+
+/** Is this media URL a video (vs an image)? By extension. */
+export function isVideoUrl(url: string): boolean {
+  const ext = url.split(".").pop()?.toLowerCase();
+  return !!ext && VIDEO_EXTS.has(ext);
 }
 
 /** A listing with its owner relations included. */

@@ -3,19 +3,24 @@
 import { useState } from "react";
 import { LISTING_CHOICES, type ListingChoice } from "@/lib/listings";
 
-const inputCls =
-  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
 
 /**
  * The four listing-type choices plus the fields that only apply to the selected
  * one (PRD §3). Conditional inputs are mounted only when active, so the browser's
- * `required` validation naturally applies to just the relevant fields and the
- * server never receives stale values from a hidden type.
+ * `required` validation applies to just the relevant fields. Accepts defaults so
+ * the edit form can pre-fill the current type and amounts.
  */
 export function ListingTypeFields({
   defaultChoice = "price",
+  defaultPrice = "",
+  defaultStartReserve = "",
+  defaultClosesAt = "",
 }: {
   defaultChoice?: ListingChoice;
+  defaultPrice?: string;
+  defaultStartReserve?: string;
+  defaultClosesAt?: string;
 }) {
   const [choice, setChoice] = useState<ListingChoice>(defaultChoice);
 
@@ -56,6 +61,7 @@ export function ListingTypeFields({
             name="price"
             required
             inputMode="decimal"
+            defaultValue={defaultPrice}
             placeholder="2500.00"
             className={inputCls}
           />
@@ -72,6 +78,7 @@ export function ListingTypeFields({
               name="startReserve"
               required
               inputMode="decimal"
+              defaultValue={defaultStartReserve}
               placeholder="1000.00"
               className={inputCls}
             />
@@ -84,6 +91,7 @@ export function ListingTypeFields({
               name="closesAt"
               required
               type="datetime-local"
+              defaultValue={defaultClosesAt}
               className={inputCls}
             />
           </div>
