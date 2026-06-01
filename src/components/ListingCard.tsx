@@ -33,7 +33,7 @@ export function ListingCard({
   return (
     <Link
       href={`/listings/${listing.id}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-sm"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-sm"
     >
       <div className="relative aspect-[4/3] bg-slate-100">
         {photo ? (
@@ -65,7 +65,7 @@ export function ListingCard({
       </div>
 
       <div className="flex flex-1 flex-col p-3">
-        <p className="line-clamp-2 text-sm font-semibold text-slate-900 group-hover:text-brand-700">
+        <p className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-slate-900 group-hover:text-brand-700">
           {listing.title}
         </p>
         <p className="mt-1 text-sm font-bold text-slate-900">{terms(listing)}</p>
@@ -81,7 +81,7 @@ export function ListingCard({
           )}
         </div>
         {owner && (
-          <p className="mt-2 truncate text-xs text-slate-400">{owner.name}</p>
+          <p className="mt-auto truncate pt-2 text-xs text-slate-400">{owner.name}</p>
         )}
       </div>
     </Link>
