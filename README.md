@@ -58,5 +58,5 @@ npm run dev      # → http://localhost:3000
 ## Build order
 
 The project is built module by module per PRD §11: (1) scaffold ✅,
-(2) identity & accounts ✅, (3) listings ✅, (4) unified feed ✅, (5) messaging,
+(2) identity & accounts ✅, (3) listings ✅, (4) unified feed ✅, (5) messaging ✅,
 (6) stubbed transactions, (7) trust, (8) seed data + polish.

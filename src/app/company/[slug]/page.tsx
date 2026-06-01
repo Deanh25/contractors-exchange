@@ -9,6 +9,7 @@ import { metroLabel } from "@/lib/locations";
 import { ListingCard } from "@/components/ListingCard";
 import { ownerInclude } from "@/lib/listings";
 import { FollowButton } from "@/components/FollowButton";
+import { messageCompanyAction } from "@/app/actions/message";
 import { isFollowing } from "@/lib/follows";
 
 export default async function CompanyPage({
@@ -98,9 +99,24 @@ export default async function CompanyPage({
                     path={`/company/${company.slug}`}
                   />
                 )}
-                <span className="cursor-not-allowed rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white opacity-50">
-                  Contact (coming in messaging)
-                </span>
+                {viewer ? (
+                  <form action={messageCompanyAction}>
+                    <input type="hidden" name="companyId" value={company.id} />
+                    <button
+                      type="submit"
+                      className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+                    >
+                      Contact
+                    </button>
+                  </form>
+                ) : (
+                  <Link
+                    href={`/signin?next=/company/${company.slug}`}
+                    className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+                  >
+                    Sign in to contact
+                  </Link>
+                )}
               </>
             )}
           </div>

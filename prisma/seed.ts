@@ -45,9 +45,15 @@ const NOW = Date.now();
 const hoursAgo = (h: number) => new Date(NOW - h * 3600_000);
 const daysAgo = (d: number) => new Date(NOW - d * 86400_000);
 
+/** Canonical participant order for a thread (matches src/lib/messaging.ts). */
+const pair = (a: string, b: string) =>
+  a < b ? { userAId: a, userBId: b } : { userAId: b, userBId: a };
+
 async function main() {
   console.log("Clearing existing data...");
   await prisma.follow.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.thread.deleteMany();
   await prisma.post.deleteMany();
   await prisma.listing.deleteMany();
   await prisma.membership.deleteMany();
@@ -307,6 +313,35 @@ async function main() {
   ] as const;
   await prisma.follow.createMany({ data: follows as never, skipDuplicates: true });
 
+  console.log("Creating message threads...");
+  // A listing-context thread (Dean asking Jordan/Rivera about the panels).
+  const panel = await prisma.listing.findFirst({
+    where: { ownerCompanyId: rivera.id, type: "bid" },
+  });
+  const t1 = await prisma.thread.create({
+    data: { ...pair(dean.id, jordan.id), listingId: panel?.id ?? null },
+  });
+  await prisma.message.createMany({
+    data: [
+      { threadId: t1.id, senderId: dean.id, body: "Hey, are these panels still available? Interested for a job in Charlotte.", createdAt: hoursAgo(5) },
+      { threadId: t1.id, senderId: jordan.id, body: "Yep, all 10 are available. Reserve is $1,200 for the lot.", createdAt: hoursAgo(4) },
+      { threadId: t1.id, senderId: dean.id, body: "Great. Can you hold them through the weekend?", createdAt: hoursAgo(3) },
+    ],
+  });
+  await prisma.thread.update({ where: { id: t1.id }, data: { updatedAt: hoursAgo(3) } });
+
+  // A general (no-listing) thread between Dean and Chris.
+  const t2 = await prisma.thread.create({
+    data: { ...pair(dean.id, chris.id), listingId: null },
+  });
+  await prisma.message.createMany({
+    data: [
+      { threadId: t2.id, senderId: chris.id, body: "Saw Hughes Paving - do you ever sub out flatwork? Our framing crews are looking to trade.", createdAt: daysAgo(1) },
+      { threadId: t2.id, senderId: dean.id, body: "We do. Let's find a project to pair up on.", createdAt: hoursAgo(20) },
+    ],
+  });
+  await prisma.thread.update({ where: { id: t2.id }, data: { updatedAt: hoursAgo(20) } });
+
   const [u, c, li, p, f] = await Promise.all([
     prisma.user.count(),
     prisma.company.count(),
@@ -314,8 +349,12 @@ async function main() {
     prisma.post.count(),
     prisma.follow.count(),
   ]);
+  const [th, ms] = await Promise.all([
+    prisma.thread.count(),
+    prisma.message.count(),
+  ]);
   console.log(
-    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows.`,
+    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages.`,
   );
   console.log("Sign in with kerinhughes50@gmail.com to use the Dean Hughes demo account.");
 }

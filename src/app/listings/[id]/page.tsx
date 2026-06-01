@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { messageAboutListingAction } from "@/app/actions/message";
 import { tradeLabel } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
 import {
@@ -178,12 +179,27 @@ export default async function ListingDetailPage({
                   <span className="block cursor-not-allowed rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white opacity-50">
                     {primaryAction}
                   </span>
-                  <span className="block cursor-not-allowed rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 opacity-50">
-                    Message seller
-                  </span>
+                  {viewer ? (
+                    <form action={messageAboutListingAction}>
+                      <input type="hidden" name="listingId" value={listing.id} />
+                      <button
+                        type="submit"
+                        className="block w-full rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        Message seller
+                      </button>
+                    </form>
+                  ) : (
+                    <Link
+                      href={`/signin?next=/listings/${listing.id}`}
+                      className="block rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Sign in to message seller
+                    </Link>
+                  )}
                   <p className="text-xs text-slate-400">
-                    On-platform completion activates with messaging (Step 5) and
-                    transactions (Step 6). Payments are stubbed in v1.
+                    Buy / bid completion activates with transactions (Step 6).
+                    Payments are stubbed in v1.
                   </p>
                 </>
               )}

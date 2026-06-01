@@ -39,6 +39,9 @@ model User {
   listings    Listing[] // listings owned as a sole operator
   posts       Post[] // discussion posts authored as an individual
   follows     Follow[] // trades/locations/companies/people this user follows
+  threadsA    Thread[]  @relation("ThreadUserA")
+  threadsB    Thread[]  @relation("ThreadUserB")
+  messages    Message[] // messages this user sent
 }
 
 model Company {
@@ -140,6 +143,7 @@ model Listing {
 
   ownerUser    User?    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   ownerCompany Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Cascade)
+  threads      Thread[] // message threads about this listing
 
   @@index([tradeCategory])
   @@index([type])
@@ -199,4 +203,48 @@ model Follow {
   @@unique([followerUserId, targetType, targetValue]) // follow each target once
   @@index([followerUserId])
   @@index([targetType, targetValue])
+}
+
+// -----------------------------------------------------------------------------
+// Messaging (PRD §6). Simple 1:1 threads between two users, optionally about a
+// listing. Participants are canonicalized (userAId < userBId) so a pair has one
+// thread per listing context. Company-owned listings/pages are messaged via the
+// company's owner. Leakage-aware completion (Buy/Bid/Complete) surfaces in the
+// thread UI; real money moves in Step 6. NOT group chat / real-time (PRD §9).
+// -----------------------------------------------------------------------------
+
+model Thread {
+  id        String   @id @default(cuid())
+  userAId   String // canonical: the lexicographically smaller user id
+  userBId   String // canonical: the larger user id
+  listingId String? // optional context: the listing this conversation is about
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // bumped on each new message (for inbox sorting)
+
+  userA    User     @relation("ThreadUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User     @relation("ThreadUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  listing  Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  // Best-effort uniqueness (MySQL treats NULL listingId as distinct, so the
+  // action also de-dupes general threads explicitly).
+  @@unique([userAId, userBId, listingId])
+  @@index([userAId])
+  @@index([userBId])
+  @@index([updatedAt])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  threadId  String
+  senderId  String
+  body      String   @db.Text
+  imageUrl  String?
+  createdAt DateTime @default(now())
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([createdAt])
 }

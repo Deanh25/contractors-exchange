@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { ProfileHeader } from "@/components/ProfileHeader";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/components/FollowButton";
+import { messageUserAction } from "@/app/actions/message";
 import { isFollowing } from "@/lib/follows";
 
 export default async function PublicProfilePage({
@@ -52,9 +53,24 @@ export default async function PublicProfilePage({
                     path={`/u/${user.id}`}
                   />
                 )}
-                <span className="cursor-not-allowed rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white opacity-50">
-                  Contact (coming in messaging)
-                </span>
+                {viewer ? (
+                  <form action={messageUserAction}>
+                    <input type="hidden" name="userId" value={user.id} />
+                    <button
+                      type="submit"
+                      className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+                    >
+                      Contact
+                    </button>
+                  </form>
+                ) : (
+                  <Link
+                    href={`/signin?next=/u/${user.id}`}
+                    className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+                  >
+                    Sign in to contact
+                  </Link>
+                )}
               </>
             )}
           </div>

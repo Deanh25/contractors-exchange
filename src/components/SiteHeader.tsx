@@ -31,6 +31,14 @@ export async function SiteHeader() {
           >
             Feed
           </Link>
+          {user && (
+            <Link
+              href="/messages"
+              className="rounded-md px-3 py-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+            >
+              Messages
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">
