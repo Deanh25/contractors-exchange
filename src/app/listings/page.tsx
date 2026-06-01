@@ -226,7 +226,7 @@ export default async function ListingsPage({
               Marketplace
             </h1>
             <p className="text-sm text-slate-500">
-              Buy, bid, and trade across every trade and location.
+              Buy, bid, and exchange across every trade and location.
             </p>
           </div>
           <Link

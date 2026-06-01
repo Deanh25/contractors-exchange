@@ -20,8 +20,9 @@ export async function SiteHeader() {
           <span className="grid h-8 w-8 place-items-center rounded-md bg-brand-500 font-black text-white">
             CX
           </span>
-          <span className="hidden text-base font-bold tracking-tight text-slate-900 sm:block">
-            Contractors Exchange
+          <span className="hidden text-base font-bold tracking-tight sm:block">
+            <span className="text-slate-900">Contractors </span>
+            <span className="text-brand-500">Exchange</span>
           </span>
         </Link>
 

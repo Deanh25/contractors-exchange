@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Contractors Exchange",
   description:
-    "The community marketplace for the construction industry - buy, sell, bid, and trade across every trade and location.",
+    "The community marketplace for the construction industry - buy, bid, and exchange across every trade and location.",
 };
 
 export default function RootLayout({
