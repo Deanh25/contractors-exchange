@@ -4,14 +4,10 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { sendMessageAction } from "@/app/actions/message";
-import { otherParticipant } from "@/lib/messaging";
+import { otherParticipant, resolveListingRecipient } from "@/lib/messaging";
 import { timeAgo } from "@/lib/time";
-import {
-  formatMoney,
-  listingBadge,
-  photosFromJson,
-  ownerInclude,
-} from "@/lib/listings";
+import { ownerInclude } from "@/lib/listings";
+import { TransactionPanel } from "@/components/TransactionPanel";
 
 export default async function ConversationPage({
   params,
@@ -37,14 +33,24 @@ export default async function ConversationPage({
   const other = otherParticipant(user.id, thread.userA, thread.userB);
   const listing = thread.listing;
 
-  // The on-platform completion action (leakage-aware, PRD §6). Stubbed until
-  // transactions ship (Step 6), but surfaced here as the path of least resistance.
-  const completion =
-    listing?.type === "price"
-      ? "Buy now - escrow protected"
-      : listing?.type === "bid"
-        ? "Place a bid"
-        : "Mark exchange arranged";
+  // Resolve the deal context (PRD §7): the seller (listing owner / company owner),
+  // the buyer (the other participant), and their latest transaction on this listing.
+  let dealSellerId: string | null = null;
+  let dealBuyerId: string | null = null;
+  let tx = null;
+  if (listing) {
+    dealSellerId = await resolveListingRecipient(listing);
+    if (dealSellerId === thread.userAId || dealSellerId === thread.userBId) {
+      dealBuyerId =
+        dealSellerId === thread.userAId ? thread.userBId : thread.userAId;
+      tx = await prisma.transaction.findFirst({
+        where: { listingId: listing.id, buyerId: dealBuyerId },
+        orderBy: { createdAt: "desc" },
+      });
+    } else {
+      dealSellerId = null; // seller isn't a participant - skip the deal panel
+    }
+  }
 
   return (
     <main className="flex-1">
@@ -60,51 +66,16 @@ export default async function ConversationPage({
           </Link>
         </div>
 
-        {/* Leakage-aware on-platform panel (when the thread is about a listing) */}
-        {listing && (
-          <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 p-3">
-            <Link
-              href={`/listings/${listing.id}`}
-              className="flex items-center gap-3"
-            >
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-white">
-                {photosFromJson(listing.photos)[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photosFromJson(listing.photos)[0]}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="grid h-full w-full place-items-center text-xl">
-                    🏗️
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-900">
-                  {listing.title}
-                </p>
-                <p className="text-xs text-slate-600">
-                  <span className="font-medium">
-                    {listingBadge(listing.type, listing.tradeKind).label}
-                  </span>
-                  {listing.type === "price" && ` · ${formatMoney(listing.price)}`}
-                  {listing.type === "bid" &&
-                    ` · from ${formatMoney(listing.startReserve)}`}
-                </p>
-              </div>
-            </Link>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="cursor-not-allowed rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white opacity-50">
-                {completion}
-              </span>
-              <p className="text-xs text-slate-500">
-                Complete on-platform for buyer protection (activates in Step 6).
-                Avoid sharing phone/email until you&apos;re protected.
-              </p>
-            </div>
-          </div>
+        {/* Leakage-aware deal panel (when the thread is about a listing) */}
+        {listing && dealSellerId && dealBuyerId && (
+          <TransactionPanel
+            listing={listing}
+            tx={tx}
+            viewerId={user.id}
+            sellerId={dealSellerId}
+            buyerId={dealBuyerId}
+            backPath={`/messages/${thread.id}`}
+          />
         )}
 
         {/* Messages */}

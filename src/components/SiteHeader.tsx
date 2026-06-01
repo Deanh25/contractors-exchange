@@ -2,9 +2,16 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { signOutAction } from "@/app/actions/auth";
 import { Avatar } from "@/components/Avatar";
+import { prisma } from "@/lib/prisma";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
+  // Pending incoming deal requests, surfaced as a badge on the Orders link.
+  const pendingOrders = user
+    ? await prisma.transaction.count({
+        where: { sellerId: user.id, status: "pending" },
+      })
+    : 0;
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -37,6 +44,19 @@ export async function SiteHeader() {
               className="rounded-md px-3 py-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
             >
               Messages
+            </Link>
+          )}
+          {user && (
+            <Link
+              href="/orders"
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+            >
+              Orders
+              {pendingOrders > 0 && (
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand-500 px-1 text-xs font-semibold text-white">
+                  {pendingOrders}
+                </span>
+              )}
             </Link>
           )}
         </nav>

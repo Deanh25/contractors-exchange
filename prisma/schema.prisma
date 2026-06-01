@@ -42,6 +42,8 @@ model User {
   threadsA    Thread[]  @relation("ThreadUserA")
   threadsB    Thread[]  @relation("ThreadUserB")
   messages    Message[] // messages this user sent
+  purchases   Transaction[] @relation("TxBuyer") // deals where this user is the buyer
+  sales       Transaction[] @relation("TxSeller") // deals where this user is the seller
 }
 
 model Company {
@@ -144,6 +146,7 @@ model Listing {
   ownerUser    User?    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   ownerCompany Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Cascade)
   threads      Thread[] // message threads about this listing
+  transactions Transaction[] // purchase / bid / trade-request records
 
   @@index([tradeCategory])
   @@index([type])
@@ -246,5 +249,50 @@ model Message {
   sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([threadId])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Transactions (PRD §7, STUBBED in v1). A purchase / bid / trade-request creates
+// a record and notifies the seller; escrow / buyer protection is represented in
+// the UI but NO money moves yet (Phase 2 makes it real). sellerId is denormalized
+// to the listing's owning user (a company's primary owner) so both sides can
+// query their deals without re-resolving ownership.
+// -----------------------------------------------------------------------------
+
+enum TransactionType {
+  purchase // a set-price "buy now"
+  bid // an offer on a bid listing
+  trade_request // a goods/services exchange request (no escrow)
+}
+
+enum TransactionStatus {
+  pending // created, awaiting the seller
+  accepted // seller accepted / awarded
+  declined // seller declined
+  completed // fulfilled on-platform (feeds reviews in Step 7)
+  cancelled // buyer withdrew
+}
+
+model Transaction {
+  id        String            @id @default(cuid())
+  listingId String
+  buyerId   String
+  sellerId  String
+  type      TransactionType
+  amount    Decimal?          @db.Decimal(12, 2) // null for trade requests
+  message   String?           @db.Text
+  status    TransactionStatus @default(pending)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User    @relation("TxBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller  User    @relation("TxSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
   @@index([createdAt])
 }

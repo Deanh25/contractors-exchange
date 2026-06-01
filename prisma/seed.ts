@@ -52,6 +52,7 @@ const pair = (a: string, b: string) =>
 async function main() {
   console.log("Clearing existing data...");
   await prisma.follow.deleteMany();
+  await prisma.transaction.deleteMany();
   await prisma.message.deleteMany();
   await prisma.thread.deleteMany();
   await prisma.post.deleteMany();
@@ -342,6 +343,50 @@ async function main() {
   });
   await prisma.thread.update({ where: { id: t2.id }, data: { updatedAt: hoursAgo(20) } });
 
+  console.log("Creating transactions...");
+  // Dean's accepted bid on Rivera's panels (lives in the t1 thread).
+  if (panel) {
+    await prisma.transaction.create({
+      data: {
+        listingId: panel.id,
+        buyerId: dean.id,
+        sellerId: jordan.id,
+        type: "bid",
+        amount: 1500,
+        status: "accepted",
+      },
+    });
+  }
+  // A pending purchase request TO Dean (so the Dean demo account has an incoming
+  // order + a badge on the Orders nav).
+  const stone = await prisma.listing.findFirst({
+    where: { ownerUserId: dean.id, type: "price" },
+  });
+  if (stone) {
+    const t3 = await prisma.thread.create({
+      data: { ...pair(tyler.id, dean.id), listingId: stone.id },
+    });
+    await prisma.message.create({
+      data: {
+        threadId: t3.id,
+        senderId: tyler.id,
+        body: `🛒 Requested to buy "${stone.title}" for $24.00 - on-platform, escrow protected.`,
+        createdAt: hoursAgo(2),
+      },
+    });
+    await prisma.thread.update({ where: { id: t3.id }, data: { updatedAt: hoursAgo(2) } });
+    await prisma.transaction.create({
+      data: {
+        listingId: stone.id,
+        buyerId: tyler.id,
+        sellerId: dean.id,
+        type: "purchase",
+        amount: 24,
+        status: "pending",
+      },
+    });
+  }
+
   const [u, c, li, p, f] = await Promise.all([
     prisma.user.count(),
     prisma.company.count(),
@@ -349,12 +394,13 @@ async function main() {
     prisma.post.count(),
     prisma.follow.count(),
   ]);
-  const [th, ms] = await Promise.all([
+  const [th, ms, tx] = await Promise.all([
     prisma.thread.count(),
     prisma.message.count(),
+    prisma.transaction.count(),
   ]);
   console.log(
-    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages.`,
+    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions.`,
   );
   console.log("Sign in with kerinhughes50@gmail.com to use the Dean Hughes demo account.");
 }

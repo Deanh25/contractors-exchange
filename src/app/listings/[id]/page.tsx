@@ -5,6 +5,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { messageAboutListingAction } from "@/app/actions/message";
+import { createTransactionAction } from "@/app/actions/transaction";
+import { resolveListingRecipient, canonicalPair } from "@/lib/messaging";
+import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
 import {
@@ -56,14 +59,34 @@ export default async function ListingDetailPage({
     canManage = m?.role === "owner";
   }
 
-  // The on-platform completion action surfaces in messaging/transactions (Steps
-  // 5-6). For now it's a labelled placeholder so the flow reads correctly (PRD §7).
-  const primaryAction =
-    listing.type === "price"
-      ? "Buy now - escrow protected"
-      : listing.type === "bid"
-        ? "Place a bid"
-        : "Arrange exchange";
+  // Deal context (PRD §7). For a buyer: their latest request on this listing and
+  // the thread to view it. For the seller: how many requests are pending.
+  const sellerId = !canManage ? await resolveListingRecipient(listing) : null;
+  let myTx = null;
+  let myThreadId: string | null = null;
+  if (viewer && sellerId && sellerId !== viewer.id) {
+    myTx = await prisma.transaction.findFirst({
+      where: { listingId: listing.id, buyerId: viewer.id },
+      orderBy: { createdAt: "desc" },
+    });
+    const { userAId, userBId } = canonicalPair(viewer.id, sellerId);
+    const t = await prisma.thread.findFirst({
+      where: { userAId, userBId, listingId: listing.id },
+    });
+    myThreadId = t?.id ?? null;
+  }
+  const myTxActive =
+    myTx &&
+    (myTx.status === "pending" ||
+      myTx.status === "accepted" ||
+      myTx.status === "completed");
+
+  let pendingCount = 0;
+  if (canManage) {
+    pendingCount = await prisma.transaction.count({
+      where: { listingId: listing.id, status: "pending" },
+    });
+  }
 
   return (
     <main className="flex-1">
@@ -168,17 +191,63 @@ export default async function ListingDetailPage({
               </p>
             )}
 
-            {/* Actions (stubbed until messaging/transactions ship) */}
+            {/* Actions */}
             <div className="mt-5 space-y-2">
               {canManage ? (
-                <span className="inline-block rounded-md bg-brand-50 px-3 py-2 text-sm font-medium text-brand-800">
-                  This is your listing · status: {listing.status}
-                </span>
+                <>
+                  <span className="block rounded-md bg-brand-50 px-3 py-2 text-center text-sm font-medium text-brand-800">
+                    This is your listing · status: {listing.status}
+                  </span>
+                  <Link
+                    href="/orders"
+                    className="block rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    View requests
+                    {pendingCount > 0 ? ` (${pendingCount} pending)` : ""}
+                  </Link>
+                </>
               ) : (
                 <>
-                  <span className="block cursor-not-allowed rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white opacity-50">
-                    {primaryAction}
-                  </span>
+                  {myTxActive && myTx ? (
+                    <Link
+                      href={myThreadId ? `/messages/${myThreadId}` : "/orders"}
+                      className="block rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
+                    >
+                      View your {TX_STATUS[myTx.status].label.toLowerCase()} request →
+                    </Link>
+                  ) : viewer ? (
+                    <form action={createTransactionAction} className="space-y-2">
+                      <input type="hidden" name="listingId" value={listing.id} />
+                      {listing.type === "bid" && (
+                        <input
+                          name="amount"
+                          required
+                          inputMode="decimal"
+                          placeholder={`Your bid (from ${formatMoney(listing.startReserve)})`}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      )}
+                      <button
+                        type="submit"
+                        className="block w-full rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
+                      >
+                        {ctaForListing(listing.type)}
+                      </button>
+                    </form>
+                  ) : (
+                    <Link
+                      href={`/signin?next=/listings/${listing.id}`}
+                      className="block rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
+                    >
+                      Sign in to{" "}
+                      {listing.type === "price"
+                        ? "buy"
+                        : listing.type === "bid"
+                          ? "bid"
+                          : "request"}
+                    </Link>
+                  )}
+
                   {viewer ? (
                     <form action={messageAboutListingAction}>
                       <input type="hidden" name="listingId" value={listing.id} />
@@ -198,8 +267,8 @@ export default async function ListingDetailPage({
                     </Link>
                   )}
                   <p className="text-xs text-slate-400">
-                    Buy / bid completion activates with transactions (Step 6).
-                    Payments are stubbed in v1.
+                    Completing on-platform keeps the deal protected (escrow is a
+                    placeholder in v1 - no money moves yet).
                   </p>
                 </>
               )}
