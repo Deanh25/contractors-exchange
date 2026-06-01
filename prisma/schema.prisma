@@ -44,6 +44,8 @@ model User {
   messages    Message[] // messages this user sent
   purchases   Transaction[] @relation("TxBuyer") // deals where this user is the buyer
   sales       Transaction[] @relation("TxSeller") // deals where this user is the seller
+  reviewsWritten  Review[] @relation("ReviewRater") // reviews this user wrote
+  reviewsReceived Review[] @relation("ReviewRatee") // reviews about this user
 }
 
 model Company {
@@ -289,10 +291,35 @@ model Transaction {
   listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
   buyer   User    @relation("TxBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
   seller  User    @relation("TxSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  reviews Review[]
 
   @@index([listingId])
   @@index([buyerId])
   @@index([sellerId])
   @@index([status])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Reviews (PRD §7). Ratings accrue from COMPLETED transactions: each party can
+// rate the other once per deal. Aggregated into a star rating on profiles and
+// company pages (a company's rating spans reviews received by its members).
+// -----------------------------------------------------------------------------
+
+model Review {
+  id            String   @id @default(cuid())
+  transactionId String
+  raterId       String // who wrote the review
+  rateeId       String // who the review is about
+  stars         Int // 1-5
+  body          String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  rater       User        @relation("ReviewRater", fields: [raterId], references: [id], onDelete: Cascade)
+  ratee       User        @relation("ReviewRatee", fields: [rateeId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, raterId]) // one review per rater per deal
+  @@index([rateeId])
   @@index([createdAt])
 }

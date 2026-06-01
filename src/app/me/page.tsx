@@ -4,18 +4,21 @@ import { prisma } from "@/lib/prisma";
 import { ProfileHeader } from "@/components/ProfileHeader";
 import { Avatar } from "@/components/Avatar";
 import { ListingCard } from "@/components/ListingCard";
+import { StarRating } from "@/components/StarRating";
 import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
+import { getUserRating } from "@/lib/reviews";
 
 export default async function MyProfilePage() {
   const user = await requireUser("/me");
-  const [memberships, listings] = await Promise.all([
+  const [memberships, listings, rating] = await Promise.all([
     getUserCompanies(user.id),
     prisma.listing.findMany({
       where: { ownerUserId: user.id },
       include: ownerInclude,
       orderBy: { createdAt: "desc" },
     }),
+    getUserRating(user.id),
   ]);
 
   const incomplete =
@@ -46,6 +49,9 @@ export default async function MyProfilePage() {
             </div>
           </div>
           <ProfileHeader profile={user} />
+          <div className="mt-3">
+            <StarRating rating={rating.avg} count={rating.count} />
+          </div>
           <p className="mt-4 text-xs text-slate-400">{user.email}</p>
 
           {incomplete && (

@@ -51,6 +51,14 @@ export default async function ConversationPage({
       dealSellerId = null; // seller isn't a participant - skip the deal panel
     }
   }
+  const myReview =
+    tx && tx.status === "completed"
+      ? await prisma.review.findUnique({
+          where: {
+            transactionId_raterId: { transactionId: tx.id, raterId: user.id },
+          },
+        })
+      : null;
 
   return (
     <main className="flex-1">
@@ -71,6 +79,7 @@ export default async function ConversationPage({
           <TransactionPanel
             listing={listing}
             tx={tx}
+            myReview={myReview}
             viewerId={user.id}
             sellerId={dealSellerId}
             buyerId={dealBuyerId}

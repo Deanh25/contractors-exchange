@@ -52,6 +52,7 @@ const pair = (a: string, b: string) =>
 async function main() {
   console.log("Clearing existing data...");
   await prisma.follow.deleteMany();
+  await prisma.review.deleteMany();
   await prisma.transaction.deleteMany();
   await prisma.message.deleteMany();
   await prisma.thread.deleteMany();
@@ -343,18 +344,25 @@ async function main() {
   });
   await prisma.thread.update({ where: { id: t2.id }, data: { updatedAt: hoursAgo(20) } });
 
-  console.log("Creating transactions...");
-  // Dean's accepted bid on Rivera's panels (lives in the t1 thread).
+  console.log("Creating transactions + reviews...");
+  // Dean's completed bid on Rivera's panels (lives in the t1 thread), with the
+  // mutual reviews it produced - so both profiles/companies show a rating.
   if (panel) {
-    await prisma.transaction.create({
+    const dealTx = await prisma.transaction.create({
       data: {
         listingId: panel.id,
         buyerId: dean.id,
         sellerId: jordan.id,
         type: "bid",
         amount: 1500,
-        status: "accepted",
+        status: "completed",
       },
+    });
+    await prisma.review.createMany({
+      data: [
+        { transactionId: dealTx.id, raterId: dean.id, rateeId: jordan.id, stars: 5, body: "Panels were exactly as described. Smooth handoff - would buy again." },
+        { transactionId: dealTx.id, raterId: jordan.id, rateeId: dean.id, stars: 5, body: "Quick to communicate and paid on time. Great buyer." },
+      ],
     });
   }
   // A pending purchase request TO Dean (so the Dean demo account has an incoming
@@ -394,13 +402,14 @@ async function main() {
     prisma.post.count(),
     prisma.follow.count(),
   ]);
-  const [th, ms, tx] = await Promise.all([
+  const [th, ms, tx, rv] = await Promise.all([
     prisma.thread.count(),
     prisma.message.count(),
     prisma.transaction.count(),
+    prisma.review.count(),
   ]);
   console.log(
-    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions.`,
+    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions, ${rv} reviews.`,
   );
   console.log("Sign in with kerinhughes50@gmail.com to use the Dean Hughes demo account.");
 }

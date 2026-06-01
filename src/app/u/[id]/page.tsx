@@ -5,8 +5,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { ProfileHeader } from "@/components/ProfileHeader";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/components/FollowButton";
+import { StarRating } from "@/components/StarRating";
+import { ReviewList } from "@/components/ReviewList";
 import { messageUserAction } from "@/app/actions/message";
 import { isFollowing } from "@/lib/follows";
+import { getUserRating, getUserReviews } from "@/lib/reviews";
 
 export default async function PublicProfilePage({
   params,
@@ -26,14 +29,21 @@ export default async function PublicProfilePage({
 
   if (!user) notFound();
   const isOwn = viewer?.id === user.id;
-  const followingUser =
-    viewer && !isOwn ? await isFollowing(viewer.id, "user", user.id) : false;
+  const [followingUser, rating, reviews] = await Promise.all([
+    viewer && !isOwn ? isFollowing(viewer.id, "user", user.id) : Promise.resolve(false),
+    getUserRating(user.id),
+    getUserReviews(user.id),
+  ]);
 
   return (
     <main className="flex-1">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <section className="rounded-xl border border-slate-200 bg-white p-6">
           <ProfileHeader profile={user} />
+
+          <div className="mt-3">
+            <StarRating rating={rating.avg} count={rating.count} />
+          </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
             {isOwn ? (
@@ -101,6 +111,13 @@ export default async function PublicProfilePage({
             </ul>
           </section>
         )}
+
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Reviews
+          </h2>
+          <ReviewList reviews={reviews} />
+        </section>
       </div>
     </main>
   );

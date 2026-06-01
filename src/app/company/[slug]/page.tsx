@@ -9,8 +9,11 @@ import { metroLabel } from "@/lib/locations";
 import { ListingCard } from "@/components/ListingCard";
 import { ownerInclude } from "@/lib/listings";
 import { FollowButton } from "@/components/FollowButton";
+import { StarRating } from "@/components/StarRating";
+import { ReviewList } from "@/components/ReviewList";
 import { messageCompanyAction } from "@/app/actions/message";
 import { isFollowing } from "@/lib/follows";
+import { getCompanyRating, getCompanyReviews } from "@/lib/reviews";
 
 export default async function CompanyPage({
   params,
@@ -30,11 +33,15 @@ export default async function CompanyPage({
 
   if (!company) notFound();
 
-  const listings = await prisma.listing.findMany({
-    where: { ownerCompanyId: company.id, status: "active" },
-    include: ownerInclude,
-    orderBy: { createdAt: "desc" },
-  });
+  const [listings, rating, reviews] = await Promise.all([
+    prisma.listing.findMany({
+      where: { ownerCompanyId: company.id, status: "active" },
+      include: ownerInclude,
+      orderBy: { createdAt: "desc" },
+    }),
+    getCompanyRating(company.id),
+    getCompanyReviews(company.id),
+  ]);
 
   const trades = tradesFromJson(company.trades);
   const location = metroLabel(company.city, company.state);
@@ -59,6 +66,9 @@ export default async function CompanyPage({
                   {company.name}
                 </h1>
                 {company.verified && <VerifiedBadge />}
+              </div>
+              <div className="mt-1">
+                <StarRating rating={rating.avg} count={rating.count} />
               </div>
               {location && <p className="mt-1 text-sm text-slate-500">📍 {location}</p>}
               {company.serviceArea && (
@@ -183,6 +193,14 @@ export default async function CompanyPage({
               </li>
             ))}
           </ul>
+        </section>
+
+        {/* Reviews */}
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Reviews
+          </h2>
+          <ReviewList reviews={reviews} />
         </section>
       </div>
     </main>

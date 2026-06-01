@@ -13,7 +13,9 @@ import {
   createTransactionAction,
   updateTransactionAction,
 } from "@/app/actions/transaction";
-import type { Listing, Transaction } from "@/generated/prisma/client";
+import { createReviewAction } from "@/app/actions/review";
+import { StarInput } from "@/components/StarInput";
+import type { Listing, Transaction, Review } from "@/generated/prisma/client";
 
 /**
  * The leakage-aware deal box for a listing thread (PRD §6-§7). Surfaces the
@@ -24,6 +26,7 @@ import type { Listing, Transaction } from "@/generated/prisma/client";
 export function TransactionPanel({
   listing,
   tx,
+  myReview,
   viewerId,
   sellerId,
   buyerId,
@@ -31,6 +34,7 @@ export function TransactionPanel({
 }: {
   listing: Listing;
   tx: Transaction | null;
+  myReview?: Review | null;
   viewerId: string;
   sellerId: string;
   buyerId: string;
@@ -121,9 +125,38 @@ export function TransactionPanel({
               </div>
             )}
             {tx.status === "completed" && (
-              <p className="text-sm font-medium text-emerald-700">
-                Deal completed. Reviews open in Step 7.
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-emerald-700">
+                  Deal completed.
+                </p>
+                {myReview ? (
+                  <p className="text-xs text-slate-500">
+                    You left a {myReview.stars}-star review. Thanks for keeping it
+                    on-platform.
+                  </p>
+                ) : (
+                  <form
+                    action={createReviewAction}
+                    className="space-y-2 rounded-lg border border-slate-200 bg-white p-3"
+                  >
+                    <input type="hidden" name="transactionId" value={tx.id} />
+                    <input type="hidden" name="back" value={backPath} />
+                    <p className="text-sm font-medium text-slate-700">
+                      Rate this deal
+                    </p>
+                    <StarInput />
+                    <textarea
+                      name="body"
+                      rows={2}
+                      placeholder="Optional: how did it go?"
+                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                    />
+                    <button type="submit" className={primaryBtn}>
+                      Submit review
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
             {(tx.status === "declined" || tx.status === "cancelled") && isBuyer && (
               <p className="text-xs text-slate-500">

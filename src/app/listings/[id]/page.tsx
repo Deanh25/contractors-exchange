@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { StarRating } from "@/components/StarRating";
+import { getUserRating, getCompanyRating } from "@/lib/reviews";
 import { messageAboutListingAction } from "@/app/actions/message";
 import { createTransactionAction } from "@/app/actions/transaction";
 import { updateListingStatusAction } from "@/app/actions/listing";
@@ -67,6 +69,11 @@ export default async function ListingDetailPage({
   const badge = listingBadge(listing.type, listing.tradeKind);
   const photos = photosFromJson(listing.photos);
   const owner = listingOwner(listing);
+  const sellerRating = owner
+    ? owner.kind === "company"
+      ? await getCompanyRating(owner.id)
+      : await getUserRating(owner.id)
+    : null;
   const location = metroLabel(listing.city, listing.state);
 
   // Can the viewer manage this listing? Either they own it as an individual, or
@@ -374,6 +381,11 @@ export default async function ListingDetailPage({
                   {owner.kind === "company" ? "Company" : "Individual"}
                   {owner.location ? ` · ${owner.location}` : ""}
                 </p>
+                {sellerRating && sellerRating.count > 0 && (
+                  <div className="mt-1">
+                    <StarRating rating={sellerRating.avg} count={sellerRating.count} />
+                  </div>
+                )}
               </div>
               <span className="text-slate-400">→</span>
             </Link>
