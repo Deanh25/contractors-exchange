@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/ListingCard";
 import { SortSelect } from "@/components/SortSelect";
-import { tradesByCategory } from "@/lib/trades";
+import { FilterPanel } from "@/components/FilterPanel";
+import { tradesByCategory, tradeLabel } from "@/lib/trades";
 import { LocationPicker } from "@/components/LocationPicker";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
 import { haversineMiles, boundingBox } from "@/lib/geo";
@@ -22,15 +23,16 @@ type Search = {
 };
 
 const RADII = [10, 25, 50, 100, 250];
-
 const SORTS = [
   { value: "", label: "Newest" },
   { value: "nearest", label: "Nearest" },
   { value: "price_asc", label: "Price: low to high" },
   { value: "price_desc", label: "Price: high to low" },
 ];
+const TYPE_LABEL = new Map<string, string>(
+  LISTING_CHOICES.map((c) => [c.value, c.label]),
+);
 
-/** Translate the four UI type choices into a Prisma where fragment. */
 function typeWhere(choice: string): Prisma.ListingWhereInput {
   switch (choice as ListingChoice) {
     case "price":
@@ -46,10 +48,33 @@ function typeWhere(choice: string): Prisma.ListingWhereInput {
   }
 }
 
-/** Sortable price: set-price uses price, bids use the starting bid, trades none. */
 function priceOf(l: { price: unknown; startReserve: unknown }): number | null {
   const v = l.price ?? l.startReserve;
   return v == null ? null : Number(v);
+}
+
+/** Build a /listings URL from the current params, dropping the omitted keys. */
+function buildQuery(
+  params: Record<string, string>,
+  omit: string[] = [],
+): string {
+  const usp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v && !omit.includes(k)) usp.set(k, v);
+  }
+  const s = usp.toString();
+  return s ? `/listings?${s}` : "/listings";
+}
+
+/** Renders hidden inputs so a form preserves params it doesn't directly edit. */
+function HiddenParams({ params }: { params: Record<string, string> }) {
+  return (
+    <>
+      {Object.entries(params).map(([k, v]) =>
+        v ? <input key={k} type="hidden" name={k} value={v} /> : null,
+      )}
+    </>
+  );
 }
 
 const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
@@ -138,26 +163,52 @@ export default async function ListingsPage({
   }
   const visible = rows.slice(0, 60);
 
-  // Active filters drive the collapsed/open state + the badge (search and sort
-  // are separate controls, so they don't count here).
-  const activeCount =
-    (trade ? 1 : 0) + (type ? 1 : 0) + (city || state ? 1 : 0) + (radiusActive ? 1 : 0);
-  const hasActiveFilters = activeCount > 0;
-  const hasFilters = !!(q || trade || type || city || state || radiusActive || sort);
-  const radiusNoCenter = !!sp.radius && !city;
-  const centerLabel = city && state ? `${city}, ${state}` : city;
-  const sortSelected = effectiveSort === "newest" ? "" : effectiveSort;
-
-  const sortParams: Record<string, string | undefined> = {
+  const latStr = hasCenter ? String(lat) : "";
+  const lngStr = hasCenter ? String(lng) : "";
+  const radiusStr = sp.radius ?? "";
+  const allParams: Record<string, string> = {
     q,
     trade,
     type,
     city,
     state,
-    lat: hasCenter ? String(lat) : "",
-    lng: hasCenter ? String(lng) : "",
-    radius: sp.radius ?? "",
+    lat: latStr,
+    lng: lngStr,
+    radius: radiusStr,
+    sort,
   };
+
+  const activeCount =
+    (trade ? 1 : 0) + (type ? 1 : 0) + (city || state ? 1 : 0) + (radiusActive ? 1 : 0);
+  const hasActiveFilters = activeCount > 0;
+  const hasAnything = activeCount > 0 || !!q || !!sort;
+  const radiusNoCenter = !!sp.radius && !city;
+  const centerLabel = city && state ? `${city}, ${state}` : city || state;
+  const sortSelected = effectiveSort === "newest" ? "" : effectiveSort;
+
+  // Removable active-filter chips (visible even when the panel is collapsed).
+  const chips: { key: string; label: string; href: string }[] = [];
+  if (q) chips.push({ key: "q", label: `"${q}"`, href: buildQuery(allParams, ["q"]) });
+  if (trade)
+    chips.push({ key: "trade", label: tradeLabel(trade), href: buildQuery(allParams, ["trade"]) });
+  if (type)
+    chips.push({
+      key: "type",
+      label: TYPE_LABEL.get(type) ?? type,
+      href: buildQuery(allParams, ["type"]),
+    });
+  if (city || state)
+    chips.push({
+      key: "loc",
+      label: centerLabel,
+      href: buildQuery(allParams, ["city", "state", "lat", "lng", "radius"]),
+    });
+  if (radiusActive)
+    chips.push({
+      key: "radius",
+      label: `Within ${radius} mi`,
+      href: buildQuery(allParams, ["radius"]),
+    });
 
   const countText =
     visible.length === 0
@@ -186,136 +237,151 @@ export default async function ListingsPage({
           </Link>
         </div>
 
-        {/* Search + filters (one GET form; sort lives separately, below). */}
-        <form method="get" className="mt-6">
-          <input type="hidden" name="sort" value={sort} />
-
-          <div className="flex gap-2">
-            <input
-              name="q"
-              defaultValue={q}
-              placeholder="Search the marketplace (skid steer, rebar, crew…)"
-              className="flex-1 rounded-md border border-slate-300 px-4 py-2.5 text-sm"
+        {/* Sticky search + sort toolbar (stays put while scrolling results). */}
+        <div className="sticky top-14 z-10 -mx-4 mt-6 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+          <div className="flex items-center gap-2">
+            <form method="get" className="flex flex-1 gap-2">
+              <HiddenParams
+                params={{
+                  trade,
+                  type,
+                  city,
+                  state,
+                  lat: latStr,
+                  lng: lngStr,
+                  radius: radiusStr,
+                  sort,
+                }}
+              />
+              <input
+                name="q"
+                defaultValue={q}
+                placeholder="Search the marketplace (skid steer, rebar, crew…)"
+                className="flex-1 rounded-md border border-slate-300 px-4 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                className="rounded-md bg-brand-500 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+              >
+                Search
+              </button>
+            </form>
+            <SortSelect
+              sort={sortSelected}
+              options={SORTS}
+              params={{ q, trade, type, city, state, lat: latStr, lng: lngStr, radius: radiusStr }}
             />
-            <button
-              type="submit"
-              className="rounded-md bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600"
-            >
-              Search
-            </button>
           </div>
+        </div>
 
-          <details
-            open={hasActiveFilters}
-            className="group mt-3 rounded-xl border border-slate-200 bg-slate-50"
-          >
-            <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 [&::-webkit-details-marker]:hidden">
-              <span>
-                Filters
-                {activeCount > 0 && (
-                  <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-brand-800">
-                    {activeCount} applied
-                  </span>
-                )}
-              </span>
-              <span className="text-slate-400 transition-transform group-open:rotate-180">
-                ▾
-              </span>
-            </summary>
-
-            <div className="px-4 pb-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Trade
-                  </label>
-                  <select name="trade" defaultValue={trade} className={inputCls}>
-                    <option value="">All trades</option>
-                    {tradesByCategory().map((g) => (
-                      <optgroup key={g.category} label={g.category}>
-                        {g.trades.map((t) => (
-                          <option key={t.slug} value={t.slug}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Type
-                  </label>
-                  <select name="type" defaultValue={type} className={inputCls}>
-                    <option value="">Any type</option>
-                    {LISTING_CHOICES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="lg:col-span-2">
-                  <LocationPicker
-                    mode="filter"
-                    defaultCity={city}
-                    defaultState={state}
-                    defaultLat={hasCenter ? lat : undefined}
-                    defaultLng={hasCenter ? lng : undefined}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
-                    Distance
-                  </label>
-                  <select name="radius" defaultValue={sp.radius ?? ""} className={inputCls}>
-                    <option value="">Any distance</option>
-                    {RADII.map((r) => (
-                      <option key={r} value={r}>
-                        Within {r} mi
-                      </option>
-                    ))}
-                  </select>
-                </div>
+        {/* Filters panel (collapsible, remembers state). */}
+        <form method="get">
+          <HiddenParams params={{ q, sort }} />
+          <FilterPanel defaultOpen={hasActiveFilters} activeCount={activeCount}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Trade
+                </label>
+                <select name="trade" defaultValue={trade} className={inputCls}>
+                  <option value="">All trades</option>
+                  {tradesByCategory().map((g) => (
+                    <optgroup key={g.category} label={g.category}>
+                      {g.trades.map((t) => (
+                        <option key={t.slug} value={t.slug}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
-
-              {radiusNoCenter && (
-                <p className="mt-3 text-xs text-amber-600">
-                  Pick a city above to use it as the center for distance search.
-                </p>
-              )}
-
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="submit"
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-                >
-                  Apply filters
-                </button>
-                {hasFilters && (
-                  <Link
-                    href="/listings"
-                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white"
-                  >
-                    Clear
-                  </Link>
-                )}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Type
+                </label>
+                <select name="type" defaultValue={type} className={inputCls}>
+                  <option value="">Any type</option>
+                  {LISTING_CHOICES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="lg:col-span-2">
+                <LocationPicker
+                  mode="filter"
+                  defaultCity={city}
+                  defaultState={state}
+                  defaultLat={hasCenter ? lat : undefined}
+                  defaultLng={hasCenter ? lng : undefined}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Distance
+                </label>
+                <select name="radius" defaultValue={radiusStr} className={inputCls}>
+                  <option value="">Any distance</option>
+                  {RADII.map((r) => (
+                    <option key={r} value={r}>
+                      Within {r} mi
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          </details>
+
+            {radiusNoCenter && (
+              <p className="mt-3 text-xs text-amber-600">
+                Pick a city above to use it as the center for distance search.
+              </p>
+            )}
+
+            <div className="mt-3">
+              <button
+                type="submit"
+                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+              >
+                Apply filters
+              </button>
+            </div>
+          </FilterPanel>
         </form>
 
-        {/* Results header: count (left) + sort (right). */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-slate-500">{countText}</p>
-          {visible.length > 0 && (
-            <SortSelect sort={sortSelected} options={SORTS} params={sortParams} />
-          )}
-        </div>
+        {/* Active filter chips (removable) + Clear all. */}
+        {(chips.length > 0 || hasAnything) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {chips.map((c) => (
+              <Link
+                key={c.key}
+                href={c.href}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {c.label}
+                <span className="text-slate-400" aria-hidden>
+                  ✕
+                </span>
+              </Link>
+            ))}
+            {hasAnything && (
+              <Link
+                href="/listings"
+                className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
+              >
+                Clear all
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Results */}
+        <p className="mt-4 text-sm text-slate-500">{countText}</p>
 
         {visible.length === 0 ? (
           <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
-            {hasFilters ? (
+            {hasAnything ? (
               <>
                 Nothing here yet.{" "}
                 <Link href="/listings" className="font-semibold underline">
