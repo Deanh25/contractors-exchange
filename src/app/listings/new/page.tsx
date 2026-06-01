@@ -54,7 +54,6 @@ export default async function NewListingPage({
         <form
           action={createListingAction}
           className="mt-6 space-y-6"
-          encType="multipart/form-data"
         >
           {/* Who's selling */}
           <div>

@@ -23,7 +23,6 @@ export function PostComposer({
   return (
     <form
       action={createPostAction}
-      encType="multipart/form-data"
       className="rounded-xl border border-slate-200 bg-white p-4"
     >
       <div className="flex gap-3">

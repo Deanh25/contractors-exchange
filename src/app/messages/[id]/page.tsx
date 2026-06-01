@@ -152,7 +152,6 @@ export default async function ConversationPage({
         {/* Composer */}
         <form
           action={sendMessageAction}
-          encType="multipart/form-data"
           className="border-t border-slate-200 pt-3"
         >
           <input type="hidden" name="threadId" value={thread.id} />
