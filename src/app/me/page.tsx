@@ -294,6 +294,14 @@ export default async function MyProfilePage({
                         </div>
                       </div>
                     </div>
+                    {r.transaction?.listing && (
+                      <Link
+                        href={`/listings/${r.transaction.listing.id}`}
+                        className="mt-2 inline-block max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200"
+                      >
+                        Deal: {r.transaction.listing.title}
+                      </Link>
+                    )}
                     {r.body && (
                       <p className="mt-2 whitespace-pre-line text-sm text-slate-700">
                         {r.body}
