@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
+import { MobileTabBar } from "@/components/MobileTabBar";
+import { getCurrentUser } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,19 +21,21 @@ export const metadata: Metadata = {
     "The community marketplace for the construction industry - buy, bid, and exchange across every trade and location.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getCurrentUser();
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-white text-slate-900">
+      <body className="flex min-h-full flex-col bg-white pb-14 text-slate-900 sm:pb-0">
         <SiteHeader />
         {children}
+        {user && <MobileTabBar />}
       </body>
     </html>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { canonicalPair } from "@/lib/messaging";
 import { TX_STATUS, TX_TYPE_LABEL } from "@/lib/transactions";
 import { formatMoney } from "@/lib/listings";
@@ -109,7 +110,7 @@ export default async function OrdersPage() {
 
   return (
     <main className="flex-1">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <WorkspaceShell user={user} active="orders">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Orders</h1>
         <p className="mt-1 text-sm text-slate-500">
           Your on-platform deals. Respond to and complete them inside the
@@ -128,7 +129,7 @@ export default async function OrdersPage() {
           role="buyer"
           threadFor={threadFor}
         />
-      </div>
+      </WorkspaceShell>
     </main>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { otherParticipant } from "@/lib/messaging";
 import { timeAgo } from "@/lib/time";
 
@@ -21,7 +22,7 @@ export default async function MessagesPage() {
 
   return (
     <main className="flex-1">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <WorkspaceShell user={user} active="messages">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Messages
         </h1>
@@ -72,7 +73,7 @@ export default async function MessagesPage() {
             })}
           </ul>
         )}
-      </div>
+      </WorkspaceShell>
     </main>
   );
 }

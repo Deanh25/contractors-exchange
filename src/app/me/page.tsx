@@ -5,6 +5,7 @@ import { ProfileHeader } from "@/components/ProfileHeader";
 import { Avatar } from "@/components/Avatar";
 import { ListingCard } from "@/components/ListingCard";
 import { StarRating } from "@/components/StarRating";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getUserRating } from "@/lib/reviews";
@@ -26,7 +27,7 @@ export default async function MyProfilePage() {
 
   return (
     <main className="flex-1">
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <WorkspaceShell user={user} active="profile">
         {/* Profile card */}
         <section className="rounded-xl border border-slate-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -142,7 +143,7 @@ export default async function MyProfilePage() {
             </div>
           )}
         </section>
-      </div>
+      </WorkspaceShell>
     </main>
   );
 }
