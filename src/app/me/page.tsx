@@ -79,7 +79,7 @@ export default async function MyProfilePage({
 
   return (
     <main className="flex-1">
-      <WorkspaceShell user={user} active="profile">
+      <WorkspaceShell user={user} active="profile" scope="personal">
         {/* Identity card (always shown) */}
         <section className="rounded-xl border border-slate-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">

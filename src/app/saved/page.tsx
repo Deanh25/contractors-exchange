@@ -89,7 +89,7 @@ export default async function SavedPage({
 
   return (
     <main className="flex-1">
-      <WorkspaceShell user={user} active="saved">
+      <WorkspaceShell user={user} active="saved" scope="personal">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Saved
         </h1>

@@ -8,20 +8,27 @@ import type { User } from "@/generated/prisma/client";
 
 /**
  * The logged-in "workspace" shell (Software + LinkedIn feel): a persistent left
- * sub-menu + content area, shared by Messages, Orders, Saved, Notifications, and
- * Profile. On desktop it's a left rail; on mobile it collapses to a horizontal
- * scroll-chip strip. Pages render <WorkspaceShell user={user} active="orders">.
+ * sub-menu + content area. It is identity-aware: acting as yourself shows your
+ * personal hub; acting as a company swaps the rail to that company's tools
+ * (Overview/Storefront/Inbox/Orders/Team/Reviews). Personal-only pages pass
+ * scope="personal" to keep the personal rail regardless of context.
  */
 
 type ItemKey =
   | "messages"
-  | "saved"
   | "orders"
+  | "saved"
   | "notifications"
   | "profile"
-  | "settings";
+  | "settings"
+  | "overview"
+  | "storefront"
+  | "team"
+  | "reviews";
 
-const ITEMS: { key: ItemKey; label: string; href: string }[] = [
+type NavItem = { key: ItemKey; label: string; href: string };
+
+const PERSONAL_ITEMS: NavItem[] = [
   { key: "messages", label: "Inbox", href: "/messages" },
   { key: "orders", label: "Orders", href: "/orders" },
   { key: "saved", label: "Saved", href: "/saved" },
@@ -33,29 +40,67 @@ const ITEMS: { key: ItemKey; label: string; href: string }[] = [
 export async function WorkspaceShell({
   user,
   active,
+  scope = "auto",
   children,
 }: {
   user: User;
   active: ItemKey;
+  /** "personal" forces the personal rail; "auto" follows the acting identity. */
+  scope?: "auto" | "personal";
   children: React.ReactNode;
 }) {
-  const actingCtx = await getActingContext(user.id);
-  const inboxParty =
-    actingCtx.type === "company"
-      ? { type: "company" as const, id: actingCtx.company.id }
-      : { type: "user" as const, id: user.id };
-  const [pendingOrders, unreadMessages, unreadNotifs] = await Promise.all([
-    prisma.transaction.count({
-      where: { sellerId: user.id, status: "pending" },
-    }),
-    getUnreadCount(inboxParty),
-    getUnreadNotificationCount(user.id),
-  ]);
-  const counts: Partial<Record<ItemKey, number>> = {
-    orders: pendingOrders,
-    messages: unreadMessages,
-    notifications: unreadNotifs,
-  };
+  const ctx = await getActingContext(user.id);
+  const company = scope === "personal" || ctx.type !== "company" ? null : ctx.company;
+
+  let items: NavItem[];
+  let counts: Partial<Record<ItemKey, number>> = {};
+  let identity: { name: string; subtitle: string; avatarUrl: string | null; href: string; rounded: "md" | "full" };
+
+  if (company) {
+    const [pendingOrders, unreadMessages] = await Promise.all([
+      prisma.transaction.count({
+        where: { status: "pending", listing: { ownerCompanyId: company.id } },
+      }),
+      getUnreadCount({ type: "company", id: company.id }),
+    ]);
+    items = [
+      { key: "overview", label: "Overview", href: `/company/${company.slug}` },
+      { key: "storefront", label: "Storefront", href: `/company/${company.slug}?tab=storefront` },
+      { key: "messages", label: "Inbox", href: "/messages" },
+      { key: "orders", label: "Orders", href: "/orders" },
+      { key: "team", label: "Team", href: `/company/${company.slug}?tab=team` },
+      { key: "reviews", label: "Reviews", href: `/company/${company.slug}?tab=reviews` },
+    ];
+    counts = { orders: pendingOrders, messages: unreadMessages };
+    identity = {
+      name: company.name,
+      subtitle: "Acting as company",
+      avatarUrl: company.logoUrl,
+      href: `/company/${company.slug}`,
+      rounded: "md",
+    };
+  } else {
+    const [pendingOrders, unreadMessages, unreadNotifs] = await Promise.all([
+      prisma.transaction.count({
+        where: { sellerId: user.id, status: "pending" },
+      }),
+      getUnreadCount({ type: "user", id: user.id }),
+      getUnreadNotificationCount(user.id),
+    ]);
+    items = PERSONAL_ITEMS;
+    counts = {
+      orders: pendingOrders,
+      messages: unreadMessages,
+      notifications: unreadNotifs,
+    };
+    identity = {
+      name: user.name,
+      subtitle: user.title ?? "View profile",
+      avatarUrl: user.avatarUrl,
+      href: "/me",
+      rounded: "full",
+    };
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -63,23 +108,28 @@ export async function WorkspaceShell({
         <aside className="lg:sticky lg:top-20 lg:self-start">
           {/* Identity card (desktop) */}
           <Link
-            href="/me"
+            href={identity.href}
             className="mb-3 hidden items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:bg-slate-50 lg:flex"
           >
-            <Avatar name={user.name} src={user.avatarUrl} size={40} />
+            <Avatar
+              name={identity.name}
+              src={identity.avatarUrl}
+              size={40}
+              rounded={identity.rounded}
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900">
-                {user.name}
+                {identity.name}
               </p>
               <p className="truncate text-xs text-slate-500">
-                {user.title ?? "View profile"}
+                {identity.subtitle}
               </p>
             </div>
           </Link>
 
           {/* Nav: vertical on desktop, horizontal scroll-chips on mobile */}
           <nav className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {ITEMS.map((item) => {
+            {items.map((item) => {
               const isActive = item.key === active;
               const count = counts[item.key] ?? 0;
               return (
