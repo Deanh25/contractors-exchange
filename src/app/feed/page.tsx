@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getUserCompanies } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { PostComposer } from "@/components/PostComposer";
 import { PostCard } from "@/components/PostCard";
 import { FeedListingCard } from "@/components/FeedListingCard";
@@ -10,6 +10,7 @@ import { tradeLabel, tradesByCategory } from "@/lib/trades";
 import { authorInclude } from "@/lib/posts";
 import { ownerInclude } from "@/lib/listings";
 import { getSavedMap, getViewerCollections } from "@/lib/saved";
+import { getActingCompanies, getActingContext } from "@/lib/identity";
 import {
   getFollowSets,
   hasAnyFollows,
@@ -76,7 +77,7 @@ export default async function FeedPage({
   const showListings = show !== "posts";
   const showPosts = show !== "listings";
 
-  const [listings, posts, memberships] = await Promise.all([
+  const [listings, posts, actingCompanies, actingCtx] = await Promise.all([
     showListings
       ? prisma.listing.findMany({
           where: listingWhere,
@@ -93,7 +94,8 @@ export default async function FeedPage({
           take: 30,
         })
       : Promise.resolve([]),
-    viewer ? getUserCompanies(viewer.id) : Promise.resolve([]),
+    viewer ? getActingCompanies(viewer.id) : Promise.resolve([]),
+    viewer ? getActingContext(viewer.id) : Promise.resolve({ type: "user" as const }),
   ]);
 
   // Merge the two streams and sort reverse-chronologically (PRD §5 - no ranking).
@@ -109,9 +111,14 @@ export default async function FeedPage({
     getViewerCollections(viewer?.id),
   ]);
 
-  const ownedCompanies = memberships
-    .filter((m) => m.role === "owner")
-    .map((m) => ({ id: m.company.id, name: m.company.name }));
+  // Companies the viewer may post as (owner OR canActAsCompany), defaulting the
+  // composer to the current acting-as context.
+  const composerCompanies = actingCompanies.map((c) => ({
+    id: c.id,
+    name: c.name,
+  }));
+  const composerDefault =
+    actingCtx.type === "company" ? actingCtx.company.id : "self";
 
   const tabCls = (active: boolean) =>
     `rounded-md px-3 py-1.5 text-sm font-medium ${
@@ -164,7 +171,8 @@ export default async function FeedPage({
               <PostComposer
                 userName={viewer.name}
                 avatarUrl={viewer.avatarUrl}
-                companies={ownedCompanies}
+                companies={composerCompanies}
+                defaultOwner={composerDefault}
               />
             ) : (
               <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">

@@ -83,6 +83,10 @@ model Membership {
   userId    String
   companyId String
   role      MembershipRole @default(member)
+  // Whether this member may act AS the company (post/list/message as it, manage
+  // its orders, receive its notifications). Owners can always act; owners grant
+  // this to members on the Team tab. See company-as-actor design.
+  canActAsCompany Boolean  @default(false)
   createdAt DateTime       @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)

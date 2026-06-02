@@ -5,9 +5,11 @@ import {
   getUnreadNotificationCount,
   getRecentNotifications,
 } from "@/lib/notifications";
+import { getActingCompanies, getActingContext } from "@/lib/identity";
 import { timeAgo } from "@/lib/time";
 import { AvatarMenu } from "@/components/AvatarMenu";
 import { NotificationBell, type BellItem } from "@/components/NotificationBell";
+import { ActingAsSwitcher } from "@/components/ActingAsSwitcher";
 
 const ICONS: Record<string, string> = {
   saved:
@@ -57,13 +59,15 @@ function IconLink({
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
-  const [unread, notifUnread, notifs] = user
+  const [unread, notifUnread, notifs, actingCompanies, actingCtx] = user
     ? await Promise.all([
         getUnreadCount(user.id),
         getUnreadNotificationCount(user.id),
         getRecentNotifications(user.id, 8),
+        getActingCompanies(user.id),
+        getActingContext(user.id),
       ])
-    : [0, 0, []];
+    : [0, 0, [], [], { type: "user" as const }];
 
   const bellItems: BellItem[] = notifs.map((n) => ({
     id: n.id,
@@ -75,6 +79,40 @@ export async function SiteHeader() {
     actorName: n.actor?.name ?? null,
     actorAvatar: n.actor?.avatarUrl ?? null,
   }));
+
+  // Acting-as switcher (only when the user can act for a company).
+  const switcherOptions = user
+    ? [
+        {
+          id: "self",
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+          kind: "user" as const,
+        },
+        ...actingCompanies.map((c) => ({
+          id: c.id,
+          name: c.name,
+          avatarUrl: c.logoUrl,
+          kind: "company" as const,
+        })),
+      ]
+    : [];
+  const switcherCurrent =
+    actingCtx.type === "company"
+      ? {
+          id: actingCtx.company.id,
+          name: actingCtx.company.name,
+          avatarUrl: actingCtx.company.logoUrl,
+          kind: "company" as const,
+        }
+      : user
+        ? {
+            id: "self",
+            name: user.name,
+            avatarUrl: user.avatarUrl,
+            kind: "user" as const,
+          }
+        : null;
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -123,6 +161,14 @@ export async function SiteHeader() {
               >
                 + List
               </Link>
+              {switcherCurrent && switcherOptions.length > 1 && (
+                <div className="ml-1">
+                  <ActingAsSwitcher
+                    current={switcherCurrent}
+                    options={switcherOptions}
+                  />
+                </div>
+              )}
               <div className="ml-1">
                 <AvatarMenu name={user.name} avatarUrl={user.avatarUrl} />
               </div>

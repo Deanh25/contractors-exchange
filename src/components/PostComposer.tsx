@@ -15,11 +15,17 @@ export function PostComposer({
   userName,
   avatarUrl,
   companies,
+  defaultOwner = "self",
 }: {
   userName: string;
   avatarUrl: string | null;
   companies: { id: string; name: string }[];
+  /** Pre-selects the "As ..." author from the acting-as context. */
+  defaultOwner?: string;
 }) {
+  const owner = companies.some((c) => c.id === defaultOwner)
+    ? defaultOwner
+    : "self";
   return (
     <form
       action={createPostAction}
@@ -38,7 +44,7 @@ export function PostComposer({
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {companies.length > 0 && (
-              <select name="owner" defaultValue="self" className={selectCls}>
+              <select name="owner" defaultValue={owner} className={selectCls}>
                 <option value="self">As {userName}</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>

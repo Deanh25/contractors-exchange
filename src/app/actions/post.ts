@@ -33,7 +33,10 @@ export async function createPostAction(formData: FormData) {
     const m = await prisma.membership.findUnique({
       where: { userId_companyId: { userId: user.id, companyId: owner } },
     });
-    if (!m || m.role !== "owner") redirect("/feed?error=owner");
+    // Owners and members granted canActAsCompany may post as the company.
+    if (!m || (m.role !== "owner" && !m.canActAsCompany)) {
+      redirect("/feed?error=owner");
+    }
     authorCompanyId = owner;
   }
 
