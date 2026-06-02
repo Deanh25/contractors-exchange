@@ -10,6 +10,7 @@ import {
 import { tradeLabel } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
 import { formatMiles } from "@/lib/geo";
+import { SaveButton } from "@/components/SaveButton";
 
 /** A short line describing the price/terms for the listing's type. */
 function terms(listing: ListingWithOwner): string {
@@ -21,9 +22,12 @@ function terms(listing: ListingWithOwner): string {
 export function ListingCard({
   listing,
   distanceMi,
+  saved,
 }: {
   listing: ListingWithOwner;
   distanceMi?: number;
+  /** Viewer's saved state; undefined hides the save button (logged-out). */
+  saved?: boolean;
 }) {
   const badge = listingBadge(listing.type, listing.tradeKind);
   const photo = photosFromJson(listing.photos)[0];
@@ -31,10 +35,13 @@ export function ListingCard({
   const location = metroLabel(listing.city, listing.state);
 
   return (
-    <Link
-      href={`/listings/${listing.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-sm"
-    >
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-sm">
+      {saved !== undefined && (
+        <div className="absolute right-2 top-2 z-10">
+          <SaveButton listingId={listing.id} saved={saved} />
+        </div>
+      )}
+      <Link href={`/listings/${listing.id}`} className="flex h-full flex-col">
       <div className="relative aspect-[4/3] bg-slate-100">
         {photo ? (
           isVideoUrl(photo) ? (
@@ -84,6 +91,7 @@ export function ListingCard({
           <p className="mt-auto truncate pt-2 text-xs text-slate-400">{owner.name}</p>
         )}
       </div>
-    </Link>
+      </Link>
+    </div>
   );
 }

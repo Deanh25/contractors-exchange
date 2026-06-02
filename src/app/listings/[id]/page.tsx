@@ -9,6 +9,7 @@ import { getUserRating, getCompanyRating } from "@/lib/reviews";
 import { messageAboutListingAction } from "@/app/actions/message";
 import { updateListingStatusAction } from "@/app/actions/listing";
 import { resolveListingRecipient } from "@/lib/messaging";
+import { SaveButton } from "@/components/SaveButton";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
@@ -111,6 +112,16 @@ export default async function ListingDetailPage({
     pendingCount = await prisma.transaction.count({
       where: { listingId: listing.id, status: "pending" },
     });
+  }
+
+  // Viewer's saved state (non-owners only; owners don't save their own listing).
+  let isSaved = false;
+  if (viewer && !canManage) {
+    const s = await prisma.savedListing.findUnique({
+      where: { userId_listingId: { userId: viewer.id, listingId: listing.id } },
+      select: { id: true },
+    });
+    isSaved = !!s;
   }
 
   return (
@@ -296,15 +307,27 @@ export default async function ListingDetailPage({
                   )}
 
                   {viewer ? (
-                    <form action={messageAboutListingAction}>
-                      <input type="hidden" name="listingId" value={listing.id} />
-                      <button
-                        type="submit"
-                        className="block w-full rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    <div className="flex gap-2">
+                      <form
+                        action={messageAboutListingAction}
+                        className="flex-1"
                       >
-                        Message seller
-                      </button>
-                    </form>
+                        <input type="hidden" name="listingId" value={listing.id} />
+                        <button
+                          type="submit"
+                          className="block w-full rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Message seller
+                        </button>
+                      </form>
+                      <div className="flex-1">
+                        <SaveButton
+                          listingId={listing.id}
+                          saved={isSaved}
+                          variant="button"
+                        />
+                      </div>
+                    </div>
                   ) : (
                     <Link
                       href={`/signin?next=/listings/${listing.id}`}

@@ -48,6 +48,8 @@ model User {
   reviewsReceived Review[] @relation("ReviewRatee") // reviews about this user
   notifications      Notification[] @relation("NotifRecipient") // alerts for this user
   notificationsActed Notification[] @relation("NotifActor") // alerts this user triggered
+  savedListings      SavedListing[] // listings this user bookmarked
+  collections        Collection[] // named folders for saved listings
 }
 
 model Company {
@@ -151,6 +153,7 @@ model Listing {
   ownerCompany Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Cascade)
   threads      Thread[] // message threads about this listing
   transactions Transaction[] // purchase / bid / trade-request records
+  savedBy      SavedListing[] // users who bookmarked this listing
 
   @@index([tradeCategory])
   @@index([type])
@@ -339,6 +342,42 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+}
+
+// -----------------------------------------------------------------------------
+// Saved (PRD §8). Users bookmark listings to revisit and optionally file them
+// into named collections. One save per (user, listing); a save belongs to at
+// most one collection (collectionId null = uncategorized).
+// -----------------------------------------------------------------------------
+
+model Collection {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items SavedListing[]
+
+  @@unique([userId, name]) // collection names are unique per user
+  @@index([userId])
+}
+
+model SavedListing {
+  id           String   @id @default(cuid())
+  userId       String
+  listingId    String
+  collectionId String? // null = uncategorized
+  createdAt    DateTime @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing    Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, listingId]) // a listing is saved at most once per user
+  @@index([userId])
+  @@index([listingId])
+  @@index([collectionId])
 }
 
 // -----------------------------------------------------------------------------

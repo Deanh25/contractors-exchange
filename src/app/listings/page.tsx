@@ -8,6 +8,7 @@ import { tradesByCategory, tradeLabel } from "@/lib/trades";
 import { LocationPicker } from "@/components/LocationPicker";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
 import { haversineMiles, boundingBox } from "@/lib/geo";
+import { getSavedListingIds } from "@/lib/saved";
 import type { Prisma } from "@/generated/prisma/client";
 
 type Search = {
@@ -162,6 +163,7 @@ export default async function ListingsPage({
     rows.sort(byNewest);
   }
   const visible = rows.slice(0, 60);
+  const savedIds = await getSavedListingIds(viewer?.id);
 
   const latStr = hasCenter ? String(lat) : "";
   const lngStr = hasCenter ? String(lng) : "";
@@ -415,6 +417,7 @@ export default async function ListingsPage({
                 key={row.listing.id}
                 listing={row.listing}
                 distanceMi={row.distanceMi}
+                saved={viewer ? savedIds.has(row.listing.id) : undefined}
               />
             ))}
           </div>
