@@ -12,7 +12,7 @@ const TABS = [
 ];
 
 /** Fixed bottom navigation for phones (PRD §8 responsive). Hidden on >= sm. */
-export function MobileTabBar() {
+export function MobileTabBar({ unread = 0 }: { unread?: number }) {
   const pathname = usePathname() ?? "";
 
   return (
@@ -33,6 +33,7 @@ export function MobileTabBar() {
               </Link>
             );
           }
+          const showDot = t.href === "/messages" && unread > 0;
           return (
             <Link
               key={t.href}
@@ -41,7 +42,12 @@ export function MobileTabBar() {
                 active ? "text-brand-700" : "text-slate-500"
               }`}
             >
-              {t.label}
+              <span className="relative">
+                {t.label}
+                {showDot && (
+                  <span className="absolute -right-2.5 -top-1 h-2 w-2 rounded-full bg-brand-500" />
+                )}
+              </span>
             </Link>
           );
         })}

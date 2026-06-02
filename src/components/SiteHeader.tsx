@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { getUnreadCount } from "@/lib/messaging";
 import { AvatarMenu } from "@/components/AvatarMenu";
 
 const ICONS: Record<string, string> = {
@@ -11,13 +12,23 @@ const ICONS: Record<string, string> = {
     "M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z",
 };
 
-function IconLink({ href, label, icon }: { href: string; label: string; icon: string }) {
+function IconLink({
+  href,
+  label,
+  icon,
+  badge = 0,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  badge?: number;
+}) {
   return (
     <Link
       href={href}
       title={label}
-      aria-label={label}
-      className="rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+      aria-label={badge > 0 ? `${label} (${badge} unread)` : label}
+      className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
     >
       <svg
         className="h-5 w-5"
@@ -29,12 +40,18 @@ function IconLink({ href, label, icon }: { href: string; label: string; icon: st
       >
         <path strokeLinecap="round" strokeLinejoin="round" d={ICONS[icon]} />
       </svg>
+      {badge > 0 && (
+        <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold leading-none text-white">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
     </Link>
   );
 }
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
+  const unread = user ? await getUnreadCount(user.id) : 0;
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -70,7 +87,12 @@ export async function SiteHeader() {
               <div className="hidden items-center sm:flex">
                 <IconLink href="/saved" label="Saved" icon="saved" />
                 <IconLink href="/notifications" label="Notifications" icon="bell" />
-                <IconLink href="/messages" label="Messages" icon="messages" />
+                <IconLink
+                  href="/messages"
+                  label="Messages"
+                  icon="messages"
+                  badge={unread}
+                />
               </div>
               <Link
                 href="/listings/new"

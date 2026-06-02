@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { getCurrentUser } from "@/lib/auth";
+import { getUnreadCount } from "@/lib/messaging";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getCurrentUser();
+  const unread = user ? await getUnreadCount(user.id) : 0;
   return (
     <html
       lang="en"
@@ -35,7 +37,7 @@ export default async function RootLayout({
       <body className="flex min-h-full flex-col bg-white pb-14 text-slate-900 sm:pb-0">
         <SiteHeader />
         {children}
-        {user && <MobileTabBar />}
+        {user && <MobileTabBar unread={unread} />}
       </body>
     </html>
   );

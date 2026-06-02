@@ -8,6 +8,7 @@ import { otherParticipant, resolveListingRecipient } from "@/lib/messaging";
 import { timeAgo } from "@/lib/time";
 import { ownerInclude } from "@/lib/listings";
 import { TransactionPanel } from "@/components/TransactionPanel";
+import { MarkThreadRead } from "@/components/MarkThreadRead";
 
 export default async function ConversationPage({
   params,
@@ -53,6 +54,8 @@ export default async function ConversationPage({
   }
   return (
     <main className="flex-1">
+      {/* Marks this thread read for the viewer (clears the unread badge). */}
+      <MarkThreadRead threadId={thread.id} />
       <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-3xl flex-col px-4 py-4 sm:px-6">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-slate-200 pb-3">

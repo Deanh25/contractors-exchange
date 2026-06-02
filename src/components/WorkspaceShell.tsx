@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
+import { getUnreadCount } from "@/lib/messaging";
 import type { User } from "@/generated/prisma/client";
 
 /**
@@ -36,10 +37,16 @@ export async function WorkspaceShell({
   active: ItemKey;
   children: React.ReactNode;
 }) {
-  const pendingOrders = await prisma.transaction.count({
-    where: { sellerId: user.id, status: "pending" },
-  });
-  const counts: Partial<Record<ItemKey, number>> = { orders: pendingOrders };
+  const [pendingOrders, unreadMessages] = await Promise.all([
+    prisma.transaction.count({
+      where: { sellerId: user.id, status: "pending" },
+    }),
+    getUnreadCount(user.id),
+  ]);
+  const counts: Partial<Record<ItemKey, number>> = {
+    orders: pendingOrders,
+    messages: unreadMessages,
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">

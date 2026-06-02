@@ -56,3 +56,45 @@ export async function resolveListingRecipient(listing: {
   if (listing.ownerCompanyId) return resolveCompanyOwner(listing.ownerCompanyId);
   return null;
 }
+
+type ReadFields = {
+  userAId: string;
+  userBId: string;
+  userALastReadAt: Date | null;
+  userBLastReadAt: Date | null;
+};
+
+/** Is the latest message unread for this viewer? (Latest is from the other party
+ * and newer than the viewer's last-read time.) */
+export function threadIsUnread(
+  viewerId: string,
+  thread: ReadFields,
+  lastMessage: { senderId: string; createdAt: Date } | null | undefined,
+): boolean {
+  if (!lastMessage || lastMessage.senderId === viewerId) return false;
+  const lastRead =
+    thread.userAId === viewerId ? thread.userALastReadAt : thread.userBLastReadAt;
+  return !lastRead || lastMessage.createdAt > lastRead;
+}
+
+/** Count of the viewer's threads with an unread latest message (for badges). */
+export async function getUnreadCount(userId: string): Promise<number> {
+  const threads = await prisma.thread.findMany({
+    where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    select: {
+      userAId: true,
+      userBId: true,
+      userALastReadAt: true,
+      userBLastReadAt: true,
+      messages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { senderId: true, createdAt: true },
+      },
+    },
+  });
+  return threads.reduce(
+    (n, t) => n + (threadIsUnread(userId, t, t.messages[0]) ? 1 : 0),
+    0,
+  );
+}

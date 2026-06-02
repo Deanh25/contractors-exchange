@@ -68,13 +68,33 @@ export async function sendMessageAction(formData: FormData) {
   await prisma.message.create({
     data: { threadId, senderId: user.id, body, imageUrl },
   });
-  // Bump the thread so it rises to the top of the inbox.
+  // Bump the thread (inbox sort) and mark it read for the sender.
+  const senderRead =
+    thread.userAId === user.id
+      ? { userALastReadAt: new Date() }
+      : { userBLastReadAt: new Date() };
   await prisma.thread.update({
     where: { id: threadId },
-    data: { updatedAt: new Date() },
+    data: { updatedAt: new Date(), ...senderRead },
   });
 
   revalidatePath(`/messages/${threadId}`);
   revalidatePath("/messages");
+  revalidatePath("/", "layout");
   redirect(`/messages/${threadId}`);
+}
+
+/** Mark a thread read for the current viewer (called when they open it). */
+export async function markThreadReadAction(threadId: string) {
+  const user = await requireUser("/messages");
+  const thread = await prisma.thread.findUnique({ where: { id: threadId } });
+  if (!thread) return;
+  if (thread.userAId !== user.id && thread.userBId !== user.id) return;
+  const data =
+    thread.userAId === user.id
+      ? { userALastReadAt: new Date() }
+      : { userBLastReadAt: new Date() };
+  await prisma.thread.update({ where: { id: threadId }, data });
+  revalidatePath("/messages");
+  revalidatePath("/", "layout");
 }

@@ -225,6 +225,9 @@ model Thread {
   listingId String? // optional context: the listing this conversation is about
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt // bumped on each new message (for inbox sorting)
+  // When each participant last opened the thread (for unread state).
+  userALastReadAt DateTime?
+  userBLastReadAt DateTime?
 
   userA    User     @relation("ThreadUserA", fields: [userAId], references: [id], onDelete: Cascade)
   userB    User     @relation("ThreadUserB", fields: [userBId], references: [id], onDelete: Cascade)
