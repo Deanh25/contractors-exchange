@@ -67,6 +67,9 @@ const pair = (a: string, b: string) => pairParties(U(a), U(b));
 
 async function main() {
   console.log("Clearing existing data...");
+  await prisma.notification.deleteMany();
+  await prisma.savedListing.deleteMany();
+  await prisma.collection.deleteMany();
   await prisma.follow.deleteMany();
   await prisma.review.deleteMany();
   await prisma.transaction.deleteMany();
@@ -223,7 +226,9 @@ async function main() {
       memberships: {
         create: [
           { userId: dean.id, role: "owner" },
-          { userId: tyler.id, role: "member" },
+          // Tyler is a member but is allowed to act as the company (demo of the
+          // per-member canActAsCompany permission).
+          { userId: tyler.id, role: "member", canActAsCompany: true },
         ],
       },
     },
@@ -382,6 +387,19 @@ async function main() {
         { transactionId: dealTx.id, raterId: jordan.id, rateeId: dean.id, stars: 5, body: "Quick to communicate and paid on time. Great buyer." },
       ],
     });
+    // Dean's bell: the review Jordan left him.
+    await prisma.notification.create({
+      data: {
+        userId: dean.id,
+        actorId: jordan.id,
+        type: "review_new",
+        title: "Jordan Rivera left you a 5-star review",
+        body: "Quick to communicate and paid on time. Great buyer.",
+        href: `/u/${dean.id}`,
+        transactionId: dealTx.id,
+        createdAt: hoursAgo(7),
+      },
+    });
   }
   // A pending purchase request TO Dean (so the Dean demo account has an incoming
   // order + a badge on the Orders nav).
@@ -401,7 +419,7 @@ async function main() {
       },
     });
     await prisma.thread.update({ where: { id: t3.id }, data: { updatedAt: hoursAgo(2) } });
-    await prisma.transaction.create({
+    const stoneTx = await prisma.transaction.create({
       data: {
         listingId: stone.id,
         buyerId: tyler.id,
@@ -411,6 +429,98 @@ async function main() {
         status: "pending",
       },
     });
+    // Dean's bell: the incoming buy request.
+    await prisma.notification.create({
+      data: {
+        userId: dean.id,
+        actorId: tyler.id,
+        type: "order_new",
+        title: "Tyler Brooks started a deal",
+        body: `Buy now request on "${stone.title}"`,
+        href: `/orders/${stoneTx.id}`,
+        listingId: stone.id,
+        transactionId: stoneTx.id,
+        createdAt: hoursAgo(2),
+      },
+    });
+  }
+
+  console.log("Creating company conversations...");
+  // Buyers reaching out to Hughes Paving (the Dean demo company). These populate
+  // the COMPANY inbox when you switch the top-bar identity to Hughes Paving.
+  const bobcat = await prisma.listing.findFirst({
+    where: { ownerCompanyId: hughes.id, type: "price" },
+  });
+  const roller = await prisma.listing.findFirst({
+    where: { ownerCompanyId: hughes.id, type: "bid" },
+  });
+  if (bobcat) {
+    // Marcus <-> Hughes Paving; Dean replies as the company. The buyer has the
+    // last word, so it shows UNREAD in the Hughes inbox.
+    const tc = await prisma.thread.create({
+      data: { ...pairParties(U(marcus.id), C(hughes.id)), listingId: bobcat.id },
+    });
+    await prisma.message.createMany({
+      data: [
+        { threadId: tc.id, senderUserId: marcus.id, body: `Is the "${bobcat.title}" still available? What's the lowest you'd take?`, createdAt: hoursAgo(6) },
+        { threadId: tc.id, senderUserId: dean.id, senderCompanyId: hughes.id, body: "It's available. Price is firm for now, but happy to share the service records.", createdAt: hoursAgo(5) },
+        { threadId: tc.id, senderUserId: marcus.id, body: "Sounds good. Could I come look at it this week?", createdAt: hoursAgo(3) },
+      ],
+    });
+    await prisma.thread.update({ where: { id: tc.id }, data: { updatedAt: hoursAgo(3) } });
+    // Fan the unread message out to the Hughes team's bells.
+    await prisma.notification.createMany({
+      data: [dean.id, tyler.id].map((uid) => ({
+        userId: uid,
+        actorId: marcus.id,
+        type: "message" as const,
+        title: "New message from Marcus Bell",
+        body: "Sounds good. Could I come look at it this week?",
+        href: `/messages/${tc.id}`,
+        threadId: tc.id,
+        createdAt: hoursAgo(3),
+      })),
+    });
+  }
+  if (roller) {
+    // Whitney <-> Hughes Paving; Tyler (a member with canActAsCompany) replies as
+    // the company. The company has the last word, so it's read on the Hughes side.
+    const td = await prisma.thread.create({
+      data: { ...pairParties(U(whitney.id), C(hughes.id)), listingId: roller.id },
+    });
+    await prisma.message.createMany({
+      data: [
+        { threadId: td.id, senderUserId: whitney.id, body: `Interested in the "${roller.title}". Is the reserve firm?`, createdAt: daysAgo(1) },
+        { threadId: td.id, senderUserId: tyler.id, senderCompanyId: hughes.id, body: "Thanks for the interest! Reserve is firm, but it's a strong machine - recent hydraulic service.", createdAt: hoursAgo(20) },
+      ],
+    });
+    await prisma.thread.update({ where: { id: td.id }, data: { updatedAt: hoursAgo(20) } });
+  }
+
+  console.log("Creating saved listings...");
+  // Dean saves a few listings, one filed into a collection - so /saved is populated.
+  const charlotteJob = await prisma.collection.create({
+    data: { userId: dean.id, name: "For the Charlotte job" },
+  });
+  const userSaves = await prisma.listing.findMany({
+    where: { ownerUserId: { not: dean.id }, ownerCompanyId: null, type: "price" },
+    take: 2,
+  });
+  const companySaves = await prisma.listing.findMany({
+    where: { ownerCompanyId: { not: hughes.id }, type: "price" },
+    take: 2,
+  });
+  let filed = false;
+  for (const l of [...userSaves, ...companySaves]) {
+    await prisma.savedListing.create({
+      data: {
+        userId: dean.id,
+        listingId: l.id,
+        // Put the first save into the collection; leave the rest uncategorized.
+        collectionId: filed ? null : charlotteJob.id,
+      },
+    });
+    filed = true;
   }
 
   const [u, c, li, p, f] = await Promise.all([
@@ -420,14 +530,16 @@ async function main() {
     prisma.post.count(),
     prisma.follow.count(),
   ]);
-  const [th, ms, tx, rv] = await Promise.all([
+  const [th, ms, tx, rv, nt, sv] = await Promise.all([
     prisma.thread.count(),
     prisma.message.count(),
     prisma.transaction.count(),
     prisma.review.count(),
+    prisma.notification.count(),
+    prisma.savedListing.count(),
   ]);
   console.log(
-    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions, ${rv} reviews.`,
+    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions, ${rv} reviews, ${nt} notifications, ${sv} saved.`,
   );
   console.log("Sign in with kerinhughes50@gmail.com to use the Dean Hughes demo account.");
 }
