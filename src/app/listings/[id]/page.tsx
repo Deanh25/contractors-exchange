@@ -7,9 +7,8 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { StarRating } from "@/components/StarRating";
 import { getUserRating, getCompanyRating } from "@/lib/reviews";
 import { messageAboutListingAction } from "@/app/actions/message";
-import { createTransactionAction } from "@/app/actions/transaction";
 import { updateListingStatusAction } from "@/app/actions/listing";
-import { resolveListingRecipient, canonicalPair } from "@/lib/messaging";
+import { resolveListingRecipient } from "@/lib/messaging";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
@@ -91,21 +90,15 @@ export default async function ListingDetailPage({
     canManage = m?.role === "owner";
   }
 
-  // Deal context (PRD §7). For a buyer: their latest request on this listing and
-  // the thread to view it. For the seller: how many requests are pending.
+  // Deal context (PRD §7). For a buyer: their latest request on this listing.
+  // For the seller: how many requests are pending.
   const sellerId = !canManage ? await resolveListingRecipient(listing) : null;
   let myTx = null;
-  let myThreadId: string | null = null;
   if (viewer && sellerId && sellerId !== viewer.id) {
     myTx = await prisma.transaction.findFirst({
       where: { listingId: listing.id, buyerId: viewer.id },
       orderBy: { createdAt: "desc" },
     });
-    const { userAId, userBId } = canonicalPair(viewer.id, sellerId);
-    const t = await prisma.thread.findFirst({
-      where: { userAId, userBId, listingId: listing.id },
-    });
-    myThreadId = t?.id ?? null;
   }
   const myTxActive =
     myTx &&
@@ -276,33 +269,21 @@ export default async function ListingDetailPage({
                 <>
                   {myTxActive && myTx ? (
                     <Link
-                      href={myThreadId ? `/messages/${myThreadId}` : "/orders"}
+                      href={`/orders/${myTx.id}`}
                       className="block rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
                     >
-                      View your {TX_STATUS[myTx.status].label.toLowerCase()} request →
+                      View your {TX_STATUS[myTx.status].label.toLowerCase()} order →
                     </Link>
                   ) : viewer ? (
-                    <form action={createTransactionAction} className="space-y-2">
-                      <input type="hidden" name="listingId" value={listing.id} />
-                      {listing.type === "bid" && (
-                        <input
-                          name="amount"
-                          required
-                          inputMode="decimal"
-                          placeholder={`Your bid (from ${formatMoney(listing.startReserve)})`}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        />
-                      )}
-                      <button
-                        type="submit"
-                        className="block w-full rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
-                      >
-                        {ctaForListing(listing.type)}
-                      </button>
-                    </form>
+                    <Link
+                      href={`/checkout/${listing.id}`}
+                      className="block rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
+                    >
+                      {ctaForListing(listing.type)}
+                    </Link>
                   ) : (
                     <Link
-                      href={`/signin?next=/listings/${listing.id}`}
+                      href={`/signin?next=/checkout/${listing.id}`}
                       className="block rounded-md bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-600"
                     >
                       Sign in to{" "}

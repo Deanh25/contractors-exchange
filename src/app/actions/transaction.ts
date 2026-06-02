@@ -19,9 +19,10 @@ function safeBack(value: FormDataEntryValue | null, fallback: string): string {
 }
 
 /**
- * Buyer opens a deal on a listing: purchase / bid / trade-request. Creates the
- * record (stubbed - no money), opens the thread, and posts an auto-message that
- * notifies the seller. De-dupes an existing active deal for the same buyer.
+ * Confirm a deal from the checkout/review step: purchase / bid / trade-request.
+ * Creates the record (stubbed - no money), opens a side-channel thread + posts an
+ * auto-message that notifies the seller, then lands on the ORDER page (checkout
+ * feel), NOT the message thread. De-dupes an existing active deal for the buyer.
  */
 export async function createTransactionAction(formData: FormData) {
   const user = await requireUser("/listings");
@@ -39,14 +40,14 @@ export async function createTransactionAction(formData: FormData) {
   } else if (type === "bid") {
     const raw = String(formData.get("amount") ?? "").replace(/[^0-9.]/g, "");
     const n = Number(raw);
-    if (!Number.isFinite(n) || n <= 0) redirect(`/listings/${listingId}?error=bid`);
+    if (!Number.isFinite(n) || n <= 0) redirect(`/checkout/${listingId}?error=bid`);
     amount = n;
   }
   const message = String(formData.get("message") ?? "").trim() || null;
 
   const thread = await findOrCreateThread(user.id, sellerId, listingId);
 
-  // One active deal per (listing, buyer): if one exists, just open the thread.
+  // One active deal per (listing, buyer): reuse it instead of duplicating.
   const existing = await prisma.transaction.findFirst({
     where: {
       listingId,
@@ -54,10 +55,14 @@ export async function createTransactionAction(formData: FormData) {
       status: { in: ["pending", "accepted"] },
     },
   });
-  if (!existing) {
-    await prisma.transaction.create({
+  let txId: string;
+  if (existing) {
+    txId = existing.id;
+  } else {
+    const created = await prisma.transaction.create({
       data: { listingId, buyerId: user.id, sellerId, type, amount, message },
     });
+    txId = created.id;
     await prisma.message.create({
       data: {
         threadId: thread.id,
@@ -71,9 +76,8 @@ export async function createTransactionAction(formData: FormData) {
     });
   }
 
-  revalidatePath(`/messages/${thread.id}`);
   revalidatePath("/orders");
-  redirect(`/messages/${thread.id}`);
+  redirect(`/orders/${txId}`);
 }
 
 /** Advance a deal: accept / decline (seller), complete (either), cancel (buyer). */
