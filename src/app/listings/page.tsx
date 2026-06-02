@@ -8,7 +8,7 @@ import { tradesByCategory, tradeLabel } from "@/lib/trades";
 import { LocationPicker } from "@/components/LocationPicker";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
 import { haversineMiles, boundingBox } from "@/lib/geo";
-import { getSavedListingIds } from "@/lib/saved";
+import { getSavedMap, getViewerCollections } from "@/lib/saved";
 import type { Prisma } from "@/generated/prisma/client";
 
 type Search = {
@@ -163,7 +163,10 @@ export default async function ListingsPage({
     rows.sort(byNewest);
   }
   const visible = rows.slice(0, 60);
-  const savedIds = await getSavedListingIds(viewer?.id);
+  const [savedMap, collections] = await Promise.all([
+    getSavedMap(viewer?.id),
+    getViewerCollections(viewer?.id),
+  ]);
 
   const latStr = hasCenter ? String(lat) : "";
   const lngStr = hasCenter ? String(lng) : "";
@@ -417,7 +420,9 @@ export default async function ListingsPage({
                 key={row.listing.id}
                 listing={row.listing}
                 distanceMi={row.distanceMi}
-                saved={viewer ? savedIds.has(row.listing.id) : undefined}
+                saved={viewer ? savedMap.has(row.listing.id) : undefined}
+                currentCollectionId={savedMap.get(row.listing.id) ?? null}
+                collections={collections}
               />
             ))}
           </div>

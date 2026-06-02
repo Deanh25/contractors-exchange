@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { ListingCard } from "@/components/ListingCard";
-import { CollectionSelect } from "@/components/CollectionSelect";
 import {
   createCollectionAction,
   deleteCollectionAction,
@@ -192,16 +191,13 @@ export default async function SavedPage({
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
             {visible.map((s) => (
-              <div key={s.id} className="flex flex-col">
-                <ListingCard listing={s.listing} saved />
-                <div className="mt-1.5">
-                  <CollectionSelect
-                    listingId={s.listingId}
-                    value={s.collectionId ?? ""}
-                    collections={colOptions}
-                  />
-                </div>
-              </div>
+              <ListingCard
+                key={s.id}
+                listing={s.listing}
+                saved
+                currentCollectionId={s.collectionId}
+                collections={colOptions}
+              />
             ))}
           </div>
         )}

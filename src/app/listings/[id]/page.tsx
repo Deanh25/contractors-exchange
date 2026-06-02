@@ -114,14 +114,26 @@ export default async function ListingDetailPage({
     });
   }
 
-  // Viewer's saved state (non-owners only; owners don't save their own listing).
+  // Viewer's saved state + collections (non-owners only; owners don't save
+  // their own listing) for the save-to-collection menu.
   let isSaved = false;
+  let savedCollectionId: string | null = null;
+  let viewerCollections: { id: string; name: string }[] = [];
   if (viewer && !canManage) {
-    const s = await prisma.savedListing.findUnique({
-      where: { userId_listingId: { userId: viewer.id, listingId: listing.id } },
-      select: { id: true },
-    });
+    const [s, cols] = await Promise.all([
+      prisma.savedListing.findUnique({
+        where: { userId_listingId: { userId: viewer.id, listingId: listing.id } },
+        select: { collectionId: true },
+      }),
+      prisma.collection.findMany({
+        where: { userId: viewer.id },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+    ]);
     isSaved = !!s;
+    savedCollectionId = s?.collectionId ?? null;
+    viewerCollections = cols;
   }
 
   return (
@@ -324,6 +336,8 @@ export default async function ListingDetailPage({
                         <SaveButton
                           listingId={listing.id}
                           saved={isSaved}
+                          currentCollectionId={savedCollectionId}
+                          collections={viewerCollections}
                           variant="button"
                         />
                       </div>

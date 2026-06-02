@@ -22,10 +22,14 @@ function terms(listing: ListingWithOwner): string {
 export function FeedListingCard({
   listing,
   saved,
+  currentCollectionId = null,
+  collections = [],
 }: {
   listing: ListingWithOwner;
   /** Viewer's saved state; undefined hides the save button (logged-out). */
   saved?: boolean;
+  currentCollectionId?: string | null;
+  collections?: { id: string; name: string }[];
 }) {
   const badge = listingBadge(listing.type, listing.tradeKind);
   const photo = photosFromJson(listing.photos)[0];
@@ -36,7 +40,12 @@ export function FeedListingCard({
     <div className="relative">
       {saved !== undefined && (
         <div className="absolute right-3 top-3 z-10">
-          <SaveButton listingId={listing.id} saved={saved} />
+          <SaveButton
+            listingId={listing.id}
+            saved={saved}
+            currentCollectionId={currentCollectionId}
+            collections={collections}
+          />
         </div>
       )}
       <Link

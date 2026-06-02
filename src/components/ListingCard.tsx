@@ -23,11 +23,15 @@ export function ListingCard({
   listing,
   distanceMi,
   saved,
+  currentCollectionId = null,
+  collections = [],
 }: {
   listing: ListingWithOwner;
   distanceMi?: number;
   /** Viewer's saved state; undefined hides the save button (logged-out). */
   saved?: boolean;
+  currentCollectionId?: string | null;
+  collections?: { id: string; name: string }[];
 }) {
   const badge = listingBadge(listing.type, listing.tradeKind);
   const photo = photosFromJson(listing.photos)[0];
@@ -38,7 +42,12 @@ export function ListingCard({
     <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-sm">
       {saved !== undefined && (
         <div className="absolute right-2 top-2 z-10">
-          <SaveButton listingId={listing.id} saved={saved} />
+          <SaveButton
+            listingId={listing.id}
+            saved={saved}
+            currentCollectionId={currentCollectionId}
+            collections={collections}
+          />
         </div>
       )}
       <Link href={`/listings/${listing.id}`} className="flex h-full flex-col">

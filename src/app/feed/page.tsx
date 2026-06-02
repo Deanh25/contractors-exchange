@@ -9,7 +9,7 @@ import { toggleFollowAction } from "@/app/actions/follow";
 import { tradeLabel, tradesByCategory } from "@/lib/trades";
 import { authorInclude } from "@/lib/posts";
 import { ownerInclude } from "@/lib/listings";
-import { getSavedListingIds } from "@/lib/saved";
+import { getSavedMap, getViewerCollections } from "@/lib/saved";
 import {
   getFollowSets,
   hasAnyFollows,
@@ -104,7 +104,10 @@ export default async function FeedPage({
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, 40);
 
-  const savedIds = await getSavedListingIds(viewer?.id);
+  const [savedMap, collections] = await Promise.all([
+    getSavedMap(viewer?.id),
+    getViewerCollections(viewer?.id),
+  ]);
 
   const ownedCompanies = memberships
     .filter((m) => m.role === "owner")
@@ -304,7 +307,9 @@ export default async function FeedPage({
                     <FeedListingCard
                       key={`l-${item.l.id}`}
                       listing={item.l}
-                      saved={viewer ? savedIds.has(item.l.id) : undefined}
+                      saved={viewer ? savedMap.has(item.l.id) : undefined}
+                      currentCollectionId={savedMap.get(item.l.id) ?? null}
+                      collections={collections}
                     />
                   ) : (
                     <PostCard key={`p-${item.p.id}`} post={item.p} />

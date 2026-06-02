@@ -44,6 +44,87 @@ export async function toggleSaveAction(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+/**
+ * Save a listing into a collection (or uncategorized when collectionId is
+ * empty). Upserts, so the same action both saves a new listing and moves an
+ * already-saved one. Used by the save-to-collection menu.
+ */
+export async function saveToCollectionAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireUser("/listings");
+  const listingId = String(formData.get("listingId") ?? "");
+  const raw = String(formData.get("collectionId") ?? "");
+  const path = safePath(formData.get("path"), "/listings");
+  if (!listingId) redirect(path);
+
+  let collectionId: string | null = null;
+  if (raw) {
+    const col = await prisma.collection.findFirst({
+      where: { id: raw, userId: user.id },
+      select: { id: true },
+    });
+    collectionId = col?.id ?? null;
+  }
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { id: true },
+  });
+  if (listing) {
+    await prisma.savedListing.upsert({
+      where: { userId_listingId: { userId: user.id, listingId } },
+      create: { userId: user.id, listingId, collectionId },
+      update: { collectionId },
+    });
+  }
+  revalidatePath(path);
+  revalidatePath("/", "layout");
+}
+
+/** Create a collection on the fly and save a listing straight into it. */
+export async function createCollectionAndSaveAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requireUser("/listings");
+  const listingId = String(formData.get("listingId") ?? "");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 60);
+  const path = safePath(formData.get("path"), "/listings");
+  if (!listingId || !name) redirect(path);
+
+  const col = await prisma.collection.upsert({
+    where: { userId_name: { userId: user.id, name } },
+    create: { userId: user.id, name },
+    update: {},
+  });
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    select: { id: true },
+  });
+  if (listing) {
+    await prisma.savedListing.upsert({
+      where: { userId_listingId: { userId: user.id, listingId } },
+      create: { userId: user.id, listingId, collectionId: col.id },
+      update: { collectionId: col.id },
+    });
+  }
+  revalidatePath(path);
+  revalidatePath("/", "layout");
+}
+
+/** Remove a listing from the viewer's saved set entirely. */
+export async function removeSaveAction(formData: FormData): Promise<void> {
+  const user = await requireUser("/listings");
+  const listingId = String(formData.get("listingId") ?? "");
+  const path = safePath(formData.get("path"), "/listings");
+  if (!listingId) redirect(path);
+  await prisma.savedListing.deleteMany({
+    where: { userId: user.id, listingId },
+  });
+  revalidatePath(path);
+  revalidatePath("/", "layout");
+}
+
 /** Create a new collection (folder) for the current user. */
 export async function createCollectionAction(formData: FormData): Promise<void> {
   const user = await requireUser("/saved");
