@@ -10,6 +10,7 @@ import {
 import { tradeLabel } from "@/lib/trades";
 import { metroLabel } from "@/lib/locations";
 import { timeAgo } from "@/lib/time";
+import { SaveButton } from "@/components/SaveButton";
 
 function terms(listing: ListingWithOwner): string {
   if (listing.type === "price") return formatMoney(listing.price);
@@ -18,17 +19,30 @@ function terms(listing: ListingWithOwner): string {
 }
 
 /** Horizontal listing card for the unified feed (vs. the grid ListingCard). */
-export function FeedListingCard({ listing }: { listing: ListingWithOwner }) {
+export function FeedListingCard({
+  listing,
+  saved,
+}: {
+  listing: ListingWithOwner;
+  /** Viewer's saved state; undefined hides the save button (logged-out). */
+  saved?: boolean;
+}) {
   const badge = listingBadge(listing.type, listing.tradeKind);
   const photo = photosFromJson(listing.photos)[0];
   const owner = listingOwner(listing);
   const location = metroLabel(listing.city, listing.state);
 
   return (
-    <Link
-      href={`/listings/${listing.id}`}
-      className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
-    >
+    <div className="relative">
+      {saved !== undefined && (
+        <div className="absolute right-3 top-3 z-10">
+          <SaveButton listingId={listing.id} saved={saved} />
+        </div>
+      )}
+      <Link
+        href={`/listings/${listing.id}`}
+        className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-sm"
+      >
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-28 sm:w-28">
         {photo ? (
           isVideoUrl(photo) ? (
@@ -50,7 +64,7 @@ export function FeedListingCard({ listing }: { listing: ListingWithOwner }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pr-9">
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge.tone}`}
           >
@@ -77,6 +91,7 @@ export function FeedListingCard({ listing }: { listing: ListingWithOwner }) {
           {owner && <span className="truncate">· {owner.name}</span>}
         </div>
       </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
