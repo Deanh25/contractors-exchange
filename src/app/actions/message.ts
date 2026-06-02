@@ -10,6 +10,7 @@ import {
   resolveCompanyOwner,
   resolveListingRecipient,
 } from "@/lib/messaging";
+import { createNotification } from "@/lib/notifications";
 
 /** "Message seller" on a listing: open (or start) the thread about it. */
 export async function messageAboutListingAction(formData: FormData) {
@@ -76,6 +77,19 @@ export async function sendMessageAction(formData: FormData) {
   await prisma.thread.update({
     where: { id: threadId },
     data: { updatedAt: new Date(), ...senderRead },
+  });
+
+  // Notify the other participant.
+  const recipientId =
+    thread.userAId === user.id ? thread.userBId : thread.userAId;
+  await createNotification({
+    userId: recipientId,
+    actorId: user.id,
+    type: "message",
+    title: `New message from ${user.name}`,
+    body: body || "Sent a photo",
+    href: `/messages/${threadId}`,
+    threadId,
   });
 
   revalidatePath(`/messages/${threadId}`);

@@ -10,6 +10,7 @@ import {
   txCreatedMessage,
   txStatusMessage,
 } from "@/lib/transactions";
+import { createNotification } from "@/lib/notifications";
 import type { TransactionStatus } from "@/generated/prisma/client";
 
 /** Safe same-origin return path. */
@@ -74,6 +75,17 @@ export async function createTransactionAction(formData: FormData) {
       where: { id: thread.id },
       data: { updatedAt: new Date() },
     });
+    // Alert the seller that a new deal landed.
+    await createNotification({
+      userId: sellerId,
+      actorId: user.id,
+      type: "order_new",
+      title: `${user.name} started a deal`,
+      body: txCreatedMessage(type, amount, listing.title),
+      href: `/orders/${txId}`,
+      listingId,
+      transactionId: txId,
+    });
   }
 
   revalidatePath("/orders");
@@ -122,6 +134,19 @@ export async function updateTransactionAction(formData: FormData) {
   await prisma.thread.update({
     where: { id: thread.id },
     data: { updatedAt: new Date() },
+  });
+
+  // Notify the other party of the status change.
+  const otherPartyId = isSeller ? tx.buyerId : tx.sellerId;
+  await createNotification({
+    userId: otherPartyId,
+    actorId: user.id,
+    type: "order_update",
+    title: txStatusMessage(next, user.name),
+    body: tx.listing.title,
+    href: `/orders/${txId}`,
+    listingId: tx.listingId,
+    transactionId: txId,
   });
 
   revalidatePath(`/messages/${thread.id}`);

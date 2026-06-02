@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { createNotification } from "@/lib/notifications";
 
 function safeBack(value: FormDataEntryValue | null, fallback: string): string {
   const v = typeof value === "string" ? value : "";
@@ -39,6 +40,15 @@ export async function createReviewAction(formData: FormData) {
   if (!existing) {
     await prisma.review.create({
       data: { transactionId: txId, raterId: user.id, rateeId, stars, body },
+    });
+    await createNotification({
+      userId: rateeId,
+      actorId: user.id,
+      type: "review_new",
+      title: `${user.name} left you a ${stars}-star review`,
+      body,
+      href: `/u/${rateeId}`,
+      transactionId: txId,
     });
   }
 

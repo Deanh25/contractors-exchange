@@ -46,6 +46,8 @@ model User {
   sales       Transaction[] @relation("TxSeller") // deals where this user is the seller
   reviewsWritten  Review[] @relation("ReviewRater") // reviews this user wrote
   reviewsReceived Review[] @relation("ReviewRatee") // reviews about this user
+  notifications      Notification[] @relation("NotifRecipient") // alerts for this user
+  notificationsActed Notification[] @relation("NotifActor") // alerts this user triggered
 }
 
 model Company {
@@ -301,6 +303,42 @@ model Transaction {
   @@index([sellerId])
   @@index([status])
   @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Notifications (PRD §8). In-app alerts fanned out on key events (new message,
+// new/updated deal, new review, new follower). Each is addressed to one recipient,
+// optionally records the actor (for an avatar), and carries an href to the relevant
+// page plus loose entity refs. readAt = null means unread (drives the bell badge).
+// -----------------------------------------------------------------------------
+
+enum NotificationType {
+  message // a new message arrived in a thread
+  order_new // someone started a deal on your listing
+  order_update // a deal you are in changed status
+  review_new // you received a review
+  follow_new // someone followed you
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  userId        String // recipient
+  type          NotificationType
+  actorId       String? // who triggered it (for the avatar); null for system
+  title         String // short headline, e.g. "New message from Dean"
+  body          String?          @db.Text // optional preview / detail
+  href          String // where clicking the notification navigates
+  threadId      String? // loose entity refs (no FK cascade needed)
+  listingId     String?
+  transactionId String?
+  readAt        DateTime? // null = unread
+  createdAt     DateTime         @default(now())
+
+  user  User  @relation("NotifRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotifActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
 
 // -----------------------------------------------------------------------------

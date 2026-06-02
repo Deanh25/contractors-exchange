@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { createNotification } from "@/lib/notifications";
 import type { FollowTargetType } from "@/generated/prisma/client";
 
 const TYPES = new Set<FollowTargetType>(["trade", "location", "company", "user"]);
@@ -44,6 +45,17 @@ export async function toggleFollowAction(formData: FormData) {
     await prisma.follow.create({
       data: { followerUserId: user.id, targetType, targetValue },
     });
+    // Tell a person when someone follows them (only the "user" target type
+    // maps to a notifiable recipient).
+    if (targetType === "user") {
+      await createNotification({
+        userId: targetValue,
+        actorId: user.id,
+        type: "follow_new",
+        title: `${user.name} followed you`,
+        href: `/u/${user.id}`,
+      });
+    }
   }
 
   revalidatePath(path);

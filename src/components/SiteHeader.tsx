@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getUnreadCount } from "@/lib/messaging";
+import {
+  getUnreadNotificationCount,
+  getRecentNotifications,
+} from "@/lib/notifications";
+import { timeAgo } from "@/lib/time";
 import { AvatarMenu } from "@/components/AvatarMenu";
+import { NotificationBell, type BellItem } from "@/components/NotificationBell";
 
 const ICONS: Record<string, string> = {
   saved:
@@ -51,7 +57,24 @@ function IconLink({
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
-  const unread = user ? await getUnreadCount(user.id) : 0;
+  const [unread, notifUnread, notifs] = user
+    ? await Promise.all([
+        getUnreadCount(user.id),
+        getUnreadNotificationCount(user.id),
+        getRecentNotifications(user.id, 8),
+      ])
+    : [0, 0, []];
+
+  const bellItems: BellItem[] = notifs.map((n) => ({
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    href: n.href,
+    read: n.readAt !== null,
+    time: timeAgo(n.createdAt),
+    actorName: n.actor?.name ?? null,
+    actorAvatar: n.actor?.avatarUrl ?? null,
+  }));
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -86,7 +109,7 @@ export async function SiteHeader() {
             <>
               <div className="hidden items-center sm:flex">
                 <IconLink href="/saved" label="Saved" icon="saved" />
-                <IconLink href="/notifications" label="Notifications" icon="bell" />
+                <NotificationBell unread={notifUnread} items={bellItems} />
                 <IconLink
                   href="/messages"
                   label="Messages"
