@@ -9,7 +9,6 @@ import { getActingCompanies, getActingContext } from "@/lib/identity";
 import { timeAgo } from "@/lib/time";
 import { AvatarMenu } from "@/components/AvatarMenu";
 import { NotificationBell, type BellItem } from "@/components/NotificationBell";
-import { ActingAsSwitcher } from "@/components/ActingAsSwitcher";
 
 const ICONS: Record<string, string> = {
   saved:
@@ -161,17 +160,11 @@ export async function SiteHeader() {
               >
                 + List
               </Link>
-              {switcherCurrent && switcherOptions.length > 1 && (
+              {switcherCurrent && (
                 <div className="ml-1">
-                  <ActingAsSwitcher
-                    current={switcherCurrent}
-                    options={switcherOptions}
-                  />
+                  <AvatarMenu current={switcherCurrent} options={switcherOptions} />
                 </div>
               )}
-              <div className="ml-1">
-                <AvatarMenu name={user.name} avatarUrl={user.avatarUrl} />
-              </div>
             </>
           ) : (
             <Link
