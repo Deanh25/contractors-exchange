@@ -43,7 +43,16 @@ export function AvatarMenu({
         <span className="hidden max-w-[8rem] truncate text-sm font-medium text-slate-800 sm:block">
           {name}
         </span>
-        <span className="text-xs text-slate-400">▾</span>
+        <svg
+          className={`h-4 w-4 text-brand-500 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2.75}
+          stroke="currentColor"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
       </button>
 
       {open && (

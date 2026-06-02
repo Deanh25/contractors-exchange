@@ -51,9 +51,16 @@ export function FilterPanel({
             </span>
           )}
         </span>
-        <span className="text-slate-400 transition-transform group-open:rotate-180">
-          ▾
-        </span>
+        <svg
+          className="h-4 w-4 text-brand-500 transition-transform group-open:rotate-180"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2.75}
+          stroke="currentColor"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
       </summary>
       <div className="px-4 pb-4">{children}</div>
     </details>
