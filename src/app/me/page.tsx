@@ -5,12 +5,12 @@ import { ProfileHeader } from "@/components/ProfileHeader";
 import { Avatar } from "@/components/Avatar";
 import { ListingCard } from "@/components/ListingCard";
 import { StarRating } from "@/components/StarRating";
+import { ReviewList } from "@/components/ReviewList";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getUserRating, getUserReviews } from "@/lib/reviews";
 import { getSavedCount } from "@/lib/saved";
-import { timeAgo } from "@/lib/time";
 
 type Tab = "overview" | "companies" | "listings" | "reviews";
 const TABS: { key: Tab; label: string }[] = [
@@ -263,54 +263,7 @@ export default async function MyProfilePage({
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
               Reviews about you
             </h2>
-            {reviews.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-                No reviews yet. Complete a deal on-platform and the other party
-                can rate you.
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {reviews.map((r) => (
-                  <li
-                    key={r.id}
-                    className="rounded-xl border border-slate-200 bg-white p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Link href={`/u/${r.raterId}`}>
-                        <Avatar name={r.rater.name} src={r.rater.avatarUrl} size={36} />
-                      </Link>
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={`/u/${r.raterId}`}
-                          className="truncate font-medium text-slate-900 hover:underline"
-                        >
-                          {r.rater.name}
-                        </Link>
-                        <div className="flex items-center gap-2">
-                          <StarRating rating={r.stars} showNumber={false} />
-                          <span className="text-xs text-slate-400">
-                            {timeAgo(r.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    {r.transaction?.listing && (
-                      <Link
-                        href={`/listings/${r.transaction.listing.id}`}
-                        className="mt-2 inline-block max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-200"
-                      >
-                        Deal: {r.transaction.listing.title}
-                      </Link>
-                    )}
-                    {r.body && (
-                      <p className="mt-2 whitespace-pre-line text-sm text-slate-700">
-                        {r.body}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ReviewList reviews={reviews} />
           </section>
         )}
       </WorkspaceShell>

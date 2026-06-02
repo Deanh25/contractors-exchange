@@ -80,7 +80,10 @@ export default async function OrderPage({
     tx.status === "completed"
       ? await prisma.review.findUnique({
           where: {
-            transactionId_raterId: { transactionId: tx.id, raterId: user.id },
+            transactionId_raterUserId: {
+              transactionId: tx.id,
+              raterUserId: user.id,
+            },
           },
         })
       : null;

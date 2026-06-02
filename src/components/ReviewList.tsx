@@ -2,15 +2,17 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { StarRating } from "@/components/StarRating";
 import { timeAgo } from "@/lib/time";
-import type { Review, User } from "@/generated/prisma/client";
+import type { Review, User, Company } from "@/generated/prisma/client";
 
 export type ReviewWithContext = Review & {
-  rater: User;
+  raterUser: User;
+  raterCompany: Company | null;
   transaction: { listing: { id: string; title: string } | null } | null;
 };
 
 /** A list of reviews about someone (PRD §7), each tagged with the product the
- * deal was about (public, to build credibility). */
+ * deal was about (public, to build credibility). The reviewer can be a person
+ * or a company (when written acting as one). */
 export function ReviewList({ reviews }: { reviews: ReviewWithContext[] }) {
   if (reviews.length === 0) {
     return (
@@ -23,15 +25,33 @@ export function ReviewList({ reviews }: { reviews: ReviewWithContext[] }) {
     <ul className="space-y-3">
       {reviews.map((r) => {
         const listing = r.transaction?.listing ?? null;
+        const rater = r.raterCompany
+          ? {
+              name: r.raterCompany.name,
+              avatarUrl: r.raterCompany.logoUrl,
+              href: `/company/${r.raterCompany.slug}`,
+              rounded: "md" as const,
+            }
+          : {
+              name: r.raterUser.name,
+              avatarUrl: r.raterUser.avatarUrl,
+              href: `/u/${r.raterUser.id}`,
+              rounded: "full" as const,
+            };
         return (
           <li key={r.id} className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="flex items-center gap-2">
-              <Avatar name={r.rater.name} src={r.rater.avatarUrl} size={28} />
+              <Avatar
+                name={rater.name}
+                src={rater.avatarUrl}
+                size={28}
+                rounded={rater.rounded}
+              />
               <Link
-                href={`/u/${r.raterId}`}
+                href={rater.href}
                 className="text-sm font-medium text-slate-900 hover:underline"
               >
-                {r.rater.name}
+                {rater.name}
               </Link>
               <span className="ml-auto">
                 <StarRating rating={r.stars} showNumber={false} />

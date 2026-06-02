@@ -368,8 +368,10 @@ async function main() {
   await prisma.thread.update({ where: { id: t2.id }, data: { updatedAt: hoursAgo(20) } });
 
   console.log("Creating transactions + reviews...");
-  // Dean's completed bid on Rivera's panels (lives in the t1 thread), with the
-  // mutual reviews it produced - so both profiles/companies show a rating.
+  // Dean's completed bid on Rivera's panels (lives in the t1 thread). The deal is
+  // on Rivera's listing, so the reviews target the PARTIES: Dean reviews the
+  // Rivera COMPANY (shows on Rivera's profile), and Rivera reviews Dean (shows on
+  // Dean's personal profile, written as the company).
   if (panel) {
     const dealTx = await prisma.transaction.create({
       data: {
@@ -383,22 +385,60 @@ async function main() {
     });
     await prisma.review.createMany({
       data: [
-        { transactionId: dealTx.id, raterId: dean.id, rateeId: jordan.id, stars: 5, body: "Panels were exactly as described. Smooth handoff - would buy again." },
-        { transactionId: dealTx.id, raterId: jordan.id, rateeId: dean.id, stars: 5, body: "Quick to communicate and paid on time. Great buyer." },
+        { transactionId: dealTx.id, raterUserId: dean.id, rateeCompanyId: rivera.id, stars: 5, body: "Panels were exactly as described. Smooth handoff - would buy again." },
+        { transactionId: dealTx.id, raterUserId: jordan.id, raterCompanyId: rivera.id, rateeUserId: dean.id, stars: 5, body: "Quick to communicate and paid on time. Great buyer." },
       ],
     });
-    // Dean's bell: the review Jordan left him.
+    // Dean's bell: the review Rivera left him (written as the company).
     await prisma.notification.create({
       data: {
         userId: dean.id,
         actorId: jordan.id,
         type: "review_new",
-        title: "Jordan Rivera left you a 5-star review",
+        title: "Rivera Electric Co. left you a 5-star review",
         body: "Quick to communicate and paid on time. Great buyer.",
         href: `/u/${dean.id}`,
         transactionId: dealTx.id,
         createdAt: hoursAgo(7),
       },
+    });
+  }
+
+  // A completed deal ON Hughes Paving's listing, so the Hughes COMPANY gets a
+  // review (visible on its Reviews tab + public page), separate from Dean's
+  // personal reviews. Marcus buys the Bobcat from Hughes.
+  const bobcatListing = await prisma.listing.findFirst({
+    where: { ownerCompanyId: hughes.id, type: "price" },
+  });
+  if (bobcatListing) {
+    const hughesTx = await prisma.transaction.create({
+      data: {
+        listingId: bobcatListing.id,
+        buyerId: marcus.id,
+        sellerId: dean.id,
+        type: "purchase",
+        amount: 38500,
+        status: "completed",
+      },
+    });
+    await prisma.review.createMany({
+      data: [
+        { transactionId: hughesTx.id, raterUserId: marcus.id, rateeCompanyId: hughes.id, stars: 5, body: "Machine was exactly as described and fairly priced. Hughes was easy to work with." },
+        { transactionId: hughesTx.id, raterUserId: dean.id, raterCompanyId: hughes.id, rateeUserId: marcus.id, stars: 5, body: "Smooth pickup, paid promptly. Welcome back anytime." },
+      ],
+    });
+    // The Hughes team's bells: the review Marcus left the company.
+    await prisma.notification.createMany({
+      data: [dean.id, tyler.id].map((uid) => ({
+        userId: uid,
+        actorId: marcus.id,
+        type: "review_new" as const,
+        title: "Marcus Bell left Hughes Paving & Grading a 5-star review",
+        body: "Machine was exactly as described and fairly priced.",
+        href: `/company/${hughes.slug}`,
+        transactionId: hughesTx.id,
+        createdAt: hoursAgo(6),
+      })),
     });
   }
   // A pending purchase request TO Dean (so the Dean demo account has an incoming
