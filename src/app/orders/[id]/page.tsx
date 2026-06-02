@@ -8,7 +8,7 @@ import {
   updateTransactionAction,
 } from "@/app/actions/transaction";
 import { createReviewAction } from "@/app/actions/review";
-import { canonicalPair } from "@/lib/messaging";
+import { findThread, listingOwnerParty } from "@/lib/messaging";
 import { timeAgo } from "@/lib/time";
 import {
   TX_STATUS,
@@ -70,11 +70,11 @@ export default async function OrderPage({
   const status = TX_STATUS[tx.status];
   const protectedDeal = isEscrowProtected(tx.type);
 
-  // Side-channel thread for "Message seller/buyer".
-  const { userAId, userBId } = canonicalPair(tx.buyerId, tx.sellerId);
-  const thread = await prisma.thread.findFirst({
-    where: { userAId, userBId, listingId: tx.listingId },
-  });
+  // Side-channel thread for "Message seller/buyer" (buyer <-> listing owner party).
+  const ownerParty = listingOwnerParty(tx.listing);
+  const thread = ownerParty
+    ? await findThread({ type: "user", id: tx.buyerId }, ownerParty, tx.listingId)
+    : null;
 
   const myReview =
     tx.status === "completed"

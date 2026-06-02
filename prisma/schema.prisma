@@ -39,9 +39,9 @@ model User {
   listings    Listing[] // listings owned as a sole operator
   posts       Post[] // discussion posts authored as an individual
   follows     Follow[] // trades/locations/companies/people this user follows
-  threadsA    Thread[]  @relation("ThreadUserA")
-  threadsB    Thread[]  @relation("ThreadUserB")
-  messages    Message[] // messages this user sent
+  threadsAsUserA Thread[] @relation("ThreadAUser") // threads where this user is party A
+  threadsAsUserB Thread[] @relation("ThreadBUser") // threads where this user is party B
+  messagesSent   Message[] @relation("MessageSenderUser") // messages this user typed
   purchases   Transaction[] @relation("TxBuyer") // deals where this user is the buyer
   sales       Transaction[] @relation("TxSeller") // deals where this user is the seller
   reviewsWritten  Review[] @relation("ReviewRater") // reviews this user wrote
@@ -71,6 +71,9 @@ model Company {
   memberships Membership[]
   listings    Listing[] // the company storefront
   posts       Post[] // discussion posts authored as the company
+  threadsAsCompanyA Thread[]  @relation("ThreadACompany") // threads where this company is party A
+  threadsAsCompanyB Thread[]  @relation("ThreadBCompany") // threads where this company is party B
+  messagesSent      Message[] @relation("MessageSenderCompany") // messages sent as this company
 }
 
 enum MembershipRole {
@@ -227,40 +230,60 @@ model Follow {
 // thread UI; real money moves in Step 6. NOT group chat / real-time (PRD §9).
 // -----------------------------------------------------------------------------
 
+// A conversation party is polymorphic: a User or a Company (company-as-actor).
+enum PartyType {
+  user
+  company
+}
+
 model Thread {
   id        String   @id @default(cuid())
-  userAId   String // canonical: the lexicographically smaller user id
-  userBId   String // canonical: the larger user id
-  listingId String? // optional context: the listing this conversation is about
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // bumped on each new message (for inbox sorting)
-  // When each participant last opened the thread (for unread state).
-  userALastReadAt DateTime?
-  userBLastReadAt DateTime?
+  // Two parties, canonically ordered by partyKey = "<type>:<id>" so a pair maps
+  // to one thread. Exactly one of (aUserId, aCompanyId) is set, per side.
+  aType      PartyType
+  aUserId    String?
+  aCompanyId String?
+  bType      PartyType
+  bUserId    String?
+  bCompanyId String?
+  listingId  String? // optional context: the listing this conversation is about
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt // bumped on each new message (for inbox sorting)
+  // When each side last opened the thread (for unread state). For a company
+  // side this is shared across the team (first reader clears it) - v1 simplification.
+  aLastReadAt DateTime?
+  bLastReadAt DateTime?
 
-  userA    User     @relation("ThreadUserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB    User     @relation("ThreadUserB", fields: [userBId], references: [id], onDelete: Cascade)
-  listing  Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
-  messages Message[]
+  aUser     User?    @relation("ThreadAUser", fields: [aUserId], references: [id], onDelete: Cascade)
+  aCompany  Company? @relation("ThreadACompany", fields: [aCompanyId], references: [id], onDelete: Cascade)
+  bUser     User?    @relation("ThreadBUser", fields: [bUserId], references: [id], onDelete: Cascade)
+  bCompany  Company? @relation("ThreadBCompany", fields: [bCompanyId], references: [id], onDelete: Cascade)
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  messages  Message[]
 
-  // Best-effort uniqueness (MySQL treats NULL listingId as distinct, so the
-  // action also de-dupes general threads explicitly).
-  @@unique([userAId, userBId, listingId])
-  @@index([userAId])
-  @@index([userBId])
+  // Best-effort uniqueness (MySQL treats NULLs as distinct, so the action also
+  // de-dupes explicitly).
+  @@unique([aType, aUserId, aCompanyId, bType, bUserId, bCompanyId, listingId])
+  @@index([aUserId])
+  @@index([aCompanyId])
+  @@index([bUserId])
+  @@index([bCompanyId])
   @@index([updatedAt])
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  threadId  String
-  senderId  String
-  body      String   @db.Text
-  imageUrl  String?
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  threadId        String
+  // The human who typed it, plus the identity they acted as (company), if any.
+  senderUserId    String
+  senderCompanyId String? // null = sent as themselves; set = sent as this company
+  body            String   @db.Text
+  imageUrl        String?
+  createdAt       DateTime @default(now())
 
-  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  thread        Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderUser    User     @relation("MessageSenderUser", fields: [senderUserId], references: [id], onDelete: Cascade)
+  senderCompany Company? @relation("MessageSenderCompany", fields: [senderCompanyId], references: [id], onDelete: SetNull)
 
   @@index([threadId])
   @@index([createdAt])

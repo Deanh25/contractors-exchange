@@ -58,15 +58,26 @@ function IconLink({
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
-  const [unread, notifUnread, notifs, actingCompanies, actingCtx] = user
-    ? await Promise.all([
-        getUnreadCount(user.id),
-        getUnreadNotificationCount(user.id),
-        getRecentNotifications(user.id, 8),
-        getActingCompanies(user.id),
-        getActingContext(user.id),
-      ])
-    : [0, 0, [], [], { type: "user" as const }];
+  let unread = 0;
+  let notifUnread = 0;
+  let notifs: Awaited<ReturnType<typeof getRecentNotifications>> = [];
+  let actingCompanies: Awaited<ReturnType<typeof getActingCompanies>> = [];
+  let actingCtx: Awaited<ReturnType<typeof getActingContext>> = { type: "user" };
+  if (user) {
+    [actingCompanies, actingCtx] = await Promise.all([
+      getActingCompanies(user.id),
+      getActingContext(user.id),
+    ]);
+    const party =
+      actingCtx.type === "company"
+        ? { type: "company" as const, id: actingCtx.company.id }
+        : { type: "user" as const, id: user.id };
+    [unread, notifUnread, notifs] = await Promise.all([
+      getUnreadCount(party),
+      getUnreadNotificationCount(user.id),
+      getRecentNotifications(user.id, 8),
+    ]);
+  }
 
   const bellItems: BellItem[] = notifs.map((n) => ({
     id: n.id,

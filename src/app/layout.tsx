@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { getCurrentUser } from "@/lib/auth";
 import { getUnreadCount } from "@/lib/messaging";
+import { getActingContext } from "@/lib/identity";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getCurrentUser();
-  const unread = user ? await getUnreadCount(user.id) : 0;
+  let unread = 0;
+  if (user) {
+    const ctx = await getActingContext(user.id);
+    const party =
+      ctx.type === "company"
+        ? { type: "company" as const, id: ctx.company.id }
+        : { type: "user" as const, id: user.id };
+    unread = await getUnreadCount(party);
+  }
   return (
     <html
       lang="en"

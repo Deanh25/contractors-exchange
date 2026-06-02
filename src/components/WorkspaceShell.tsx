@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { getUnreadCount } from "@/lib/messaging";
 import { getUnreadNotificationCount } from "@/lib/notifications";
+import { getActingContext } from "@/lib/identity";
 import type { User } from "@/generated/prisma/client";
 
 /**
@@ -38,11 +39,16 @@ export async function WorkspaceShell({
   active: ItemKey;
   children: React.ReactNode;
 }) {
+  const actingCtx = await getActingContext(user.id);
+  const inboxParty =
+    actingCtx.type === "company"
+      ? { type: "company" as const, id: actingCtx.company.id }
+      : { type: "user" as const, id: user.id };
   const [pendingOrders, unreadMessages, unreadNotifs] = await Promise.all([
     prisma.transaction.count({
       where: { sellerId: user.id, status: "pending" },
     }),
-    getUnreadCount(user.id),
+    getUnreadCount(inboxParty),
     getUnreadNotificationCount(user.id),
   ]);
   const counts: Partial<Record<ItemKey, number>> = {

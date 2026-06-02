@@ -3,7 +3,17 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { otherParticipant, threadIsUnread } from "@/lib/messaging";
+import {
+  threadPartyInclude,
+  sideOfParty,
+  partyDisplay,
+  threadIsUnread,
+  messageFromParty,
+  listingOwnerParty,
+  partiesEqual,
+  type Party,
+} from "@/lib/messaging";
+import { getActingContext } from "@/lib/identity";
 import { timeAgo } from "@/lib/time";
 
 type Folder = "all" | "unread" | "buying" | "selling";
@@ -68,19 +78,25 @@ export default async function MessagesPage({
     : "all";
   const q = (sp.q ?? "").trim();
 
-  // Companies the viewer owns - so a thread about one of their company listings
-  // counts as "selling".
-  const owned = await prisma.membership.findMany({
-    where: { userId: user.id, role: "owner" },
-    select: { companyId: true },
-  });
-  const ownedCompanyIds = new Set(owned.map((m) => m.companyId));
+  // The inbox is scoped to the current acting identity (you, or a company you
+  // act for). Switch identity in the top bar to see a company's inbox.
+  const actingCtx = await getActingContext(user.id);
+  const inboxParty: Party =
+    actingCtx.type === "company"
+      ? { type: "company", id: actingCtx.company.id }
+      : { type: "user", id: user.id };
+  const inboxLabel =
+    actingCtx.type === "company" ? actingCtx.company.name : "you";
+
+  const where =
+    inboxParty.type === "company"
+      ? { OR: [{ aCompanyId: inboxParty.id }, { bCompanyId: inboxParty.id }] }
+      : { OR: [{ aUserId: inboxParty.id }, { bUserId: inboxParty.id }] };
 
   const threads = await prisma.thread.findMany({
-    where: { OR: [{ userAId: user.id }, { userBId: user.id }] },
+    where,
     include: {
-      userA: true,
-      userB: true,
+      ...threadPartyInclude,
       listing: true,
       messages: { orderBy: { createdAt: "desc" }, take: 1 },
     },
@@ -88,21 +104,20 @@ export default async function MessagesPage({
   });
 
   // Decorate each thread with derived state used for filtering and display.
-  const rows = threads.map((t) => {
-    const other = otherParticipant(user.id, t.userA, t.userB);
+  const rows = threads.flatMap((t) => {
+    const mySide = sideOfParty(t, inboxParty);
+    if (!mySide) return [];
+    const otherSide = mySide === "a" ? "b" : "a";
+    const other = partyDisplay(t, otherSide);
     const last = t.messages[0];
-    const unread = threadIsUnread(user.id, t, last);
-    const isSeller =
-      !!t.listing &&
-      (t.listing.ownerUserId === user.id ||
-        (!!t.listing.ownerCompanyId &&
-          ownedCompanyIds.has(t.listing.ownerCompanyId)));
+    const unread = threadIsUnread(t, mySide, last);
+    const ownerParty = t.listing ? listingOwnerParty(t.listing) : null;
     const role: "buying" | "selling" | "general" = !t.listing
       ? "general"
-      : isSeller
+      : ownerParty && partiesEqual(ownerParty, inboxParty)
         ? "selling"
         : "buying";
-    return { t, other, last, unread, role };
+    return [{ t, other, last, unread, role }];
   });
 
   const counts = {
@@ -133,7 +148,9 @@ export default async function MessagesPage({
           Messages
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Your 1:1 conversations. Keep deals on-platform for buyer protection.
+          Inbox for{" "}
+          <span className="font-medium text-slate-700">{inboxLabel}</span>. Keep
+          deals on-platform for buyer protection.
         </p>
 
         {/* Folder tabs */}
@@ -195,10 +212,9 @@ export default async function MessagesPage({
         ) : (
           <ul className="mt-4 space-y-2">
             {visible.map(({ t, other, last, unread, role }) => {
+              const fromMe = last ? messageFromParty(last, inboxParty) : false;
               const preview = last
-                ? `${last.senderId === user.id ? "You: " : ""}${
-                    last.body || "Photo"
-                  }`
+                ? `${fromMe ? "You: " : ""}${last.body || "Photo"}`
                 : "No messages yet";
               return (
                 <li key={t.id}>
@@ -211,7 +227,12 @@ export default async function MessagesPage({
                     }`}
                   >
                     <div className="relative shrink-0">
-                      <Avatar name={other.name} src={other.avatarUrl} size={44} />
+                      <Avatar
+                        name={other.name}
+                        src={other.avatarUrl}
+                        size={44}
+                        rounded={other.kind === "company" ? "md" : "full"}
+                      />
                       {unread && (
                         <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-brand-500" />
                       )}

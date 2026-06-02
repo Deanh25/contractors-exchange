@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { findOrCreateThread, resolveListingRecipient } from "@/lib/messaging";
+import {
+  findOrCreateThread,
+  resolveListingRecipient,
+  listingOwnerParty,
+} from "@/lib/messaging";
 import {
   txTypeForListing,
   txCreatedMessage,
@@ -46,7 +50,12 @@ export async function createTransactionAction(formData: FormData) {
   }
   const message = String(formData.get("message") ?? "").trim() || null;
 
-  const thread = await findOrCreateThread(user.id, sellerId, listingId);
+  // Deal thread = buyer (the user) <-> the listing's owning party (so it aligns
+  // with the messaging thread for company listings).
+  const ownerParty = listingOwnerParty(listing);
+  const thread = ownerParty
+    ? await findOrCreateThread({ type: "user", id: user.id }, ownerParty, listingId)
+    : null;
 
   // One active deal per (listing, buyer): reuse it instead of duplicating.
   const existing = await prisma.transaction.findFirst({
@@ -64,17 +73,19 @@ export async function createTransactionAction(formData: FormData) {
       data: { listingId, buyerId: user.id, sellerId, type, amount, message },
     });
     txId = created.id;
-    await prisma.message.create({
-      data: {
-        threadId: thread.id,
-        senderId: user.id,
-        body: txCreatedMessage(type, amount, listing.title),
-      },
-    });
-    await prisma.thread.update({
-      where: { id: thread.id },
-      data: { updatedAt: new Date() },
-    });
+    if (thread) {
+      await prisma.message.create({
+        data: {
+          threadId: thread.id,
+          senderUserId: user.id,
+          body: txCreatedMessage(type, amount, listing.title),
+        },
+      });
+      await prisma.thread.update({
+        where: { id: thread.id },
+        data: { updatedAt: new Date() },
+      });
+    }
     // Alert the seller that a new deal landed.
     await createNotification({
       userId: sellerId,
@@ -122,19 +133,28 @@ export async function updateTransactionAction(formData: FormData) {
     data: { status: next },
   });
 
-  // Reflect the change in the conversation thread.
-  const thread = await findOrCreateThread(tx.buyerId, tx.sellerId, tx.listingId);
-  await prisma.message.create({
-    data: {
-      threadId: thread.id,
-      senderId: user.id,
-      body: txStatusMessage(next, user.name),
-    },
-  });
-  await prisma.thread.update({
-    where: { id: thread.id },
-    data: { updatedAt: new Date() },
-  });
+  // Reflect the change in the conversation thread (buyer <-> listing owner party).
+  const ownerParty = listingOwnerParty(tx.listing);
+  const thread = ownerParty
+    ? await findOrCreateThread(
+        { type: "user", id: tx.buyerId },
+        ownerParty,
+        tx.listingId,
+      )
+    : null;
+  if (thread) {
+    await prisma.message.create({
+      data: {
+        threadId: thread.id,
+        senderUserId: user.id,
+        body: txStatusMessage(next, user.name),
+      },
+    });
+    await prisma.thread.update({
+      where: { id: thread.id },
+      data: { updatedAt: new Date() },
+    });
+  }
 
   // Notify the other party of the status change.
   const otherPartyId = isSeller ? tx.buyerId : tx.sellerId;
@@ -149,7 +169,7 @@ export async function updateTransactionAction(formData: FormData) {
     transactionId: txId,
   });
 
-  revalidatePath(`/messages/${thread.id}`);
+  if (thread) revalidatePath(`/messages/${thread.id}`);
   revalidatePath("/orders");
   redirect(back);
 }

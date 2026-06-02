@@ -46,8 +46,24 @@ const hoursAgo = (h: number) => new Date(NOW - h * 3600_000);
 const daysAgo = (d: number) => new Date(NOW - d * 86400_000);
 
 /** Canonical participant order for a thread (matches src/lib/messaging.ts). */
-const pair = (a: string, b: string) =>
-  a < b ? { userAId: a, userBId: b } : { userAId: b, userBId: a };
+// Canonical party columns for a thread. Each party is "user:<id>" or
+// "company:<id>"; ordered by that key so a pair maps to one thread.
+type SeedParty = { type: "user" | "company"; id: string };
+const U = (id: string): SeedParty => ({ type: "user", id });
+const C = (id: string): SeedParty => ({ type: "company", id });
+function pairParties(p1: SeedParty, p2: SeedParty) {
+  const key = (p: SeedParty) => `${p.type}:${p.id}`;
+  const [a, b] = key(p1) <= key(p2) ? [p1, p2] : [p2, p1];
+  return {
+    aType: a.type,
+    aUserId: a.type === "user" ? a.id : null,
+    aCompanyId: a.type === "company" ? a.id : null,
+    bType: b.type,
+    bUserId: b.type === "user" ? b.id : null,
+    bCompanyId: b.type === "company" ? b.id : null,
+  };
+}
+const pair = (a: string, b: string) => pairParties(U(a), U(b));
 
 async function main() {
   console.log("Clearing existing data...");
@@ -320,14 +336,16 @@ async function main() {
   const panel = await prisma.listing.findFirst({
     where: { ownerCompanyId: rivera.id, type: "bid" },
   });
+  // Buyer (Dean) <-> the Rivera COMPANY (demonstrates the shared company inbox);
+  // Jordan, a Rivera owner, replies as the company.
   const t1 = await prisma.thread.create({
-    data: { ...pair(dean.id, jordan.id), listingId: panel?.id ?? null },
+    data: { ...pairParties(U(dean.id), C(rivera.id)), listingId: panel?.id ?? null },
   });
   await prisma.message.createMany({
     data: [
-      { threadId: t1.id, senderId: dean.id, body: "Hey, are these panels still available? Interested for a job in Charlotte.", createdAt: hoursAgo(5) },
-      { threadId: t1.id, senderId: jordan.id, body: "Yep, all 10 are available. Reserve is $1,200 for the lot.", createdAt: hoursAgo(4) },
-      { threadId: t1.id, senderId: dean.id, body: "Great. Can you hold them through the weekend?", createdAt: hoursAgo(3) },
+      { threadId: t1.id, senderUserId: dean.id, body: "Hey, are these panels still available? Interested for a job in Charlotte.", createdAt: hoursAgo(5) },
+      { threadId: t1.id, senderUserId: jordan.id, senderCompanyId: rivera.id, body: "Yep, all 10 are available. Reserve is $1,200 for the lot.", createdAt: hoursAgo(4) },
+      { threadId: t1.id, senderUserId: dean.id, body: "Great. Can you hold them through the weekend?", createdAt: hoursAgo(3) },
     ],
   });
   await prisma.thread.update({ where: { id: t1.id }, data: { updatedAt: hoursAgo(3) } });
@@ -338,8 +356,8 @@ async function main() {
   });
   await prisma.message.createMany({
     data: [
-      { threadId: t2.id, senderId: chris.id, body: "Saw Hughes Paving - do you ever sub out flatwork? Our framing crews are looking to trade.", createdAt: daysAgo(1) },
-      { threadId: t2.id, senderId: dean.id, body: "We do. Let's find a project to pair up on.", createdAt: hoursAgo(20) },
+      { threadId: t2.id, senderUserId: chris.id, body: "Saw Hughes Paving - do you ever sub out flatwork? Our framing crews are looking to trade.", createdAt: daysAgo(1) },
+      { threadId: t2.id, senderUserId: dean.id, body: "We do. Let's find a project to pair up on.", createdAt: hoursAgo(20) },
     ],
   });
   await prisma.thread.update({ where: { id: t2.id }, data: { updatedAt: hoursAgo(20) } });
@@ -377,7 +395,7 @@ async function main() {
     await prisma.message.create({
       data: {
         threadId: t3.id,
-        senderId: tyler.id,
+        senderUserId: tyler.id,
         body: `🛒 Requested to buy "${stone.title}" for $24.00 - on-platform, escrow protected.`,
         createdAt: hoursAgo(2),
       },

@@ -4,7 +4,16 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { sendMessageAction } from "@/app/actions/message";
-import { otherParticipant, resolveListingRecipient } from "@/lib/messaging";
+import {
+  threadPartyInclude,
+  threadParties,
+  controlsParty,
+  partyDisplay,
+  messageFromParty,
+  resolveListingRecipient,
+  type Party,
+} from "@/lib/messaging";
+import { getActingCompanies } from "@/lib/identity";
 import { timeAgo } from "@/lib/time";
 import { ownerInclude } from "@/lib/listings";
 import { TransactionPanel } from "@/components/TransactionPanel";
@@ -21,40 +30,56 @@ export default async function ConversationPage({
   const thread = await prisma.thread.findUnique({
     where: { id },
     include: {
-      userA: true,
-      userB: true,
+      ...threadPartyInclude,
       listing: { include: ownerInclude },
-      messages: { orderBy: { createdAt: "asc" } },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: { senderUser: true, senderCompany: true },
+      },
     },
   });
 
   if (!thread) notFound();
-  if (thread.userAId !== user.id && thread.userBId !== user.id) notFound();
 
-  const other = otherParticipant(user.id, thread.userA, thread.userB);
+  // The viewer must control one side (as themselves or a company they act for).
+  const acting = new Set(
+    (await getActingCompanies(user.id)).map((c) => c.id),
+  );
+  const { a, b } = threadParties(thread);
+  const mySide = controlsParty(a, user.id, acting)
+    ? "a"
+    : controlsParty(b, user.id, acting)
+      ? "b"
+      : null;
+  if (!mySide) notFound();
+
+  const myParty: Party = mySide === "a" ? a : b;
+  const otherSide = mySide === "a" ? "b" : "a";
+  const other = partyDisplay(thread, otherSide);
   const listing = thread.listing;
 
-  // Resolve the deal context (PRD §7): the seller (listing owner / company owner),
-  // the buyer (the other participant), and their latest transaction on this listing.
+  // Deal panel (PRD §7): shown for legacy user-to-user threads. Company-party
+  // deals move to the order page once orders are party-aware (8.3).
   let dealSellerId: string | null = null;
   let dealBuyerId: string | null = null;
   let tx = null;
-  if (listing) {
+  if (listing && thread.aType === "user" && thread.bType === "user") {
     dealSellerId = await resolveListingRecipient(listing);
-    if (dealSellerId === thread.userAId || dealSellerId === thread.userBId) {
+    if (dealSellerId === thread.aUserId || dealSellerId === thread.bUserId) {
       dealBuyerId =
-        dealSellerId === thread.userAId ? thread.userBId : thread.userAId;
+        dealSellerId === thread.aUserId ? thread.bUserId : thread.aUserId;
       tx = await prisma.transaction.findFirst({
-        where: { listingId: listing.id, buyerId: dealBuyerId },
+        where: { listingId: listing.id, buyerId: dealBuyerId! },
         orderBy: { createdAt: "desc" },
       });
     } else {
-      dealSellerId = null; // seller isn't a participant - skip the deal panel
+      dealSellerId = null;
     }
   }
+
   return (
     <main className="flex-1">
-      {/* Marks this thread read for the viewer (clears the unread badge). */}
+      {/* Marks this thread read for the viewer's side (clears the unread badge). */}
       <MarkThreadRead threadId={thread.id} />
       <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-3xl flex-col px-4 py-4 sm:px-6">
         {/* Header */}
@@ -62,13 +87,18 @@ export default async function ConversationPage({
           <Link href="/messages" className="text-slate-400 hover:text-slate-600">
             ←
           </Link>
-          <Link href={`/u/${other.id}`} className="flex items-center gap-2">
-            <Avatar name={other.name} src={other.avatarUrl} size={36} />
+          <Link href={other.href} className="flex items-center gap-2">
+            <Avatar
+              name={other.name}
+              src={other.avatarUrl}
+              size={36}
+              rounded={other.kind === "company" ? "md" : "full"}
+            />
             <span className="font-semibold text-slate-900">{other.name}</span>
           </Link>
         </div>
 
-        {/* Leakage-aware deal panel (when the thread is about a listing) */}
+        {/* Leakage-aware deal panel (user-to-user threads about a listing) */}
         {listing && dealSellerId && dealBuyerId && (
           <TransactionPanel
             listing={listing}
@@ -87,7 +117,11 @@ export default async function ConversationPage({
             </p>
           ) : (
             thread.messages.map((m) => {
-              const own = m.senderId === user.id;
+              const own = messageFromParty(m, myParty);
+              // Attribution for company-sent messages (which human spoke).
+              const asCompany = m.senderCompany
+                ? `${m.senderCompany.name} · ${m.senderUser.name}`
+                : null;
               return (
                 <div
                   key={m.id}
@@ -100,6 +134,13 @@ export default async function ConversationPage({
                         : "bg-slate-100 text-slate-800"
                     }`}
                   >
+                    {asCompany && (
+                      <p
+                        className={`mb-0.5 text-[10px] font-medium ${own ? "text-white/80" : "text-slate-500"}`}
+                      >
+                        {asCompany}
+                      </p>
+                    )}
                     {m.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -127,6 +168,14 @@ export default async function ConversationPage({
           className="border-t border-slate-200 pt-3"
         >
           <input type="hidden" name="threadId" value={thread.id} />
+          {myParty.type === "company" && (
+            <p className="mb-2 text-xs text-slate-500">
+              Replying as{" "}
+              <span className="font-medium text-slate-700">
+                {partyDisplay(thread, mySide).name}
+              </span>
+            </p>
+          )}
           <div className="flex items-end gap-2">
             <textarea
               name="body"
