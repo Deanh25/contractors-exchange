@@ -20,6 +20,20 @@ export async function getMarginBand(category: string): Promise<MarginBand> {
     : DEFAULT_BAND;
 }
 
+/** All configured bands keyed by category (for the listing form's live math). */
+export async function getAllMarginBands(): Promise<Record<string, MarginBand>> {
+  const rows = await prisma.categoryMargin.findMany();
+  const out: Record<string, MarginBand> = {};
+  for (const r of rows) {
+    out[r.category] = {
+      defaultPct: r.defaultPct,
+      minPct: r.minPct,
+      maxPct: r.maxPct,
+    };
+  }
+  return out;
+}
+
 /** Public buyer price for a seller net at a given margin %, rounded to cents. */
 export function buyerPriceFor(sellerNet: number, marginPct: number): number {
   return Math.round(sellerNet * (1 + marginPct / 100) * 100) / 100;

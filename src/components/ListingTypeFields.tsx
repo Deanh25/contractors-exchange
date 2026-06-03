@@ -1,38 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LISTING_CHOICES, type ListingChoice } from "@/lib/listings";
 
 const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
 
+type Band = { defaultPct: number; minPct: number; maxPct: number };
+const FALLBACK_BAND: Band = { defaultPct: 12, minPct: 6, maxPct: 25 };
+
 /**
- * The four listing-type choices plus the fields that only apply to the selected
- * one (PRD §3). Conditional inputs are mounted only when active, so the browser's
- * `required` validation applies to just the relevant fields. Accepts defaults so
- * the edit form can pre-fill the current type and amounts.
+ * The four listing-type choices + the fields for the selected one (PRD §3). For
+ * set-price listings (PRD §7B) the seller enters their NET; CX adds the selected
+ * trade category's margin to set the buyer price (live estimate). A seller may
+ * counter with a custom buyer price: in-band it goes live, BELOW the category
+ * minimum it triggers a red warning + a confirm that it must be reviewed first.
  */
 export function ListingTypeFields({
   defaultChoice = "price",
   defaultSellerNet = "",
   defaultStartReserve = "",
   defaultClosesAt = "",
-  defaultMarginPct = 12,
+  bands = {},
+  defaultBand = FALLBACK_BAND,
 }: {
   defaultChoice?: ListingChoice;
   defaultSellerNet?: string;
   defaultStartReserve?: string;
   defaultClosesAt?: string;
-  /** Representative margin for the live estimate; the exact per-category band
-   * is applied server-side at publish. */
-  defaultMarginPct?: number;
+  /** Per-category margin bands; the selected category's band drives the math. */
+  bands?: Record<string, Band>;
+  defaultBand?: Band;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [choice, setChoice] = useState<ListingChoice>(defaultChoice);
   const [net, setNet] = useState(defaultSellerNet);
+  const [custom, setCustom] = useState("");
+  const [category, setCategory] = useState("");
+
+  // Track the form's selected trade category (a sibling SearchSelect writes a
+  // hidden input) so the band math matches the chosen category.
+  useEffect(() => {
+    const form = rootRef.current?.closest("form");
+    if (!form) return;
+    const read = () => {
+      const el = form.querySelector(
+        'input[name="tradeCategory"]',
+      ) as HTMLInputElement | null;
+      setCategory(el?.value ?? "");
+    };
+    read();
+    const onClick = () => requestAnimationFrame(read);
+    form.addEventListener("input", read);
+    form.addEventListener("change", read);
+    form.addEventListener("click", onClick);
+    return () => {
+      form.removeEventListener("input", read);
+      form.removeEventListener("change", read);
+      form.removeEventListener("click", onClick);
+    };
+  }, []);
+
+  const band = bands[category] ?? defaultBand;
   const netNum = Number(String(net).replace(/[^0-9.]/g, ""));
-  const estimate = netNum > 0 ? netNum * (1 + defaultMarginPct / 100) : 0;
+  const estimate = netNum > 0 ? netNum * (1 + band.defaultPct / 100) : 0;
+  const customNum = Number(String(custom).replace(/[^0-9.]/g, ""));
+  const impliedPct =
+    netNum > 0 && customNum > 0 ? (customNum / netNum - 1) * 100 : null;
+  const belowMin = impliedPct !== null && impliedPct < band.minPct;
+  const aboveMax = impliedPct !== null && impliedPct > band.maxPct;
+
+  // Confirm-on-submit when below the category minimum (the case we discourage).
+  const needsConfirmRef = useRef(false);
+  useEffect(() => {
+    needsConfirmRef.current = belowMin;
+  }, [belowMin]);
+  useEffect(() => {
+    const form = rootRef.current?.closest("form");
+    if (!form) return;
+    const onSubmit = (e: Event) => {
+      if (!needsConfirmRef.current) return;
+      const ok = window.confirm(
+        "This buyer price is below the category minimum, so it must be reviewed before it can go live and won't be visible to buyers until approved. Submit it for review anyway?",
+      );
+      if (!ok) e.preventDefault();
+    };
+    form.addEventListener("submit", onSubmit);
+    return () => form.removeEventListener("submit", onSubmit);
+  }, []);
 
   return (
-    <div className="space-y-4">
+    <div ref={rootRef} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         {LISTING_CHOICES.map((c) => (
           <label
@@ -77,20 +134,19 @@ export function ListingTypeFields({
             className={inputCls}
           />
           <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            CX adds a category margin (~{defaultMarginPct}%) to set the buyer&apos;s
-            price - you keep your full net.
+            CX adds the category margin ({band.defaultPct}%) to set the
+            buyer&apos;s price - you keep your full net.
             {netNum > 0 && (
               <>
                 {" "}
                 Buyers would pay about{" "}
-                <strong className="text-slate-900">
-                  ${estimate.toFixed(2)}
-                </strong>
+                <strong className="text-slate-900">${estimate.toFixed(2)}</strong>
                 ; you keep{" "}
                 <strong className="text-slate-900">${netNum.toFixed(2)}</strong>.
               </>
             )}
           </p>
+
           <details className="text-sm">
             <summary className="cursor-pointer text-xs font-medium text-brand-700">
               Set the buyer&apos;s price yourself (advanced)
@@ -99,6 +155,8 @@ export function ListingTypeFields({
               <input
                 name="customPrice"
                 inputMode="decimal"
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
                 placeholder="Buyer price you want, e.g. 2800.00"
                 className={inputCls}
               />
@@ -107,10 +165,39 @@ export function ListingTypeFields({
                 placeholder="Why this price? (used if it needs review)"
                 className={inputCls}
               />
-              <p className="text-xs text-slate-400">
-                Within the allowed margin band it goes live immediately; outside
-                it, it waits for a quick review.
-              </p>
+
+              {belowMin ? (
+                <div className="rounded-md border border-red-300 bg-red-50 p-2.5">
+                  <p className="text-xs font-semibold text-red-700">
+                    ⚠ Below the {band.minPct}% category minimum (your price implies
+                    just a {impliedPct!.toFixed(1)}% margin).
+                  </p>
+                  <p className="mt-1 text-xs text-red-600">
+                    This price must be reviewed before it can be posted, and your
+                    listing won&apos;t be visible to buyers until it&apos;s
+                    approved. Consider raising it to at least{" "}
+                    <strong>
+                      ${(netNum * (1 + band.minPct / 100)).toFixed(2)}
+                    </strong>{" "}
+                    to go live right away.
+                  </p>
+                </div>
+              ) : aboveMax ? (
+                <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+                  Above the {band.maxPct}% range - this will be reviewed before
+                  going live.
+                </p>
+              ) : impliedPct !== null ? (
+                <p className="text-xs font-medium text-emerald-700">
+                  Within the {band.minPct}-{band.maxPct}% band - goes live
+                  immediately.
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400">
+                  Within the allowed margin band it goes live immediately;
+                  outside it, it waits for a quick review.
+                </p>
+              )}
             </div>
           </details>
         </div>

@@ -14,6 +14,7 @@ import { MediaUpload } from "@/components/MediaUpload";
 import { ConfirmSubmit } from "@/components/ConfirmSubmit";
 import { tradeOptions } from "@/lib/trades";
 import { listingChoice, photosFromJson } from "@/lib/listings";
+import { getAllMarginBands, DEFAULT_BAND } from "@/lib/pricing";
 
 const ERRORS: Record<string, string> = {
   title: "A title is required.",
@@ -50,6 +51,7 @@ export default async function EditListingPage({
   const statusDefault = ["active", "sold", "closed"].includes(listing.status)
     ? listing.status
     : "active";
+  const bands = await getAllMarginBands();
 
   return (
     <main className="flex-1">
@@ -110,6 +112,8 @@ export default async function EditListingPage({
               Listing type
             </label>
             <ListingTypeFields
+              bands={bands}
+              defaultBand={DEFAULT_BAND}
               defaultChoice={choice}
               defaultSellerNet={
                 listing.sellerNet !== null

@@ -7,6 +7,7 @@ import { LocationPicker } from "@/components/LocationPicker";
 import { SearchSelect } from "@/components/SearchSelect";
 import { MediaUpload } from "@/components/MediaUpload";
 import { tradeOptions } from "@/lib/trades";
+import { getAllMarginBands, DEFAULT_BAND } from "@/lib/pricing";
 
 const ERRORS: Record<string, string> = {
   title: "A title is required.",
@@ -34,6 +35,7 @@ export default async function NewListingPage({
     include: { company: true },
     orderBy: { createdAt: "asc" },
   });
+  const bands = await getAllMarginBands();
 
   return (
     <main className="flex-1">
@@ -108,7 +110,7 @@ export default async function NewListingPage({
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Listing type
             </label>
-            <ListingTypeFields />
+            <ListingTypeFields bands={bands} defaultBand={DEFAULT_BAND} />
           </div>
 
           {/* Unit + freight */}
