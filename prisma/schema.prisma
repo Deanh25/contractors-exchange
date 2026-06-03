@@ -46,8 +46,8 @@ model User {
   salesAsUser     Transaction[] @relation("TxSellerUser") // deals where this user is the seller
   reviewsWritten  Review[] @relation("ReviewRaterUser") // reviews this user wrote
   reviewsReceived Review[] @relation("ReviewRateeUser") // reviews about this user (personal)
-  notifications      Notification[] @relation("NotifRecipient") // alerts for this user
-  notificationsActed Notification[] @relation("NotifActor") // alerts this user triggered
+  notifications      Notification[] @relation("NotifRecipientUser") // alerts for this user
+  notificationsActed Notification[] @relation("NotifActorUser") // alerts this user triggered
   savedListings      SavedListing[] // listings this user bookmarked
   collections        Collection[] // named folders for saved listings
 }
@@ -78,6 +78,8 @@ model Company {
   reviewsReceived   Review[]  @relation("ReviewRateeCompany") // reviews about this company
   purchasesAsCompany Transaction[] @relation("TxBuyerCompany") // deals where this company is the buyer
   salesAsCompany     Transaction[] @relation("TxSellerCompany") // deals where this company is the seller (storefront)
+  notifications      Notification[] @relation("NotifRecipientCompany") // alerts for this company's team
+  notificationsActed Notification[] @relation("NotifActorCompany") // alerts this company triggered
 }
 
 enum MembershipRole {
@@ -356,10 +358,11 @@ model Transaction {
 }
 
 // -----------------------------------------------------------------------------
-// Notifications (PRD §8). In-app alerts fanned out on key events (new message,
-// new/updated deal, new review, new follower). Each is addressed to one recipient,
-// optionally records the actor (for an avatar), and carries an href to the relevant
-// page plus loose entity refs. readAt = null means unread (drives the bell badge).
+// Notifications (PRD §8 + company-as-actor). In-app alerts on key events. The
+// recipient is a PARTY: a user, OR a company (its permitted team sees the single
+// record in their bell, labeled with the company; shared read - first reader
+// clears it for the team). The actor records the human + the identity acted as.
+// readAt = null means unread (drives the bell badge).
 // -----------------------------------------------------------------------------
 
 enum NotificationType {
@@ -371,10 +374,14 @@ enum NotificationType {
 }
 
 model Notification {
-  id            String           @id @default(cuid())
-  userId        String // recipient
+  id String @id @default(cuid())
+  // Recipient party: exactly one of these is set.
+  recipientUserId    String?
+  recipientCompanyId String?
   type          NotificationType
-  actorId       String? // who triggered it (for the avatar); null for system
+  // Actor: the human who triggered it + the identity they acted as (for avatar).
+  actorUserId    String?
+  actorCompanyId String?
   title         String // short headline, e.g. "New message from Dean"
   body          String?          @db.Text // optional preview / detail
   href          String // where clicking the notification navigates
@@ -384,11 +391,14 @@ model Notification {
   readAt        DateTime? // null = unread
   createdAt     DateTime         @default(now())
 
-  user  User  @relation("NotifRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor User? @relation("NotifActor", fields: [actorId], references: [id], onDelete: SetNull)
+  recipientUser    User?    @relation("NotifRecipientUser", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  recipientCompany Company? @relation("NotifRecipientCompany", fields: [recipientCompanyId], references: [id], onDelete: Cascade)
+  actorUser        User?    @relation("NotifActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorCompany     Company? @relation("NotifActorCompany", fields: [actorCompanyId], references: [id], onDelete: SetNull)
 
-  @@index([userId, createdAt])
-  @@index([userId, readAt])
+  @@index([recipientUserId, readAt])
+  @@index([recipientCompanyId, readAt])
+  @@index([createdAt])
 }
 
 // -----------------------------------------------------------------------------

@@ -86,8 +86,11 @@ export async function SiteHeader() {
     href: n.href,
     read: n.readAt !== null,
     time: timeAgo(n.createdAt),
-    actorName: n.actor?.name ?? null,
-    actorAvatar: n.actor?.avatarUrl ?? null,
+    actorName: n.actorCompany?.name ?? n.actorUser?.name ?? null,
+    actorAvatar: n.actorCompany?.logoUrl ?? n.actorUser?.avatarUrl ?? null,
+    actorIsCompany: !!n.actorCompany,
+    // The company this alert is for (so members can tell their bell apart).
+    forCompany: n.recipientCompany?.name ?? null,
   }));
 
   // Acting-as switcher (only when the user can act for a company).

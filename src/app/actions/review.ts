@@ -14,24 +14,6 @@ function safeBack(value: FormDataEntryValue | null, fallback: string): string {
   return v.startsWith("/") && !v.startsWith("//") ? v : fallback;
 }
 
-/** Notify a ratee party of a new review (a user, or a company's team). */
-async function notifyRatee(
-  ratee: Party,
-  n: { actorId: string; title: string; body: string | null; href: string; transactionId: string },
-): Promise<void> {
-  if (ratee.type === "user") {
-    await createNotification({ userId: ratee.id, type: "review_new", ...n });
-    return;
-  }
-  const members = await prisma.membership.findMany({
-    where: { companyId: ratee.id, OR: [{ role: "owner" }, { canActAsCompany: true }] },
-    select: { userId: true },
-  });
-  for (const m of members) {
-    await createNotification({ userId: m.userId, type: "review_new", ...n });
-  }
-}
-
 /**
  * Leave a review on a COMPLETED deal (PRD §7). Each side rates the other once.
  * Parties are derived from the deal: the seller party is the listing's owner
@@ -105,8 +87,11 @@ export async function createReviewAction(formData: FormData) {
       href = co ? `/company/${co.slug}` : "/me";
     }
 
-    await notifyRatee(rateeParty, {
-      actorId: user.id,
+    await createNotification({
+      recipient: rateeParty,
+      type: "review_new",
+      actorUserId: user.id,
+      actorCompanyId: raterParty.type === "company" ? raterParty.id : null,
       title: `${raterName} left you a ${stars}-star review`,
       body,
       href,

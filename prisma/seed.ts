@@ -404,8 +404,9 @@ async function main() {
     // Dean's bell: the review Rivera left him (written as the company).
     await prisma.notification.create({
       data: {
-        userId: dean.id,
-        actorId: jordan.id,
+        recipientUserId: dean.id,
+        actorUserId: jordan.id,
+        actorCompanyId: rivera.id,
         type: "review_new",
         title: "Rivera Electric Co. left you a 5-star review",
         body: "Quick to communicate and paid on time. Great buyer.",
@@ -439,18 +440,18 @@ async function main() {
         { transactionId: hughesTx.id, raterUserId: dean.id, raterCompanyId: hughes.id, rateeUserId: marcus.id, stars: 5, body: "Smooth pickup, paid promptly. Welcome back anytime." },
       ],
     });
-    // The Hughes team's bells: the review Marcus left the company.
-    await prisma.notification.createMany({
-      data: [dean.id, tyler.id].map((uid) => ({
-        userId: uid,
-        actorId: marcus.id,
-        type: "review_new" as const,
+    // The Hughes team's shared bell: one company-targeted record.
+    await prisma.notification.create({
+      data: {
+        recipientCompanyId: hughes.id,
+        actorUserId: marcus.id,
+        type: "review_new",
         title: "Marcus Bell left Hughes Paving & Grading a 5-star review",
         body: "Machine was exactly as described and fairly priced.",
         href: `/company/${hughes.slug}`,
         transactionId: hughesTx.id,
         createdAt: hoursAgo(6),
-      })),
+      },
     });
   }
   // A pending purchase request TO Dean (so the Dean demo account has an incoming
@@ -481,11 +482,11 @@ async function main() {
         status: "pending",
       },
     });
-    // Dean's bell: the incoming buy request.
+    // Dean's bell: the incoming buy request (his personal listing).
     await prisma.notification.create({
       data: {
-        userId: dean.id,
-        actorId: tyler.id,
+        recipientUserId: dean.id,
+        actorUserId: tyler.id,
         type: "order_new",
         title: "Tyler Brooks started a deal",
         body: `Buy now request on "${stone.title}"`,
@@ -520,18 +521,18 @@ async function main() {
       ],
     });
     await prisma.thread.update({ where: { id: tc.id }, data: { updatedAt: hoursAgo(3) } });
-    // Fan the unread message out to the Hughes team's bells.
-    await prisma.notification.createMany({
-      data: [dean.id, tyler.id].map((uid) => ({
-        userId: uid,
-        actorId: marcus.id,
-        type: "message" as const,
+    // One company-targeted record for the Hughes team's shared bell.
+    await prisma.notification.create({
+      data: {
+        recipientCompanyId: hughes.id,
+        actorUserId: marcus.id,
+        type: "message",
         title: "New message from Marcus Bell",
         body: "Sounds good. Could I come look at it this week?",
         href: `/messages/${tc.id}`,
         threadId: tc.id,
         createdAt: hoursAgo(3),
-      })),
+      },
     });
   }
   if (roller) {
@@ -560,18 +561,18 @@ async function main() {
         status: "pending",
       },
     });
-    await prisma.notification.createMany({
-      data: [dean.id, tyler.id].map((uid) => ({
-        userId: uid,
-        actorId: whitney.id,
-        type: "order_new" as const,
+    await prisma.notification.create({
+      data: {
+        recipientCompanyId: hughes.id,
+        actorUserId: whitney.id,
+        type: "order_new",
         title: "Whitney Adams started a deal",
         body: `Bid on "${roller.title}"`,
         href: `/orders/${rollerTx.id}`,
         listingId: roller.id,
         transactionId: rollerTx.id,
         createdAt: hoursAgo(19),
-      })),
+      },
     });
   }
 

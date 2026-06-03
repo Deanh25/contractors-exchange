@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { MarkNotificationsRead } from "@/components/MarkNotificationsRead";
+import { getRecentNotifications } from "@/lib/notifications";
 import { timeAgo } from "@/lib/time";
 import type { NotificationType } from "@/generated/prisma/client";
 
@@ -60,12 +60,7 @@ export default async function NotificationsPage({
   const sp = await searchParams;
   const filter: "all" | "unread" = sp.filter === "unread" ? "unread" : "all";
 
-  const notifs = await prisma.notification.findMany({
-    where: { userId: user.id },
-    include: { actor: true },
-    orderBy: { createdAt: "desc" },
-    take: 60,
-  });
+  const notifs = await getRecentNotifications(user.id, 60);
 
   const unreadCount = notifs.filter((n) => n.readAt === null).length;
   const visible =
@@ -121,9 +116,10 @@ export default async function NotificationsPage({
                   >
                     <div className="relative shrink-0">
                       <Avatar
-                        name={n.actor?.name ?? "CX"}
-                        src={n.actor?.avatarUrl}
+                        name={n.actorCompany?.name ?? n.actorUser?.name ?? "CX"}
+                        src={n.actorCompany?.logoUrl ?? n.actorUser?.avatarUrl}
                         size={42}
+                        rounded={n.actorCompany ? "md" : "full"}
                       />
                       {unread && (
                         <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-brand-500" />
@@ -136,6 +132,11 @@ export default async function NotificationsPage({
                         >
                           {meta.label}
                         </span>
+                        {n.recipientCompany && (
+                          <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">
+                            {n.recipientCompany.name}
+                          </span>
+                        )}
                         <span className="text-xs text-slate-400">
                           {timeAgo(n.createdAt)}
                         </span>

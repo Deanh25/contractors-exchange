@@ -14,6 +14,9 @@ export type BellItem = {
   time: string;
   actorName: string | null;
   actorAvatar: string | null;
+  actorIsCompany?: boolean;
+  /** Set when this alert is addressed to a company (labels it in the bell). */
+  forCompany?: string | null;
 };
 
 const BELL =
@@ -104,12 +107,18 @@ export function NotificationBell({
                         name={n.actorName ?? "CX"}
                         src={n.actorAvatar}
                         size={36}
+                        rounded={n.actorIsCompany ? "md" : "full"}
                       />
                       {!n.read && (
                         <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-500" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
+                      {n.forCompany && (
+                        <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-brand-600">
+                          {n.forCompany}
+                        </p>
+                      )}
                       <p
                         className={`truncate text-sm ${
                           n.read

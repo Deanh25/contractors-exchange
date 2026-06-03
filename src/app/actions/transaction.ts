@@ -56,11 +56,13 @@ async function partyName(party: Party, fallback: string): Promise<string> {
   return fallback;
 }
 
-/** Notify a party of an order event (a user, or a company's permitted team). */
+/** Notify a recipient party of an order event, from an actor party (the human
+ * who acted + the identity they acted as). */
 async function notifyParty(
   recipient: Party,
+  actor: Party,
+  userId: string,
   n: {
-    actorId: string;
     type: "order_new" | "order_update";
     title: string;
     body: string | null;
@@ -69,29 +71,17 @@ async function notifyParty(
     transactionId: string;
   },
 ): Promise<void> {
-  const payload = {
-    actorId: n.actorId,
+  await createNotification({
+    recipient,
     type: n.type,
+    actorUserId: userId,
+    actorCompanyId: actor.type === "company" ? actor.id : null,
     title: n.title,
     body: n.body,
     href: n.href,
     listingId: n.listingId,
     transactionId: n.transactionId,
-  };
-  if (recipient.type === "user") {
-    await createNotification({ userId: recipient.id, ...payload });
-    return;
-  }
-  const members = await prisma.membership.findMany({
-    where: {
-      companyId: recipient.id,
-      OR: [{ role: "owner" }, { canActAsCompany: true }],
-    },
-    select: { userId: true },
   });
-  for (const m of members) {
-    await createNotification({ userId: m.userId, ...payload });
-  }
 }
 
 /**
@@ -169,8 +159,7 @@ export async function createTransactionAction(formData: FormData) {
       data: { updatedAt: new Date() },
     });
     const buyerName = await partyName(buyer, user.name);
-    await notifyParty(seller, {
-      actorId: user.id,
+    await notifyParty(seller, buyer, user.id, {
       type: "order_new",
       title: `${buyerName} started a deal`,
       body: txCreatedMessage(type, amount, listing.title),
@@ -236,8 +225,7 @@ export async function updateTransactionAction(formData: FormData) {
     data: { updatedAt: new Date() },
   });
 
-  await notifyParty(other, {
-    actorId: user.id,
+  await notifyParty(other, actingSide, user.id, {
     type: "order_update",
     title: txStatusMessage(next, actorName),
     body: tx.listing.title,

@@ -30,51 +30,6 @@ async function senderParty(userId: string): Promise<Party> {
     : { type: "user", id: userId };
 }
 
-/** Fan a notification out to a recipient party (a user, or a company's team). */
-async function notifyParty(
-  recipient: Party,
-  n: {
-    actorId: string;
-    title: string;
-    body: string | null;
-    href: string;
-    threadId: string;
-  },
-): Promise<void> {
-  if (recipient.type === "user") {
-    await createNotification({
-      userId: recipient.id,
-      actorId: n.actorId,
-      type: "message",
-      title: n.title,
-      body: n.body,
-      href: n.href,
-      threadId: n.threadId,
-    });
-    return;
-  }
-  // Company recipient: notify every member who can act for it (8.4 will make
-  // this a single company-targeted record).
-  const members = await prisma.membership.findMany({
-    where: {
-      companyId: recipient.id,
-      OR: [{ role: "owner" }, { canActAsCompany: true }],
-    },
-    select: { userId: true },
-  });
-  for (const m of members) {
-    await createNotification({
-      userId: m.userId,
-      actorId: n.actorId,
-      type: "message",
-      title: n.title,
-      body: n.body,
-      href: n.href,
-      threadId: n.threadId,
-    });
-  }
-}
-
 /** Start (or open) a thread with a recipient party as the current identity. */
 async function openThread(
   userId: string,
@@ -181,8 +136,11 @@ export async function sendMessageAction(formData: FormData) {
     });
     senderName = co?.name ?? user.name;
   }
-  await notifyParty(recipient, {
-    actorId: user.id,
+  await createNotification({
+    recipient,
+    type: "message",
+    actorUserId: user.id,
+    actorCompanyId: sender.type === "company" ? sender.id : null,
     title: `New message from ${senderName}`,
     body: body || "Sent a photo",
     href: `/messages/${threadId}`,

@@ -49,8 +49,8 @@ export async function toggleFollowAction(formData: FormData) {
     // maps to a notifiable recipient).
     if (targetType === "user") {
       await createNotification({
-        userId: targetValue,
-        actorId: user.id,
+        recipient: { type: "user", id: targetValue },
+        actorUserId: user.id,
         type: "follow_new",
         title: `${user.name} followed you`,
         href: `/u/${user.id}`,
