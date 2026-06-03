@@ -3,6 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { postAuthor, postTags, type PostWithAuthor } from "@/lib/posts";
 import { tradeLabel } from "@/lib/trades";
+import { isVideoUrl } from "@/lib/listings";
 import { timeAgo } from "@/lib/time";
 
 /** A discussion post in the feed (PRD §4): author, body, optional image + tags. */
@@ -61,14 +62,21 @@ export function PostCard({ post }: { post: PostWithAuthor }) {
         </p>
       )}
 
-      {post.imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={post.imageUrl}
-          alt=""
-          className="mt-3 max-h-96 w-full rounded-lg border border-slate-200 object-cover"
-        />
-      )}
+      {post.imageUrl &&
+        (isVideoUrl(post.imageUrl) ? (
+          <video
+            src={post.imageUrl}
+            controls
+            className="mt-3 max-h-96 w-full rounded-lg border border-slate-200 object-contain"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.imageUrl}
+            alt=""
+            className="mt-3 max-h-96 w-full rounded-lg border border-slate-200 object-cover"
+          />
+        ))}
 
       {(post.tradeTag || post.regionTag) && (
         <div className="mt-3 flex flex-wrap gap-2">

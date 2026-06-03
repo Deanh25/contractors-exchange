@@ -1,5 +1,6 @@
 import { createPostAction } from "@/app/actions/post";
 import { Avatar } from "@/components/Avatar";
+import { MediaInput } from "@/components/MediaInput";
 import { PostTagPicker } from "@/components/PostTagPicker";
 import { tradesByCategory } from "@/lib/trades";
 import { usStates } from "@/lib/cities";
@@ -81,15 +82,7 @@ export function PostComposer({
               ))}
             </select>
 
-            <label className="cursor-pointer rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-              📷 Photo
-              <input
-                name="image"
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-              />
-            </label>
+            <MediaInput name="image" label="📷 Photo / video" />
 
             <button
               type="submit"

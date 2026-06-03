@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { saveImage } from "@/lib/storage";
+import { saveMedia } from "@/lib/storage";
 import {
   findOrCreateThread,
   listingOwnerParty,
@@ -107,7 +107,7 @@ export async function sendMessageAction(formData: FormData) {
 
   const image = formData.get("image");
   const imageUrl =
-    image instanceof File && image.size > 0 ? await saveImage(image) : null;
+    image instanceof File && image.size > 0 ? await saveMedia(image) : null;
   if (!body && !imageUrl) redirect(`/messages/${threadId}`);
 
   await prisma.message.create({

@@ -17,9 +17,10 @@ import {
 import { getActingCompanies } from "@/lib/identity";
 import { buyerWhere } from "@/lib/orders";
 import { timeAgo } from "@/lib/time";
-import { ownerInclude } from "@/lib/listings";
+import { ownerInclude, isVideoUrl } from "@/lib/listings";
 import { TransactionPanel } from "@/components/TransactionPanel";
 import { MarkThreadRead } from "@/components/MarkThreadRead";
+import { MediaInput } from "@/components/MediaInput";
 
 export default async function ConversationPage({
   params,
@@ -137,14 +138,21 @@ export default async function ConversationPage({
                         {asCompany}
                       </p>
                     )}
-                    {m.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={m.imageUrl}
-                        alt=""
-                        className="mb-1 max-h-64 rounded-lg object-cover"
-                      />
-                    )}
+                    {m.imageUrl &&
+                      (isVideoUrl(m.imageUrl) ? (
+                        <video
+                          src={m.imageUrl}
+                          controls
+                          className="mb-1 max-h-64 rounded-lg object-contain"
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={m.imageUrl}
+                          alt=""
+                          className="mb-1 max-h-64 rounded-lg object-cover"
+                        />
+                      ))}
                     {m.body && <p className="whitespace-pre-line">{m.body}</p>}
                     <p
                       className={`mt-0.5 text-[10px] ${own ? "text-white/70" : "text-slate-400"}`}
@@ -179,15 +187,7 @@ export default async function ConversationPage({
               placeholder="Write a message…"
               className="flex-1 resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
-            <label className="cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
-              📷
-              <input
-                name="image"
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-              />
-            </label>
+            <MediaInput name="image" label="📷" />
             <button
               type="submit"
               className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"

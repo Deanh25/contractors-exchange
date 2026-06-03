@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { saveImage } from "@/lib/storage";
+import { saveMedia } from "@/lib/storage";
 import { TRADES } from "@/lib/trades";
 import { createNotification } from "@/lib/notifications";
 import type { Party } from "@/lib/messaging";
@@ -62,7 +62,7 @@ export async function createPostAction(formData: FormData) {
 
   const image = formData.get("image");
   const imageUrl =
-    image instanceof File && image.size > 0 ? await saveImage(image) : null;
+    image instanceof File && image.size > 0 ? await saveMedia(image) : null;
 
   const data: Prisma.PostCreateInput = {
     body,
