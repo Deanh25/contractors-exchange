@@ -8,15 +8,15 @@ import type { PriceAgreement } from "@/generated/prisma/client";
  * ever public; sellerNet / marginPct stay private (owner + admin only).
  */
 
-export type MarginBand = { defaultPct: number; minPct: number; maxPct: number };
+export type MarginBand = { defaultPct: number; minPct: number };
 
 /** Fallback band when a category has no configured CategoryMargin row. */
-export const DEFAULT_BAND: MarginBand = { defaultPct: 12, minPct: 6, maxPct: 25 };
+export const DEFAULT_BAND: MarginBand = { defaultPct: 12, minPct: 6 };
 
 export async function getMarginBand(category: string): Promise<MarginBand> {
   const row = await prisma.categoryMargin.findUnique({ where: { category } });
   return row
-    ? { defaultPct: row.defaultPct, minPct: row.minPct, maxPct: row.maxPct }
+    ? { defaultPct: row.defaultPct, minPct: row.minPct }
     : DEFAULT_BAND;
 }
 
@@ -25,11 +25,7 @@ export async function getAllMarginBands(): Promise<Record<string, MarginBand>> {
   const rows = await prisma.categoryMargin.findMany();
   const out: Record<string, MarginBand> = {};
   for (const r of rows) {
-    out[r.category] = {
-      defaultPct: r.defaultPct,
-      minPct: r.minPct,
-      maxPct: r.maxPct,
-    };
+    out[r.category] = { defaultPct: r.defaultPct, minPct: r.minPct };
   }
   return out;
 }
@@ -65,9 +61,9 @@ export type ComputedPricing = {
 
 /**
  * Resolve a set-price listing's pricing. Default: buyer price = net + default
- * margin (auto-agreed). Counter: the seller sets a custom buyer price - if its
- * implied margin is within [minPct, maxPct] it auto-agrees, otherwise it is held
- * for admin review (pending_admin, not public).
+ * margin (auto-agreed). Counter: the seller sets a custom buyer price - any
+ * price AT OR ABOVE the minimum margin auto-agrees (no maximum); below the
+ * minimum it is held for admin review (pending_admin, not public).
  */
 export function computePricing(
   band: MarginBand,
@@ -79,14 +75,14 @@ export function computePricing(
   const defaultPrice = buyerPriceFor(sellerNet, band.defaultPct);
   if (customPrice != null && Math.abs(customPrice - defaultPrice) > 0.005) {
     const pct = impliedMarginPct(sellerNet, customPrice);
-    const inBand = pct >= band.minPct && pct <= band.maxPct;
+    const ok = pct >= band.minPct;
     return {
       price: customPrice,
       sellerNet,
       marginPct: Math.round(pct * 100) / 100,
-      agreement: inBand ? "agreed" : "pending_admin",
-      counterReason: inBand ? null : counterReason,
-      listedAt: inBand ? now : null,
+      agreement: ok ? "agreed" : "pending_admin",
+      counterReason: ok ? null : counterReason,
+      listedAt: ok ? now : null,
     };
   }
   return {

@@ -5,8 +5,8 @@ import { LISTING_CHOICES, type ListingChoice } from "@/lib/listings";
 
 const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
 
-type Band = { defaultPct: number; minPct: number; maxPct: number };
-const FALLBACK_BAND: Band = { defaultPct: 12, minPct: 6, maxPct: 25 };
+type Band = { defaultPct: number; minPct: number };
+const FALLBACK_BAND: Band = { defaultPct: 12, minPct: 6 };
 
 /**
  * The four listing-type choices + the fields for the selected one (PRD §3). For
@@ -67,7 +67,6 @@ export function ListingTypeFields({
   const impliedPct =
     netNum > 0 && customNum > 0 ? (customNum / netNum - 1) * 100 : null;
   const belowMin = impliedPct !== null && impliedPct < band.minPct;
-  const aboveMax = impliedPct !== null && impliedPct > band.maxPct;
 
   // Confirm-on-submit when below the category minimum (the case we discourage).
   const needsConfirmRef = useRef(false);
@@ -182,20 +181,14 @@ export function ListingTypeFields({
                     to go live right away.
                   </p>
                 </div>
-              ) : aboveMax ? (
-                <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
-                  Above the {band.maxPct}% range - this will be reviewed before
-                  going live.
-                </p>
               ) : impliedPct !== null ? (
                 <p className="text-xs font-medium text-emerald-700">
-                  Within the {band.minPct}-{band.maxPct}% band - goes live
-                  immediately.
+                  At or above the {band.minPct}% minimum - goes live immediately.
                 </p>
               ) : (
                 <p className="text-xs text-slate-400">
-                  Within the allowed margin band it goes live immediately;
-                  outside it, it waits for a quick review.
+                  At or above the category minimum it goes live immediately; below
+                  it, it waits for a quick review.
                 </p>
               )}
             </div>

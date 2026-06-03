@@ -198,14 +198,14 @@ model Listing {
 
 // Per-category margin band (PRD §7B): the spread CX adds on top of a seller's
 // net to form the public buyer price. defaultPct is applied automatically; a
-// seller counter within [minPct, maxPct] auto-agrees, outside waits for admin.
-// Tuned in the admin panel (§7C) without code. Falls back to a code default.
+// seller may counter with any price AT OR ABOVE minPct (auto-agrees) - there is
+// no maximum. Below minPct waits for admin. Tuned in the admin panel (§7C)
+// without code. Falls back to a code default.
 model CategoryMargin {
   id         String   @id @default(cuid())
   category   String   @unique // trade slug (src/lib/trades.ts)
   defaultPct Float
   minPct     Float
-  maxPct     Float
   updatedAt  DateTime @updatedAt
 }
 

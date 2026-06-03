@@ -98,14 +98,14 @@ async function main() {
   // Per-category spread bands (PRD §7B). Others fall back to the code default.
   await prisma.categoryMargin.createMany({
     data: [
-      { category: "paving", defaultPct: 12, minPct: 6, maxPct: 22 },
-      { category: "electrical", defaultPct: 14, minPct: 8, maxPct: 25 },
-      { category: "hvac", defaultPct: 13, minPct: 7, maxPct: 24 },
-      { category: "plumbing", defaultPct: 13, minPct: 7, maxPct: 24 },
-      { category: "concrete", defaultPct: 11, minPct: 6, maxPct: 20 },
-      { category: "framing", defaultPct: 12, minPct: 6, maxPct: 22 },
-      { category: "roofing", defaultPct: 12, minPct: 6, maxPct: 22 },
-      { category: "landscaping", defaultPct: 15, minPct: 8, maxPct: 28 },
+      { category: "paving", defaultPct: 12, minPct: 6 },
+      { category: "electrical", defaultPct: 14, minPct: 8 },
+      { category: "hvac", defaultPct: 13, minPct: 7 },
+      { category: "plumbing", defaultPct: 13, minPct: 7 },
+      { category: "concrete", defaultPct: 11, minPct: 6 },
+      { category: "framing", defaultPct: 12, minPct: 6 },
+      { category: "roofing", defaultPct: 12, minPct: 6 },
+      { category: "landscaping", defaultPct: 15, minPct: 8 },
     ],
   });
 
