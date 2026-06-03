@@ -50,6 +50,7 @@ model User {
   notificationsActed Notification[] @relation("NotifActorUser") // alerts this user triggered
   savedListings      SavedListing[] // listings this user bookmarked
   collections        Collection[] // named folders for saved listings
+  taggedInPosts      PostTag[] @relation("PostTagUser") // posts that mention this user
 }
 
 model Company {
@@ -80,6 +81,7 @@ model Company {
   salesAsCompany     Transaction[] @relation("TxSellerCompany") // deals where this company is the seller (storefront)
   notifications      Notification[] @relation("NotifRecipientCompany") // alerts for this company's team
   notificationsActed Notification[] @relation("NotifActorCompany") // alerts this company triggered
+  taggedInPosts      PostTag[] @relation("PostTagCompany") // posts that mention this company
 }
 
 enum MembershipRole {
@@ -199,12 +201,31 @@ model Post {
 
   authorUser    User?    @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
   authorCompany Company? @relation(fields: [authorCompanyId], references: [id], onDelete: Cascade)
+  tags          PostTag[] // users / companies mentioned in this post
 
   @@index([tradeTag])
   @@index([regionTag])
   @@index([authorUserId])
   @@index([authorCompanyId])
   @@index([createdAt])
+}
+
+// A mention/tag in a post: a tagged PARTY (a user or a company). Tagged parties
+// get linked in the post and notified (company-as-actor: tag people or pages).
+model PostTag {
+  id              String   @id @default(cuid())
+  postId          String
+  taggedUserId    String?
+  taggedCompanyId String?
+  createdAt       DateTime @default(now())
+
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  taggedUser    User?    @relation("PostTagUser", fields: [taggedUserId], references: [id], onDelete: Cascade)
+  taggedCompany Company? @relation("PostTagCompany", fields: [taggedCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([taggedUserId])
+  @@index([taggedCompanyId])
 }
 
 enum FollowTargetType {
@@ -371,6 +392,7 @@ enum NotificationType {
   order_update // a deal you are in changed status
   review_new // you received a review
   follow_new // someone followed you
+  post_mention // you (or your company) were tagged in a post
 }
 
 model Notification {

@@ -329,6 +329,46 @@ async function main() {
     await prisma.post.create({ data: { ...rest, ...author } });
   }
 
+  // A post that tags people + a company (so the feed shows mentions, and the
+  // tagged parties get a post_mention notification).
+  await prisma.post.create({
+    data: {
+      authorUser: { connect: { id: chris.id } },
+      body: "Big thanks to the crews that helped us close out the Raleigh job on time. Couldn't have done it without good partners.",
+      tradeTag: "framing",
+      regionTag: "NC",
+      createdAt: hoursAgo(10),
+      tags: {
+        create: [
+          { taggedCompany: { connect: { id: hughes.id } } },
+          { taggedUser: { connect: { id: dean.id } } },
+        ],
+      },
+    },
+  });
+  await prisma.notification.createMany({
+    data: [
+      {
+        recipientCompanyId: hughes.id,
+        actorUserId: chris.id,
+        type: "post_mention" as const,
+        title: "Chris Nguyen mentioned you in a post",
+        body: "Big thanks to the crews that helped us close out the Raleigh job...",
+        href: "/feed",
+        createdAt: hoursAgo(10),
+      },
+      {
+        recipientUserId: dean.id,
+        actorUserId: chris.id,
+        type: "post_mention" as const,
+        title: "Chris Nguyen mentioned you in a post",
+        body: "Big thanks to the crews that helped us close out the Raleigh job...",
+        href: "/feed",
+        createdAt: hoursAgo(10),
+      },
+    ],
+  });
+
   console.log("Creating follows...");
   const follows = [
     // Dean's feed: his trades + state + a company and a person.

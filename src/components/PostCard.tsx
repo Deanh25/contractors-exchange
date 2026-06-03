@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { postAuthor, type PostWithAuthor } from "@/lib/posts";
+import { postAuthor, postTags, type PostWithAuthor } from "@/lib/posts";
 import { tradeLabel } from "@/lib/trades";
 import { timeAgo } from "@/lib/time";
 
 /** A discussion post in the feed (PRD §4): author, body, optional image + tags. */
 export function PostCard({ post }: { post: PostWithAuthor }) {
   const author = postAuthor(post);
+  const tags = postTags(post);
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4">
@@ -42,6 +43,23 @@ export function PostCard({ post }: { post: PostWithAuthor }) {
       </div>
 
       <p className="mt-3 whitespace-pre-line text-sm text-slate-800">{post.body}</p>
+
+      {tags.length > 0 && (
+        <p className="mt-2 text-xs text-slate-500">
+          with{" "}
+          {tags.map((t, i) => (
+            <span key={`${t.kind}-${t.href}`}>
+              {i > 0 && ", "}
+              <Link
+                href={t.href}
+                className="font-medium text-brand-700 hover:underline"
+              >
+                @{t.name}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
 
       {post.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element

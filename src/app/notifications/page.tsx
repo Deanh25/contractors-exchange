@@ -14,6 +14,7 @@ const TYPE_LABEL: Record<NotificationType, { label: string; cls: string }> = {
   order_update: { label: "Deal update", cls: "bg-amber-100 text-amber-700" },
   review_new: { label: "Review", cls: "bg-violet-100 text-violet-700" },
   follow_new: { label: "Follow", cls: "bg-slate-100 text-slate-600" },
+  post_mention: { label: "Mention", cls: "bg-rose-100 text-rose-700" },
 };
 
 function FilterTab({

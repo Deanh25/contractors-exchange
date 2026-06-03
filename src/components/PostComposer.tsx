@@ -1,5 +1,6 @@
 import { createPostAction } from "@/app/actions/post";
 import { Avatar } from "@/components/Avatar";
+import { PostTagPicker } from "@/components/PostTagPicker";
 import { tradesByCategory } from "@/lib/trades";
 import { usStates } from "@/lib/cities";
 
@@ -41,6 +42,10 @@ export function PostComposer({
             placeholder="Share an update, ask the trades a question…"
             className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
           />
+
+          <div className="mt-2">
+            <PostTagPicker />
+          </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {companies.length > 0 && (

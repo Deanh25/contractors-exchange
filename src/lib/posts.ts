@@ -1,10 +1,40 @@
 import type { Post, User, Company } from "@/generated/prisma/client";
 
-/** A post with its polymorphic author relations included. */
+type PostTagRel = { taggedUser: User | null; taggedCompany: Company | null };
+
+/** A post with its polymorphic author + tagged parties included. */
 export type PostWithAuthor = Post & {
   authorUser: User | null;
   authorCompany: Company | null;
+  tags?: PostTagRel[];
 };
+
+export type TagDisplay = {
+  name: string;
+  href: string;
+  kind: "user" | "company";
+};
+
+/** Resolve a post's tagged parties (users/companies) into uniform chips. */
+export function postTags(post: PostWithAuthor): TagDisplay[] {
+  return (post.tags ?? [])
+    .map((t): TagDisplay | null => {
+      if (t.taggedCompany)
+        return {
+          name: t.taggedCompany.name,
+          href: `/company/${t.taggedCompany.slug}`,
+          kind: "company",
+        };
+      if (t.taggedUser)
+        return {
+          name: t.taggedUser.name,
+          href: `/u/${t.taggedUser.id}`,
+          kind: "user",
+        };
+      return null;
+    })
+    .filter((t): t is TagDisplay => t !== null);
+}
 
 export type PostAuthor = {
   kind: "user" | "company";
@@ -42,5 +72,9 @@ export function postAuthor(post: PostWithAuthor): PostAuthor | null {
   return null;
 }
 
-/** The standard author include for post queries. */
-export const authorInclude = { authorUser: true, authorCompany: true } as const;
+/** The standard author (+ tags) include for post queries. */
+export const authorInclude = {
+  authorUser: true,
+  authorCompany: true,
+  tags: { include: { taggedUser: true, taggedCompany: true } },
+} as const;
