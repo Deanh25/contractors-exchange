@@ -59,7 +59,7 @@ export async function WorkspaceShell({
   if (company) {
     const [pendingOrders, unreadMessages] = await Promise.all([
       prisma.transaction.count({
-        where: { status: "pending", listing: { ownerCompanyId: company.id } },
+        where: { status: "pending", sellerCompanyId: company.id },
       }),
       getUnreadCount({ type: "company", id: company.id }),
     ]);
@@ -82,7 +82,7 @@ export async function WorkspaceShell({
   } else {
     const [pendingOrders, unreadMessages, unreadNotifs] = await Promise.all([
       prisma.transaction.count({
-        where: { sellerId: user.id, status: "pending" },
+        where: { sellerUserId: user.id, status: "pending" },
       }),
       getUnreadCount({ type: "user", id: user.id }),
       getUnreadNotificationCount(user.id),

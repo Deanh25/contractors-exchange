@@ -65,6 +65,18 @@ function pairParties(p1: SeedParty, p2: SeedParty) {
 }
 const pair = (a: string, b: string) => pairParties(U(a), U(b));
 
+// Transaction buyer/seller party columns.
+function txCols(buyer: SeedParty, seller: SeedParty) {
+  return {
+    buyerType: buyer.type,
+    buyerUserId: buyer.type === "user" ? buyer.id : null,
+    buyerCompanyId: buyer.type === "company" ? buyer.id : null,
+    sellerType: seller.type,
+    sellerUserId: seller.type === "user" ? seller.id : null,
+    sellerCompanyId: seller.type === "company" ? seller.id : null,
+  };
+}
+
 async function main() {
   console.log("Clearing existing data...");
   await prisma.notification.deleteMany();
@@ -376,10 +388,10 @@ async function main() {
     const dealTx = await prisma.transaction.create({
       data: {
         listingId: panel.id,
-        buyerId: dean.id,
-        sellerId: jordan.id,
+        ...txCols(U(dean.id), C(rivera.id)),
         type: "bid",
         amount: 1500,
+        buyerPrice: 1500,
         status: "completed",
       },
     });
@@ -414,10 +426,10 @@ async function main() {
     const hughesTx = await prisma.transaction.create({
       data: {
         listingId: bobcatListing.id,
-        buyerId: marcus.id,
-        sellerId: dean.id,
+        ...txCols(U(marcus.id), C(hughes.id)),
         type: "purchase",
         amount: 38500,
+        buyerPrice: 38500,
         status: "completed",
       },
     });
@@ -462,10 +474,10 @@ async function main() {
     const stoneTx = await prisma.transaction.create({
       data: {
         listingId: stone.id,
-        buyerId: tyler.id,
-        sellerId: dean.id,
+        ...txCols(U(tyler.id), U(dean.id)),
         type: "purchase",
         amount: 24,
+        buyerPrice: 24,
         status: "pending",
       },
     });
@@ -535,6 +547,32 @@ async function main() {
       ],
     });
     await prisma.thread.update({ where: { id: td.id }, data: { updatedAt: hoursAgo(20) } });
+
+    // A pending bid ON the company's roller (so the Hughes COMPANY orders book
+    // has an actionable incoming deal + an Orders badge when acting as Hughes).
+    const rollerTx = await prisma.transaction.create({
+      data: {
+        listingId: roller.id,
+        ...txCols(U(whitney.id), C(hughes.id)),
+        type: "bid",
+        amount: 9500,
+        buyerPrice: 9500,
+        status: "pending",
+      },
+    });
+    await prisma.notification.createMany({
+      data: [dean.id, tyler.id].map((uid) => ({
+        userId: uid,
+        actorId: whitney.id,
+        type: "order_new" as const,
+        title: "Whitney Adams started a deal",
+        body: `Bid on "${roller.title}"`,
+        href: `/orders/${rollerTx.id}`,
+        listingId: roller.id,
+        transactionId: rollerTx.id,
+        createdAt: hoursAgo(19),
+      })),
+    });
   }
 
   console.log("Creating saved listings...");

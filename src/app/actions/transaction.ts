@@ -6,9 +6,17 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import {
   findOrCreateThread,
-  resolveListingRecipient,
   listingOwnerParty,
+  controlsParty,
+  partiesEqual,
+  type Party,
 } from "@/lib/messaging";
+import { getActingContext, getActingCompanies } from "@/lib/identity";
+import {
+  txPartyColumns,
+  txParties,
+  buyerWhere,
+} from "@/lib/orders";
 import {
   txTypeForListing,
   txCreatedMessage,
@@ -23,11 +31,74 @@ function safeBack(value: FormDataEntryValue | null, fallback: string): string {
   return v.startsWith("/") && !v.startsWith("//") ? v : fallback;
 }
 
+/** The party the user is currently acting as. */
+async function actingParty(userId: string): Promise<Party> {
+  const ctx = await getActingContext(userId);
+  return ctx.type === "company"
+    ? { type: "company", id: ctx.company.id }
+    : { type: "user", id: userId };
+}
+
+async function actingCompanyIdSet(userId: string): Promise<Set<string>> {
+  const cs = await getActingCompanies(userId);
+  return new Set(cs.map((c) => c.id));
+}
+
+/** Display name of a party (company name, or the acting user's name). */
+async function partyName(party: Party, fallback: string): Promise<string> {
+  if (party.type === "company") {
+    const co = await prisma.company.findUnique({
+      where: { id: party.id },
+      select: { name: true },
+    });
+    return co?.name ?? fallback;
+  }
+  return fallback;
+}
+
+/** Notify a party of an order event (a user, or a company's permitted team). */
+async function notifyParty(
+  recipient: Party,
+  n: {
+    actorId: string;
+    type: "order_new" | "order_update";
+    title: string;
+    body: string | null;
+    href: string;
+    listingId: string | null;
+    transactionId: string;
+  },
+): Promise<void> {
+  const payload = {
+    actorId: n.actorId,
+    type: n.type,
+    title: n.title,
+    body: n.body,
+    href: n.href,
+    listingId: n.listingId,
+    transactionId: n.transactionId,
+  };
+  if (recipient.type === "user") {
+    await createNotification({ userId: recipient.id, ...payload });
+    return;
+  }
+  const members = await prisma.membership.findMany({
+    where: {
+      companyId: recipient.id,
+      OR: [{ role: "owner" }, { canActAsCompany: true }],
+    },
+    select: { userId: true },
+  });
+  for (const m of members) {
+    await createNotification({ userId: m.userId, ...payload });
+  }
+}
+
 /**
- * Confirm a deal from the checkout/review step: purchase / bid / trade-request.
- * Creates the record (stubbed - no money), opens a side-channel thread + posts an
- * auto-message that notifies the seller, then lands on the ORDER page (checkout
- * feel), NOT the message thread. De-dupes an existing active deal for the buyer.
+ * Confirm a deal from the checkout step. The BUYER is the current acting
+ * identity (you, or a company you act for); the SELLER is the listing's owning
+ * party. So a personal listing never routes through a company, and each company
+ * transacts for its own products. Lands on the order page (checkout feel).
  */
 export async function createTransactionAction(formData: FormData) {
   const user = await requireUser("/listings");
@@ -35,8 +106,17 @@ export async function createTransactionAction(formData: FormData) {
   const listing = await prisma.listing.findUnique({ where: { id: listingId } });
   if (!listing) redirect("/listings");
 
-  const sellerId = await resolveListingRecipient(listing);
-  if (!sellerId || sellerId === user.id) redirect(`/listings/${listingId}`);
+  const seller = listingOwnerParty(listing);
+  const buyer = await actingParty(user.id);
+  const acting = await actingCompanyIdSet(user.id);
+  // Can't buy with no seller, your own identity, or a listing you control.
+  if (
+    !seller ||
+    partiesEqual(buyer, seller) ||
+    controlsParty(seller, user.id, acting)
+  ) {
+    redirect(`/listings/${listingId}`);
+  }
 
   const type = txTypeForListing(listing.type);
   let amount: number | null = null;
@@ -50,18 +130,14 @@ export async function createTransactionAction(formData: FormData) {
   }
   const message = String(formData.get("message") ?? "").trim() || null;
 
-  // Deal thread = buyer (the user) <-> the listing's owning party (so it aligns
-  // with the messaging thread for company listings).
-  const ownerParty = listingOwnerParty(listing);
-  const thread = ownerParty
-    ? await findOrCreateThread({ type: "user", id: user.id }, ownerParty, listingId)
-    : null;
+  // Deal thread = buyer party <-> seller party (aligns with messaging).
+  const thread = await findOrCreateThread(buyer, seller, listingId);
 
-  // One active deal per (listing, buyer): reuse it instead of duplicating.
+  // One active deal per (listing, buyer party): reuse it instead of duplicating.
   const existing = await prisma.transaction.findFirst({
     where: {
       listingId,
-      buyerId: user.id,
+      ...buyerWhere(buyer),
       status: { in: ["pending", "accepted"] },
     },
   });
@@ -70,28 +146,33 @@ export async function createTransactionAction(formData: FormData) {
     txId = existing.id;
   } else {
     const created = await prisma.transaction.create({
-      data: { listingId, buyerId: user.id, sellerId, type, amount, message },
+      data: {
+        listingId,
+        ...txPartyColumns(buyer, seller),
+        type,
+        amount,
+        buyerPrice: amount, // §7B: public price (spread flow lands later)
+        message,
+      },
     });
     txId = created.id;
-    if (thread) {
-      await prisma.message.create({
-        data: {
-          threadId: thread.id,
-          senderUserId: user.id,
-          body: txCreatedMessage(type, amount, listing.title),
-        },
-      });
-      await prisma.thread.update({
-        where: { id: thread.id },
-        data: { updatedAt: new Date() },
-      });
-    }
-    // Alert the seller that a new deal landed.
-    await createNotification({
-      userId: sellerId,
+    await prisma.message.create({
+      data: {
+        threadId: thread.id,
+        senderUserId: user.id,
+        senderCompanyId: buyer.type === "company" ? buyer.id : null,
+        body: txCreatedMessage(type, amount, listing.title),
+      },
+    });
+    await prisma.thread.update({
+      where: { id: thread.id },
+      data: { updatedAt: new Date() },
+    });
+    const buyerName = await partyName(buyer, user.name);
+    await notifyParty(seller, {
       actorId: user.id,
       type: "order_new",
-      title: `${user.name} started a deal`,
+      title: `${buyerName} started a deal`,
       body: txCreatedMessage(type, amount, listing.title),
       href: `/orders/${txId}`,
       listingId,
@@ -115,8 +196,10 @@ export async function updateTransactionAction(formData: FormData) {
   });
   if (!tx) redirect("/orders");
 
-  const isSeller = tx.sellerId === user.id;
-  const isBuyer = tx.buyerId === user.id;
+  const { buyer, seller } = txParties(tx);
+  const acting = await actingCompanyIdSet(user.id);
+  const isSeller = controlsParty(seller, user.id, acting);
+  const isBuyer = controlsParty(buyer, user.id, acting);
   if (!isSeller && !isBuyer) redirect("/orders");
 
   let next: TransactionStatus | null = null;
@@ -133,43 +216,37 @@ export async function updateTransactionAction(formData: FormData) {
     data: { status: next },
   });
 
-  // Reflect the change in the conversation thread (buyer <-> listing owner party).
-  const ownerParty = listingOwnerParty(tx.listing);
-  const thread = ownerParty
-    ? await findOrCreateThread(
-        { type: "user", id: tx.buyerId },
-        ownerParty,
-        tx.listingId,
-      )
-    : null;
-  if (thread) {
-    await prisma.message.create({
-      data: {
-        threadId: thread.id,
-        senderUserId: user.id,
-        body: txStatusMessage(next, user.name),
-      },
-    });
-    await prisma.thread.update({
-      where: { id: thread.id },
-      data: { updatedAt: new Date() },
-    });
-  }
+  // The acting side (the one the user controls) authors the status message.
+  const actingSide: Party = isSeller ? seller : buyer;
+  const other: Party = isSeller ? buyer : seller;
+  const actorName = await partyName(actingSide, user.name);
 
-  // Notify the other party of the status change.
-  const otherPartyId = isSeller ? tx.buyerId : tx.sellerId;
-  await createNotification({
-    userId: otherPartyId,
+  // Reflect the change in the conversation thread (buyer <-> seller party).
+  const thread = await findOrCreateThread(buyer, seller, tx.listingId);
+  await prisma.message.create({
+    data: {
+      threadId: thread.id,
+      senderUserId: user.id,
+      senderCompanyId: actingSide.type === "company" ? actingSide.id : null,
+      body: txStatusMessage(next, actorName),
+    },
+  });
+  await prisma.thread.update({
+    where: { id: thread.id },
+    data: { updatedAt: new Date() },
+  });
+
+  await notifyParty(other, {
     actorId: user.id,
     type: "order_update",
-    title: txStatusMessage(next, user.name),
+    title: txStatusMessage(next, actorName),
     body: tx.listing.title,
     href: `/orders/${txId}`,
     listingId: tx.listingId,
     transactionId: txId,
   });
 
-  if (thread) revalidatePath(`/messages/${thread.id}`);
+  revalidatePath(`/messages/${thread.id}`);
   revalidatePath("/orders");
   redirect(back);
 }

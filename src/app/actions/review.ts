@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications";
-import { listingOwnerParty, type Party } from "@/lib/messaging";
-import { canActAs } from "@/lib/identity";
+import { controlsParty, type Party } from "@/lib/messaging";
+import { getActingCompanies } from "@/lib/identity";
+import { txParties } from "@/lib/orders";
 
 function safeBack(value: FormDataEntryValue | null, fallback: string): string {
   const v = typeof value === "string" ? value : "";
@@ -44,35 +45,28 @@ export async function createReviewAction(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim() || null;
   const back = safeBack(formData.get("back"), "/orders");
 
-  const tx = await prisma.transaction.findUnique({
-    where: { id: txId },
-    include: { listing: true },
-  });
+  const tx = await prisma.transaction.findUnique({ where: { id: txId } });
   if (!tx) redirect("/orders");
   if (tx.status !== "completed") redirect(back);
   if (!(stars >= 1 && stars <= 5)) redirect(back);
 
-  const sellerParty = listingOwnerParty(tx.listing);
-  const buyerParty: Party = { type: "user", id: tx.buyerId };
-  const isBuyer = tx.buyerId === user.id;
-  const controlsSeller =
-    !!sellerParty &&
-    (sellerParty.type === "user"
-      ? sellerParty.id === user.id
-      : await canActAs(user.id, sellerParty.id));
+  // Reviewer = the side the user controls; ratee = the other side.
+  const { buyer, seller } = txParties(tx);
+  const acting = new Set((await getActingCompanies(user.id)).map((c) => c.id));
+  const isBuyer = controlsParty(buyer, user.id, acting);
+  const controlsSeller = controlsParty(seller, user.id, acting);
 
   let raterParty: Party;
-  let rateeParty: Party | null;
+  let rateeParty: Party;
   if (isBuyer) {
-    raterParty = buyerParty;
-    rateeParty = sellerParty;
-  } else if (controlsSeller && sellerParty) {
-    raterParty = sellerParty;
-    rateeParty = buyerParty;
+    raterParty = buyer;
+    rateeParty = seller;
+  } else if (controlsSeller) {
+    raterParty = seller;
+    rateeParty = buyer;
   } else {
     redirect("/orders");
   }
-  if (!rateeParty) redirect(back);
 
   // One review per person per deal.
   const existing = await prisma.review.findUnique({

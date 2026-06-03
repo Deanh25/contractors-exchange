@@ -42,8 +42,8 @@ model User {
   threadsAsUserA Thread[] @relation("ThreadAUser") // threads where this user is party A
   threadsAsUserB Thread[] @relation("ThreadBUser") // threads where this user is party B
   messagesSent   Message[] @relation("MessageSenderUser") // messages this user typed
-  purchases   Transaction[] @relation("TxBuyer") // deals where this user is the buyer
-  sales       Transaction[] @relation("TxSeller") // deals where this user is the seller
+  purchasesAsUser Transaction[] @relation("TxBuyerUser") // deals where this user is the buyer
+  salesAsUser     Transaction[] @relation("TxSellerUser") // deals where this user is the seller
   reviewsWritten  Review[] @relation("ReviewRaterUser") // reviews this user wrote
   reviewsReceived Review[] @relation("ReviewRateeUser") // reviews about this user (personal)
   notifications      Notification[] @relation("NotifRecipient") // alerts for this user
@@ -76,6 +76,8 @@ model Company {
   messagesSent      Message[] @relation("MessageSenderCompany") // messages sent as this company
   reviewsWritten    Review[]  @relation("ReviewRaterCompany") // reviews written as this company
   reviewsReceived   Review[]  @relation("ReviewRateeCompany") // reviews about this company
+  purchasesAsCompany Transaction[] @relation("TxBuyerCompany") // deals where this company is the buyer
+  salesAsCompany     Transaction[] @relation("TxSellerCompany") // deals where this company is the seller (storefront)
 }
 
 enum MembershipRole {
@@ -314,25 +316,41 @@ enum TransactionStatus {
 }
 
 model Transaction {
-  id        String            @id @default(cuid())
+  id        String @id @default(cuid())
   listingId String
-  buyerId   String
-  sellerId  String
+  // Buyer and seller are PARTIES (a user or a company), so a company's deals
+  // form its own orders book, separate from any member's personal orders.
+  buyerType       PartyType
+  buyerUserId     String?
+  buyerCompanyId  String?
+  sellerType      PartyType
+  sellerUserId    String?
+  sellerCompanyId String?
   type      TransactionType
   amount    Decimal?          @db.Decimal(12, 2) // null for trade requests
+  // Spread pricing (PRD §7B): buyerPrice is public; sellerNet/margin are private
+  // (filtered from buyer-facing views). Populated simply for now (buyerPrice =
+  // amount) until the full per-category margin + agreement flow lands.
+  buyerPrice Decimal?         @db.Decimal(12, 2)
+  sellerNet  Decimal?         @db.Decimal(12, 2)
+  margin     Decimal?         @db.Decimal(12, 2)
   message   String?           @db.Text
   status    TransactionStatus @default(pending)
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
-  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  buyer   User    @relation("TxBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
-  seller  User    @relation("TxSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerUser     User?    @relation("TxBuyerUser", fields: [buyerUserId], references: [id], onDelete: Cascade)
+  buyerCompany  Company? @relation("TxBuyerCompany", fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+  sellerUser    User?    @relation("TxSellerUser", fields: [sellerUserId], references: [id], onDelete: Cascade)
+  sellerCompany Company? @relation("TxSellerCompany", fields: [sellerCompanyId], references: [id], onDelete: Cascade)
   reviews Review[]
 
   @@index([listingId])
-  @@index([buyerId])
-  @@index([sellerId])
+  @@index([buyerUserId])
+  @@index([buyerCompanyId])
+  @@index([sellerUserId])
+  @@index([sellerCompanyId])
   @@index([status])
   @@index([createdAt])
 }

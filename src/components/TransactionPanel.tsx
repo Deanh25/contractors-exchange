@@ -11,16 +11,13 @@ import type { Listing, Transaction } from "@/generated/prisma/client";
 export function TransactionPanel({
   listing,
   tx,
-  viewerId,
-  buyerId,
+  isBuyer,
 }: {
   listing: Listing;
   tx: Transaction | null;
-  viewerId: string;
-  sellerId: string;
-  buyerId: string;
+  /** Is the viewer on the buyer side of this deal? (drives the checkout CTA) */
+  isBuyer: boolean;
 }) {
-  const isBuyer = viewerId === buyerId;
   const photo = photosFromJson(listing.photos)[0];
   const badge = listingBadge(listing.type, listing.tradeKind);
   const primaryBtn =

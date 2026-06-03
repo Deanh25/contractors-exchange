@@ -8,7 +8,9 @@ import { StarRating } from "@/components/StarRating";
 import { getUserRating, getCompanyRating } from "@/lib/reviews";
 import { messageAboutListingAction } from "@/app/actions/message";
 import { updateListingStatusAction } from "@/app/actions/listing";
-import { resolveListingRecipient } from "@/lib/messaging";
+import { listingOwnerParty, controlsParty, partiesEqual } from "@/lib/messaging";
+import { getActingContext, getActingCompanies } from "@/lib/identity";
+import { buyerWhere, sellerWhere } from "@/lib/orders";
 import { SaveButton } from "@/components/SaveButton";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
@@ -91,15 +93,23 @@ export default async function ListingDetailPage({
     canManage = m?.role === "owner";
   }
 
-  // Deal context (PRD §7). For a buyer: their latest request on this listing.
-  // For the seller: how many requests are pending.
-  const sellerId = !canManage ? await resolveListingRecipient(listing) : null;
+  // Deal context (PRD §7). The buyer is the viewer's current acting identity;
+  // show their latest request on this listing (unless they own/control it).
+  const sellerParty = listingOwnerParty(listing);
   let myTx = null;
-  if (viewer && sellerId && sellerId !== viewer.id) {
-    myTx = await prisma.transaction.findFirst({
-      where: { listingId: listing.id, buyerId: viewer.id },
-      orderBy: { createdAt: "desc" },
-    });
+  if (viewer && sellerParty) {
+    const ctx = await getActingContext(viewer.id);
+    const buyerParty =
+      ctx.type === "company"
+        ? { type: "company" as const, id: ctx.company.id }
+        : { type: "user" as const, id: viewer.id };
+    const acting = new Set((await getActingCompanies(viewer.id)).map((c) => c.id));
+    if (!partiesEqual(buyerParty, sellerParty) && !controlsParty(sellerParty, viewer.id, acting)) {
+      myTx = await prisma.transaction.findFirst({
+        where: { listingId: listing.id, ...buyerWhere(buyerParty) },
+        orderBy: { createdAt: "desc" },
+      });
+    }
   }
   const myTxActive =
     myTx &&
@@ -107,10 +117,11 @@ export default async function ListingDetailPage({
       myTx.status === "accepted" ||
       myTx.status === "completed");
 
+  // For the seller (owner): how many requests are pending on this listing.
   let pendingCount = 0;
-  if (canManage) {
+  if (canManage && sellerParty) {
     pendingCount = await prisma.transaction.count({
-      where: { listingId: listing.id, status: "pending" },
+      where: { listingId: listing.id, ...sellerWhere(sellerParty), status: "pending" },
     });
   }
 

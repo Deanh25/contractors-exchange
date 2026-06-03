@@ -6,6 +6,14 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { TX_STATUS, TX_TYPE_LABEL } from "@/lib/transactions";
 import { formatMoney } from "@/lib/listings";
 import { timeAgo } from "@/lib/time";
+import { getActingContext } from "@/lib/identity";
+import {
+  txPartyInclude,
+  orderPartyDisplay,
+  buyerWhere,
+  sellerWhere,
+} from "@/lib/orders";
+import type { Party } from "@/lib/messaging";
 import type { Prisma, TransactionStatus } from "@/generated/prisma/client";
 
 const STATUSES: TransactionStatus[] = [
@@ -60,8 +68,16 @@ export default async function OrdersPage({
   const status = (sp.status ?? "").trim();
   const q = (sp.q ?? "").trim();
 
-  const roleWhere =
-    tab === "selling" ? { sellerId: user.id } : { buyerId: user.id };
+  // The orders book is scoped to the current acting identity (you, or a company
+  // you act for). Switch identity in the top bar to see a company's orders.
+  const ctx = await getActingContext(user.id);
+  const party: Party =
+    ctx.type === "company"
+      ? { type: "company", id: ctx.company.id }
+      : { type: "user", id: user.id };
+  const ledgerLabel = ctx.type === "company" ? ctx.company.name : "you";
+
+  const roleWhere = tab === "selling" ? sellerWhere(party) : buyerWhere(party);
   const where: Prisma.TransactionWhereInput = {
     ...roleWhere,
     ...(STATUSES.includes(status as TransactionStatus)
@@ -73,12 +89,12 @@ export default async function OrdersPage({
   const [rows, sellingCount, buyingCount] = await Promise.all([
     prisma.transaction.findMany({
       where,
-      include: { listing: true, buyer: true, seller: true },
+      include: { listing: true, ...txPartyInclude },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
-    prisma.transaction.count({ where: { sellerId: user.id } }),
-    prisma.transaction.count({ where: { buyerId: user.id } }),
+    prisma.transaction.count({ where: sellerWhere(party) }),
+    prisma.transaction.count({ where: buyerWhere(party) }),
   ]);
 
   const allParams: Record<string, string> = { tab, status, q };
@@ -96,7 +112,9 @@ export default async function OrdersPage({
       <WorkspaceShell user={user} active="orders">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Orders</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Your on-platform deals. Open one to review, respond, and complete it.
+          On-platform deals for{" "}
+          <span className="font-medium text-slate-700">{ledgerLabel}</span>. Open
+          one to review, respond, and complete it.
         </p>
 
         {/* Selling / Buying tabs */}
@@ -171,14 +189,19 @@ export default async function OrdersPage({
         ) : (
           <ul className="mt-4 space-y-2">
             {rows.map((t) => {
-              const other = tab === "selling" ? t.buyer : t.seller;
+              const other = orderPartyDisplay(t, tab === "selling" ? "buyer" : "seller");
               return (
                 <li key={t.id}>
                   <Link
                     href={`/orders/${t.id}`}
                     className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:bg-slate-50"
                   >
-                    <Avatar name={other.name} src={other.avatarUrl} size={40} />
+                    <Avatar
+                      name={other.name}
+                      src={other.avatarUrl}
+                      size={40}
+                      rounded={other.kind === "company" ? "md" : "full"}
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900">
                         {t.listing.title}

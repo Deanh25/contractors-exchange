@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { StarRating } from "@/components/StarRating";
 import { createTransactionAction } from "@/app/actions/transaction";
-import { resolveListingRecipient } from "@/lib/messaging";
+import { listingOwnerParty, controlsParty, partiesEqual } from "@/lib/messaging";
+import { getActingContext, getActingCompanies } from "@/lib/identity";
+import { buyerWhere } from "@/lib/orders";
 import { getUserRating, getCompanyRating } from "@/lib/reviews";
 import {
   formatMoney,
@@ -35,12 +37,22 @@ export default async function CheckoutPage({
   });
   if (!listing) notFound();
 
-  const sellerId = await resolveListingRecipient(listing);
-  if (!sellerId || sellerId === user.id) redirect(`/listings/${listingId}`);
+  // Buyer = current acting identity; seller = the listing's owning party. Can't
+  // buy your own listing (one you control).
+  const seller = listingOwnerParty(listing);
+  const ctx = await getActingContext(user.id);
+  const buyer =
+    ctx.type === "company"
+      ? { type: "company" as const, id: ctx.company.id }
+      : { type: "user" as const, id: user.id };
+  const acting = new Set((await getActingCompanies(user.id)).map((c) => c.id));
+  if (!seller || partiesEqual(buyer, seller) || controlsParty(seller, user.id, acting)) {
+    redirect(`/listings/${listingId}`);
+  }
 
-  // If the buyer already has an active deal here, skip straight to its order.
+  // If this identity already has an active deal here, skip to its order.
   const existing = await prisma.transaction.findFirst({
-    where: { listingId, buyerId: user.id, status: { in: ["pending", "accepted"] } },
+    where: { listingId, ...buyerWhere(buyer), status: { in: ["pending", "accepted"] } },
   });
   if (existing) redirect(`/orders/${existing.id}`);
 

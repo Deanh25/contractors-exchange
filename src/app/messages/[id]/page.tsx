@@ -9,11 +9,13 @@ import {
   threadParties,
   controlsParty,
   partyDisplay,
+  partiesEqual,
   messageFromParty,
-  resolveListingRecipient,
+  listingOwnerParty,
   type Party,
 } from "@/lib/messaging";
 import { getActingCompanies } from "@/lib/identity";
+import { buyerWhere } from "@/lib/orders";
 import { timeAgo } from "@/lib/time";
 import { ownerInclude } from "@/lib/listings";
 import { TransactionPanel } from "@/components/TransactionPanel";
@@ -58,22 +60,22 @@ export default async function ConversationPage({
   const other = partyDisplay(thread, otherSide);
   const listing = thread.listing;
 
-  // Deal panel (PRD §7): shown for legacy user-to-user threads. Company-party
-  // deals move to the order page once orders are party-aware (8.3).
-  let dealSellerId: string | null = null;
-  let dealBuyerId: string | null = null;
+  // Deal panel (PRD §7): when the thread is about a listing and the seller party
+  // (listing owner) is one of the two participants, the buyer party is the other
+  // side. Works for user-to-user and buyer-to-company threads.
+  let dealActive = false;
+  let dealIsBuyer = false;
   let tx = null;
-  if (listing && thread.aType === "user" && thread.bType === "user") {
-    dealSellerId = await resolveListingRecipient(listing);
-    if (dealSellerId === thread.aUserId || dealSellerId === thread.bUserId) {
-      dealBuyerId =
-        dealSellerId === thread.aUserId ? thread.bUserId : thread.aUserId;
+  if (listing) {
+    const sellerParty = listingOwnerParty(listing);
+    if (sellerParty && (partiesEqual(sellerParty, a) || partiesEqual(sellerParty, b))) {
+      const buyerParty = partiesEqual(sellerParty, a) ? b : a;
+      dealActive = true;
+      dealIsBuyer = partiesEqual(myParty, buyerParty);
       tx = await prisma.transaction.findFirst({
-        where: { listingId: listing.id, buyerId: dealBuyerId! },
+        where: { listingId: listing.id, ...buyerWhere(buyerParty) },
         orderBy: { createdAt: "desc" },
       });
-    } else {
-      dealSellerId = null;
     }
   }
 
@@ -98,15 +100,9 @@ export default async function ConversationPage({
           </Link>
         </div>
 
-        {/* Leakage-aware deal panel (user-to-user threads about a listing) */}
-        {listing && dealSellerId && dealBuyerId && (
-          <TransactionPanel
-            listing={listing}
-            tx={tx}
-            viewerId={user.id}
-            sellerId={dealSellerId}
-            buyerId={dealBuyerId}
-          />
+        {/* Leakage-aware deal panel (thread about a listing, seller is a party) */}
+        {listing && dealActive && (
+          <TransactionPanel listing={listing} tx={tx} isBuyer={dealIsBuyer} />
         )}
 
         {/* Messages */}

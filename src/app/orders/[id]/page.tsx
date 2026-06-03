@@ -8,7 +8,9 @@ import {
   updateTransactionAction,
 } from "@/app/actions/transaction";
 import { createReviewAction } from "@/app/actions/review";
-import { findThread, listingOwnerParty } from "@/lib/messaging";
+import { findThread, controlsParty } from "@/lib/messaging";
+import { getActingCompanies } from "@/lib/identity";
+import { txParties, txPartyInclude, orderPartyDisplay } from "@/lib/orders";
 import { timeAgo } from "@/lib/time";
 import {
   TX_STATUS,
@@ -55,26 +57,26 @@ export default async function OrderPage({
 
   const tx = await prisma.transaction.findUnique({
     where: { id },
-    include: { listing: { include: ownerInclude }, buyer: true, seller: true },
+    include: { listing: { include: ownerInclude }, ...txPartyInclude },
   });
   if (!tx) notFound();
 
-  const isBuyer = tx.buyerId === user.id;
-  const isSeller = tx.sellerId === user.id;
+  // Access if the viewer controls a side (themselves, or a company they act for).
+  const acting = new Set((await getActingCompanies(user.id)).map((c) => c.id));
+  const { buyer, seller } = txParties(tx);
+  const isBuyer = controlsParty(buyer, user.id, acting);
+  const isSeller = controlsParty(seller, user.id, acting);
   if (!isBuyer && !isSeller) notFound();
 
-  const other = isBuyer ? tx.seller : tx.buyer;
+  const other = orderPartyDisplay(tx, isBuyer ? "seller" : "buyer");
   const listing = tx.listing;
   const photo = photosFromJson(listing.photos)[0];
   const badge = listingBadge(listing.type, listing.tradeKind);
   const status = TX_STATUS[tx.status];
   const protectedDeal = isEscrowProtected(tx.type);
 
-  // Side-channel thread for "Message seller/buyer" (buyer <-> listing owner party).
-  const ownerParty = listingOwnerParty(tx.listing);
-  const thread = ownerParty
-    ? await findThread({ type: "user", id: tx.buyerId }, ownerParty, tx.listingId)
-    : null;
+  // Side-channel thread for "Message seller/buyer" (buyer party <-> seller party).
+  const thread = await findThread(buyer, seller, tx.listingId);
 
   const myReview =
     tx.status === "completed"
@@ -278,10 +280,15 @@ export default async function OrderPage({
                 {isBuyer ? "Seller" : "Buyer"}
               </p>
               <Link
-                href={`/u/${other.id}`}
+                href={other.href}
                 className="flex items-center gap-2 hover:underline"
               >
-                <Avatar name={other.name} src={other.avatarUrl} size={36} />
+                <Avatar
+                  name={other.name}
+                  src={other.avatarUrl}
+                  size={36}
+                  rounded={other.kind === "company" ? "md" : "full"}
+                />
                 <span className="text-sm font-medium text-slate-900">
                   {other.name}
                 </span>
