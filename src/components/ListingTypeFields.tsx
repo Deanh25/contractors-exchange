@@ -13,16 +13,23 @@ const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
  */
 export function ListingTypeFields({
   defaultChoice = "price",
-  defaultPrice = "",
+  defaultSellerNet = "",
   defaultStartReserve = "",
   defaultClosesAt = "",
+  defaultMarginPct = 12,
 }: {
   defaultChoice?: ListingChoice;
-  defaultPrice?: string;
+  defaultSellerNet?: string;
   defaultStartReserve?: string;
   defaultClosesAt?: string;
+  /** Representative margin for the live estimate; the exact per-category band
+   * is applied server-side at publish. */
+  defaultMarginPct?: number;
 }) {
   const [choice, setChoice] = useState<ListingChoice>(defaultChoice);
+  const [net, setNet] = useState(defaultSellerNet);
+  const netNum = Number(String(net).replace(/[^0-9.]/g, ""));
+  const estimate = netNum > 0 ? netNum * (1 + defaultMarginPct / 100) : 0;
 
   return (
     <div className="space-y-4">
@@ -53,18 +60,59 @@ export function ListingTypeFields({
       </div>
 
       {choice === "price" && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Price (USD)
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700">
+            Your net price (USD){" "}
+            <span className="font-normal text-slate-400">
+              - what you take home
+            </span>
           </label>
           <input
-            name="price"
+            name="sellerNet"
             required
             inputMode="decimal"
-            defaultValue={defaultPrice}
+            value={net}
+            onChange={(e) => setNet(e.target.value)}
             placeholder="2500.00"
             className={inputCls}
           />
+          <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            CX adds a category margin (~{defaultMarginPct}%) to set the buyer&apos;s
+            price - you keep your full net.
+            {netNum > 0 && (
+              <>
+                {" "}
+                Buyers would pay about{" "}
+                <strong className="text-slate-900">
+                  ${estimate.toFixed(2)}
+                </strong>
+                ; you keep{" "}
+                <strong className="text-slate-900">${netNum.toFixed(2)}</strong>.
+              </>
+            )}
+          </p>
+          <details className="text-sm">
+            <summary className="cursor-pointer text-xs font-medium text-brand-700">
+              Set the buyer&apos;s price yourself (advanced)
+            </summary>
+            <div className="mt-2 space-y-2">
+              <input
+                name="customPrice"
+                inputMode="decimal"
+                placeholder="Buyer price you want, e.g. 2800.00"
+                className={inputCls}
+              />
+              <input
+                name="counterReason"
+                placeholder="Why this price? (used if it needs review)"
+                className={inputCls}
+              />
+              <p className="text-xs text-slate-400">
+                Within the allowed margin band it goes live immediately; outside
+                it, it waits for a quick review.
+              </p>
+            </div>
+          </details>
         </div>
       )}
 

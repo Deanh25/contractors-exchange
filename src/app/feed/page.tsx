@@ -64,9 +64,13 @@ export default async function FeedPage({
 
   const listingWhere: Prisma.ListingWhereInput = {
     status: "active",
-    ...(useFollowFilter ? listingFollowFilter(follows) : {}),
     ...(trade ? { tradeCategory: trade } : {}),
     ...(q ? { title: { contains: q } } : {}),
+    // Hide pricing-review listings (§7B); combine with the follow filter via AND.
+    AND: [
+      { OR: [{ agreement: null }, { agreement: "agreed" }] },
+      ...(useFollowFilter ? [listingFollowFilter(follows)] : []),
+    ],
   };
   const postWhere: Prisma.PostWhereInput = {
     ...(useFollowFilter ? postFollowFilter(follows) : {}),

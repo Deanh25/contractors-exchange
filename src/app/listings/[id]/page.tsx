@@ -11,6 +11,7 @@ import { updateListingStatusAction } from "@/app/actions/listing";
 import { listingOwnerParty, controlsParty, partiesEqual } from "@/lib/messaging";
 import { getActingContext, getActingCompanies } from "@/lib/identity";
 import { buyerWhere, sellerWhere } from "@/lib/orders";
+import { marginAmount } from "@/lib/pricing";
 import { SaveButton } from "@/components/SaveButton";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
@@ -92,6 +93,9 @@ export default async function ListingDetailPage({
     });
     canManage = m?.role === "owner";
   }
+
+  // A listing held for pricing review (§7B) is not public - only its owner sees it.
+  if (listing.agreement === "pending_admin" && !canManage) notFound();
 
   // Deal context (PRD §7). The buyer is the viewer's current acting identity;
   // show their latest request on this listing (unless they own/control it).
@@ -266,6 +270,41 @@ export default async function ListingDetailPage({
                 Freight: {listing.freightNote}
               </p>
             )}
+
+            {/* Spread breakdown - owner only (private; never shown to buyers). */}
+            {canManage &&
+              listing.type === "price" &&
+              listing.sellerNet !== null && (
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Your pricing (private)
+                  </p>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Your net</span>
+                    <span className="font-medium text-slate-900">
+                      {formatMoney(listing.sellerNet)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex justify-between text-slate-600">
+                    <span>
+                      CX margin
+                      {listing.marginPct !== null
+                        ? ` (${listing.marginPct.toFixed(1)}%)`
+                        : ""}
+                    </span>
+                    <span>{formatMoney(marginAmount(listing) ?? 0)}</span>
+                  </div>
+                  <div className="mt-1 flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-900">
+                    <span>Buyer pays</span>
+                    <span>{formatMoney(listing.price)}</span>
+                  </div>
+                  {listing.agreement === "pending_admin" && (
+                    <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                      Held for a quick pricing review - not visible to buyers yet.
+                    </p>
+                  )}
+                </div>
+              )}
 
             {/* Actions */}
             <div className="mt-5 space-y-2">

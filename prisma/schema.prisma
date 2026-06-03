@@ -134,6 +134,14 @@ enum ListingStatus {
   closed // withdrawn / expired
 }
 
+// Outcome of the seller's price agreement (PRD §7B): the seller agrees to the
+// computed buyer price, or counters - in-band counters auto-agree, out-of-band
+// counters wait for admin (§7C).
+enum PriceAgreement {
+  agreed
+  pending_admin
+}
+
 model Listing {
   id String @id @default(cuid())
   // Polymorphic owner via two optional FKs (exactly one is set). This keeps clean
@@ -155,10 +163,20 @@ model Listing {
   type ListingType
 
   // Type-exclusive fields (null unless the matching type is selected):
-  price        Decimal?   @db.Decimal(12, 2) // type=price
+  price        Decimal?   @db.Decimal(12, 2) // type=price - PUBLIC buyer price
   startReserve Decimal?   @db.Decimal(12, 2) // type=bid (starting/reserve amount)
   closesAt     DateTime? // type=bid
   tradeKind    TradeKind? // type=trade
+
+  // Spread pricing (PRD §7B), set-price listings only. The seller enters a
+  // PRIVATE net; the public `price` is net + margin (per-category band). These
+  // are NEVER shown to buyers - filtered out everywhere except the owner/admin.
+  sellerNet       Decimal?  @db.Decimal(12, 2) // private: what the seller takes home
+  marginPct       Float? // private: margin % applied to reach `price`
+  agreement       PriceAgreement? // agreed (live) or pending_admin (held for review)
+  counterReason   String?   @db.Text // why the seller proposed an out-of-band price
+  listedAt        DateTime? // when pricing was agreed / went live (for aging)
+  lastRepricedAt  DateTime? // last aging reprice
 
   status    ListingStatus @default(active)
   createdAt DateTime      @default(now())
@@ -176,6 +194,19 @@ model Listing {
   @@index([ownerUserId])
   @@index([ownerCompanyId])
   @@index([createdAt])
+}
+
+// Per-category margin band (PRD §7B): the spread CX adds on top of a seller's
+// net to form the public buyer price. defaultPct is applied automatically; a
+// seller counter within [minPct, maxPct] auto-agrees, outside waits for admin.
+// Tuned in the admin panel (§7C) without code. Falls back to a code default.
+model CategoryMargin {
+  id         String   @id @default(cuid())
+  category   String   @unique // trade slug (src/lib/trades.ts)
+  defaultPct Float
+  minPct     Float
+  maxPct     Float
+  updatedAt  DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------------------

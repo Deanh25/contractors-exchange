@@ -89,9 +89,25 @@ async function main() {
   await prisma.thread.deleteMany();
   await prisma.post.deleteMany();
   await prisma.listing.deleteMany();
+  await prisma.categoryMargin.deleteMany();
   await prisma.membership.deleteMany();
   await prisma.company.deleteMany();
   await prisma.user.deleteMany();
+
+  console.log("Creating category margin bands...");
+  // Per-category spread bands (PRD §7B). Others fall back to the code default.
+  await prisma.categoryMargin.createMany({
+    data: [
+      { category: "paving", defaultPct: 12, minPct: 6, maxPct: 22 },
+      { category: "electrical", defaultPct: 14, minPct: 8, maxPct: 25 },
+      { category: "hvac", defaultPct: 13, minPct: 7, maxPct: 24 },
+      { category: "plumbing", defaultPct: 13, minPct: 7, maxPct: 24 },
+      { category: "concrete", defaultPct: 11, minPct: 6, maxPct: 20 },
+      { category: "framing", defaultPct: 12, minPct: 6, maxPct: 22 },
+      { category: "roofing", defaultPct: 12, minPct: 6, maxPct: 22 },
+      { category: "landscaping", defaultPct: 15, minPct: 8, maxPct: 28 },
+    ],
+  });
 
   console.log("Creating users...");
   const jordan = await prisma.user.create({
@@ -307,7 +323,18 @@ async function main() {
 
   for (const l of listings) {
     const { owner, ...rest } = l;
-    await prisma.listing.create({ data: { ...rest, ...owner } });
+    // Spread pricing (PRD §7B): the listed `price` is the PUBLIC buyer price;
+    // back out a private seller net at a 12% margin so the demo shows a spread.
+    const priceFields =
+      rest.type === "price" && "price" in rest && rest.price
+        ? {
+            sellerNet: Math.round((Number(rest.price) / 1.12) * 100) / 100,
+            marginPct: 12,
+            agreement: "agreed" as const,
+            listedAt: rest.createdAt ?? new Date(),
+          }
+        : {};
+    await prisma.listing.create({ data: { ...rest, ...priceFields, ...owner } });
   }
 
   console.log("Creating posts...");

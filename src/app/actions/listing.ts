@@ -8,11 +8,13 @@ import { saveMediaFiles } from "@/lib/storage";
 import { TRADES } from "@/lib/trades";
 import { parseCoord } from "@/lib/form";
 import { canManageListing } from "@/lib/listing-access";
+import { getMarginBand, computePricing } from "@/lib/pricing";
 import { Prisma } from "@/generated/prisma/client";
 import type {
   ListingType,
   TradeKind,
   ListingStatus,
+  PriceAgreement,
 } from "@/generated/prisma/client";
 import type { ListingChoice } from "@/lib/listings";
 
@@ -39,6 +41,10 @@ type TypeFields = {
   price: number | null;
   startReserve: number | null;
   closesAt: Date | null;
+  // Set-price spread inputs (PRD §7B):
+  sellerNet?: number;
+  customPrice?: number | null;
+  counterReason?: string | null;
 };
 
 /** Resolve the type-exclusive fields (PRD §10 constraint), or an error code. */
@@ -47,9 +53,22 @@ function parseTypeFields(
   choice: ListingChoice,
 ): TypeFields | { error: string } {
   if (choice === "price") {
-    const price = parseMoney(String(formData.get("price") ?? ""));
-    if (price === null) return { error: "price" };
-    return { type: "price", tradeKind: null, price, startReserve: null, closesAt: null };
+    // The seller enters their NET; the public price is computed (spread pricing).
+    const sellerNet = parseMoney(String(formData.get("sellerNet") ?? ""));
+    if (sellerNet === null) return { error: "price" };
+    const customPrice = parseMoney(String(formData.get("customPrice") ?? ""));
+    const counterReason =
+      String(formData.get("counterReason") ?? "").trim() || null;
+    return {
+      type: "price",
+      tradeKind: null,
+      price: null, // computed from the band in the action
+      startReserve: null,
+      closesAt: null,
+      sellerNet,
+      customPrice,
+      counterReason,
+    };
   }
   if (choice === "bid") {
     const startReserve = parseMoney(String(formData.get("startReserve") ?? ""));
@@ -90,6 +109,48 @@ function mediaFiles(formData: FormData): File[] {
     .filter((f): f is File => f instanceof File && f.size > 0);
 }
 
+type PricingData = {
+  price: number | null;
+  sellerNet: number | null;
+  marginPct: number | null;
+  agreement: PriceAgreement | null;
+  counterReason: string | null;
+  listedAt: Date | null;
+};
+
+/** Spread pricing for set-price listings; nulls for bid/trade. */
+async function pricingData(
+  tf: TypeFields,
+  category: string,
+): Promise<PricingData> {
+  if (tf.type !== "price" || tf.sellerNet === undefined) {
+    return {
+      price: tf.price,
+      sellerNet: null,
+      marginPct: null,
+      agreement: null,
+      counterReason: null,
+      listedAt: null,
+    };
+  }
+  const band = await getMarginBand(category);
+  const p = computePricing(
+    band,
+    tf.sellerNet,
+    tf.customPrice ?? null,
+    tf.counterReason ?? null,
+    new Date(),
+  );
+  return {
+    price: p.price,
+    sellerNet: p.sellerNet,
+    marginPct: p.marginPct,
+    agreement: p.agreement,
+    counterReason: p.counterReason,
+    listedAt: p.listedAt,
+  };
+}
+
 // --- Create ------------------------------------------------------------------
 
 export async function createListingAction(formData: FormData) {
@@ -118,6 +179,7 @@ export async function createListingAction(formData: FormData) {
   if ("error" in tf) return fail(tf.error);
 
   const photos = await saveMediaFiles(mediaFiles(formData));
+  const pricing = await pricingData(tf, c.tradeCategory);
 
   const data: Prisma.ListingCreateInput = {
     title: c.title,
@@ -132,7 +194,12 @@ export async function createListingAction(formData: FormData) {
     photos: photos.length > 0 ? photos : undefined,
     type: tf.type,
     tradeKind: tf.tradeKind,
-    price: tf.price,
+    price: pricing.price,
+    sellerNet: pricing.sellerNet,
+    marginPct: pricing.marginPct,
+    agreement: pricing.agreement,
+    counterReason: pricing.counterReason,
+    listedAt: pricing.listedAt,
     startReserve: tf.startReserve,
     closesAt: tf.closesAt,
     ...(ownerCompanyId
@@ -171,6 +238,7 @@ export async function updateListingAction(formData: FormData) {
   const kept = formData.getAll("existingPhotos").map(String).filter(Boolean);
   const uploaded = await saveMediaFiles(mediaFiles(formData));
   const media = [...kept, ...uploaded];
+  const pricing = await pricingData(tf, c.tradeCategory);
 
   await prisma.listing.update({
     where: { id },
@@ -186,7 +254,12 @@ export async function updateListingAction(formData: FormData) {
       freightNote: c.freightNote || null,
       type: tf.type,
       tradeKind: tf.tradeKind,
-      price: tf.price,
+      price: pricing.price,
+      sellerNet: pricing.sellerNet,
+      marginPct: pricing.marginPct,
+      agreement: pricing.agreement,
+      counterReason: pricing.counterReason,
+      listedAt: pricing.listedAt,
       startReserve: tf.startReserve,
       closesAt: tf.closesAt,
       status,

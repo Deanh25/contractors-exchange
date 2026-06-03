@@ -106,6 +106,8 @@ export default async function ListingsPage({
     ...(q ? { title: { contains: q } } : {}),
     ...(trade ? { tradeCategory: trade } : {}),
     ...(type ? typeWhere(type) : {}),
+    // Hide listings held for pricing review (§7B); show agreed + non-priced.
+    AND: [{ OR: [{ agreement: null }, { agreement: "agreed" }] }],
   };
 
   const where: Prisma.ListingWhereInput = radiusActive

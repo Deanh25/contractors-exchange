@@ -111,7 +111,13 @@ export default async function EditListingPage({
             </label>
             <ListingTypeFields
               defaultChoice={choice}
-              defaultPrice={listing.price !== null ? String(Number(listing.price)) : ""}
+              defaultSellerNet={
+                listing.sellerNet !== null
+                  ? String(Number(listing.sellerNet))
+                  : listing.price !== null
+                    ? String(Number(listing.price))
+                    : ""
+              }
               defaultStartReserve={
                 listing.startReserve !== null ? String(Number(listing.startReserve)) : ""
               }

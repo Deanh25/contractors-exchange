@@ -120,6 +120,15 @@ export async function createTransactionAction(formData: FormData) {
   }
   const message = String(formData.get("message") ?? "").trim() || null;
 
+  // Spread (§7B): for a set-price buy, the buyer pays `price`, the seller takes
+  // their net, and CX keeps the margin. (Bids settle on accept; net TBD.)
+  let sellerNet: number | null = null;
+  let margin: number | null = null;
+  if (type === "purchase" && listing.sellerNet != null && listing.price != null) {
+    sellerNet = Number(listing.sellerNet);
+    margin = Number(listing.price) - sellerNet;
+  }
+
   // Deal thread = buyer party <-> seller party (aligns with messaging).
   const thread = await findOrCreateThread(buyer, seller, listingId);
 
@@ -141,7 +150,9 @@ export async function createTransactionAction(formData: FormData) {
         ...txPartyColumns(buyer, seller),
         type,
         amount,
-        buyerPrice: amount, // §7B: public price (spread flow lands later)
+        buyerPrice: amount, // §7B: the public price the buyer pays
+        sellerNet, // private: what the seller takes home
+        margin, // private: CX spread
         message,
       },
     });
