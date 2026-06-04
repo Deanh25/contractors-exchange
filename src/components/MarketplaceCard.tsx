@@ -95,7 +95,7 @@ export function MarketplaceCard({
           </p>
         </Link>
 
-        <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
+        <div className="mt-1.5 flex min-h-[1.25rem] flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
           <span className="rounded-full border border-slate-200 px-2 py-0.5 font-medium text-slate-600">
             {tradeLabel(listing.tradeCategory)}
           </span>
@@ -109,8 +109,9 @@ export function MarketplaceCard({
 
         <p className="mt-2 text-base font-bold text-slate-900">{terms(listing)}</p>
 
-        {/* Adaptive primary action */}
-        <div className="mt-3">
+        {/* Adaptive primary action - pinned to the bottom so the buttons line up
+            across every card in the row regardless of title/stepper height. */}
+        <div className="mt-auto pt-3">
           <BuyBox
             listingId={listing.id}
             type={listing.type}
@@ -118,16 +119,16 @@ export function MarketplaceCard({
           />
         </div>
 
-        {/* Seller block */}
+        {/* Seller block (fixed two-line height -> aligned across cards) */}
         {owner && (
           <div className="mt-3 border-t border-slate-100 pt-2">
             <Link
               href={owner.href}
-              className="truncate text-xs font-medium text-slate-700 hover:underline"
+              className="block truncate text-xs font-medium text-slate-700 hover:underline"
             >
               {owner.name}
             </Link>
-            <div className="mt-0.5">
+            <div className="mt-0.5 h-5">
               {sellerRating && sellerRating.count > 0 ? (
                 <StarRating rating={sellerRating.avg} count={sellerRating.count} />
               ) : (
