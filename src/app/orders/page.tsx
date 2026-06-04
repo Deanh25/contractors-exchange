@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Avatar } from "@/components/Avatar";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { TX_STATUS, TX_TYPE_LABEL } from "@/lib/transactions";
-import { formatMoney } from "@/lib/listings";
+import { formatMoney, listingOwner, ownerInclude } from "@/lib/listings";
 import { timeAgo } from "@/lib/time";
 import { getActingContext } from "@/lib/identity";
 import {
@@ -13,8 +13,14 @@ import {
   buyerWhere,
   sellerWhere,
 } from "@/lib/orders";
+import { offerBuyerWhere } from "@/lib/offers";
 import type { Party } from "@/lib/messaging";
 import type { Prisma, TransactionStatus } from "@/generated/prisma/client";
+
+// A "Negotiating" pseudo-status surfaces in-flight offers (which aren't yet
+// Transactions) in the same orders list, linking to the thread where they're
+// resolved.
+const NEGOTIATING = "negotiating";
 
 const STATUSES: TransactionStatus[] = [
   "pending",
@@ -86,16 +92,116 @@ export default async function OrdersPage({
     ...(q ? { listing: { title: { contains: q } } } : {}),
   };
 
-  const [rows, sellingCount, buyingCount] = await Promise.all([
-    prisma.transaction.findMany({
-      where,
-      include: { listing: true, ...txPartyInclude },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
+  // Which sources to show given the status filter: real statuses -> transactions
+  // only; "negotiating" -> offers only; no filter -> both.
+  const showTx = status === "" || STATUSES.includes(status as TransactionStatus);
+  const showOffers = status === "" || status === NEGOTIATING;
+
+  // Pending offers in the current role: as buyer (offers I made) or as seller
+  // (offers on my listings).
+  const myListingWhere =
+    party.type === "company"
+      ? { ownerCompanyId: party.id }
+      : { ownerUserId: party.id };
+  const offerWhere: Prisma.OfferWhereInput = {
+    status: "pending",
+    ...(tab === "selling" ? { listing: myListingWhere } : offerBuyerWhere(party)),
+    ...(q ? { listing: { title: { contains: q } } } : {}),
+  };
+
+  const [txRows, pendingOffers, txSell, txBuy, offSell, offBuy] = await Promise.all([
+    showTx
+      ? prisma.transaction.findMany({
+          where,
+          include: { listing: true, ...txPartyInclude },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        })
+      : Promise.resolve([]),
+    showOffers
+      ? prisma.offer.findMany({
+          where: offerWhere,
+          include: {
+            listing: { include: ownerInclude },
+            buyerUser: true,
+            buyerCompany: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        })
+      : Promise.resolve([]),
     prisma.transaction.count({ where: sellerWhere(party) }),
     prisma.transaction.count({ where: buyerWhere(party) }),
+    prisma.offer.count({ where: { status: "pending", listing: myListingWhere } }),
+    prisma.offer.count({ where: { status: "pending", ...offerBuyerWhere(party) } }),
   ]);
+  const sellingCount = txSell + offSell;
+  const buyingCount = txBuy + offBuy;
+
+  // Unify transactions + pending offers into one date-sorted list.
+  type DealRow = {
+    key: string;
+    href: string;
+    title: string;
+    otherName: string;
+    otherAvatar: string | null;
+    otherKind: "user" | "company";
+    meta: string;
+    badgeLabel: string;
+    badgeTone: string;
+    createdAt: Date;
+  };
+  const txMapped: DealRow[] = txRows.map((t) => {
+    const other = orderPartyDisplay(t, tab === "selling" ? "buyer" : "seller");
+    return {
+      key: `tx-${t.id}`,
+      href: `/orders/${t.id}`,
+      title: t.listing.title,
+      otherName: other.name,
+      otherAvatar: other.avatarUrl,
+      otherKind: other.kind,
+      meta: `${TX_TYPE_LABEL[t.type]}${t.amount !== null ? ` · ${formatMoney(t.amount)}` : ""} · ${tab === "selling" ? "from" : "to"} ${other.name} · ${timeAgo(t.createdAt)}`,
+      badgeLabel: TX_STATUS[t.status].label,
+      badgeTone: TX_STATUS[t.status].tone,
+      createdAt: t.createdAt,
+    };
+  });
+  const offerMapped: DealRow[] = pendingOffers.map((o) => {
+    let otherName: string;
+    let otherAvatar: string | null;
+    let otherKind: "user" | "company";
+    if (tab === "selling") {
+      if (o.buyerType === "company") {
+        otherName = o.buyerCompany?.name ?? "Company";
+        otherAvatar = o.buyerCompany?.logoUrl ?? null;
+        otherKind = "company";
+      } else {
+        otherName = o.buyerUser?.name ?? "User";
+        otherAvatar = o.buyerUser?.avatarUrl ?? null;
+        otherKind = "user";
+      }
+    } else {
+      const owner = listingOwner(o.listing);
+      otherName = owner?.name ?? "Seller";
+      otherAvatar = owner?.avatarUrl ?? null;
+      otherKind = owner?.kind ?? "user";
+    }
+    return {
+      key: `offer-${o.id}`,
+      href: o.threadId ? `/messages/${o.threadId}` : "/messages",
+      title: o.listing.title,
+      otherName,
+      otherAvatar,
+      otherKind,
+      meta: `Offer · ${formatMoney(o.buyerPrice)} · ${tab === "selling" ? "from" : "to"} ${otherName} · ${timeAgo(o.createdAt)}`,
+      badgeLabel: "Negotiating",
+      badgeTone: "bg-amber-100 text-amber-700",
+      createdAt: o.createdAt,
+    };
+  });
+  const dealRows = [...offerMapped, ...txMapped].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
 
   const allParams: Record<string, string> = { tab, status, q };
   const chips: { label: string; href: string }[] = [];
@@ -104,6 +210,8 @@ export default async function OrdersPage({
       label: TX_STATUS[status as TransactionStatus].label,
       href: buildQuery(allParams, ["status"]),
     });
+  else if (status === NEGOTIATING)
+    chips.push({ label: "Negotiating", href: buildQuery(allParams, ["status"]) });
   if (q) chips.push({ label: `"${q}"`, href: buildQuery(allParams, ["q"]) });
   const hasFilters = chips.length > 0;
 
@@ -142,6 +250,7 @@ export default async function OrdersPage({
           />
           <select name="status" defaultValue={status} className={inputCls}>
             <option value="">All statuses</option>
+            <option value={NEGOTIATING}>Negotiating</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {TX_STATUS[s].label}
@@ -179,8 +288,8 @@ export default async function OrdersPage({
           </div>
         )}
 
-        {/* Orders list */}
-        {rows.length === 0 ? (
+        {/* Orders list (transactions + in-flight negotiations) */}
+        {dealRows.length === 0 ? (
           <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
             {tab === "selling"
               ? "No incoming orders yet."
@@ -188,40 +297,32 @@ export default async function OrdersPage({
           </div>
         ) : (
           <ul className="mt-4 space-y-2">
-            {rows.map((t) => {
-              const other = orderPartyDisplay(t, tab === "selling" ? "buyer" : "seller");
-              return (
-                <li key={t.id}>
-                  <Link
-                    href={`/orders/${t.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:bg-slate-50"
+            {dealRows.map((r) => (
+              <li key={r.key}>
+                <Link
+                  href={r.href}
+                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:bg-slate-50"
+                >
+                  <Avatar
+                    name={r.otherName}
+                    src={r.otherAvatar}
+                    size={40}
+                    rounded={r.otherKind === "company" ? "md" : "full"}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {r.title}
+                    </p>
+                    <p className="text-xs text-slate-500">{r.meta}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.badgeTone}`}
                   >
-                    <Avatar
-                      name={other.name}
-                      src={other.avatarUrl}
-                      size={40}
-                      rounded={other.kind === "company" ? "md" : "full"}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {t.listing.title}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {TX_TYPE_LABEL[t.type]}
-                        {t.amount !== null ? ` · ${formatMoney(t.amount)}` : ""} ·{" "}
-                        {tab === "selling" ? "from" : "to"} {other.name} ·{" "}
-                        {timeAgo(t.createdAt)}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${TX_STATUS[t.status].tone}`}
-                    >
-                      {TX_STATUS[t.status].label}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
+                    {r.badgeLabel}
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
         )}
       </WorkspaceShell>
