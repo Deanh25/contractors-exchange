@@ -95,18 +95,19 @@ async function main() {
   await prisma.company.deleteMany();
   await prisma.user.deleteMany();
 
-  console.log("Creating category margin bands...");
-  // Per-category spread bands (PRD §7B). Others fall back to the code default.
+  console.log("Creating category margins...");
+  // Flat per-category margin % (PRD §7B, corrected model). Others fall back to
+  // the code default. buyerPrice = sellerNet x (1 + marginPct/100).
   await prisma.categoryMargin.createMany({
     data: [
-      { category: "paving", defaultPct: 12, minPct: 6 },
-      { category: "electrical", defaultPct: 14, minPct: 8 },
-      { category: "hvac", defaultPct: 13, minPct: 7 },
-      { category: "plumbing", defaultPct: 13, minPct: 7 },
-      { category: "concrete", defaultPct: 11, minPct: 6 },
-      { category: "framing", defaultPct: 12, minPct: 6 },
-      { category: "roofing", defaultPct: 12, minPct: 6 },
-      { category: "landscaping", defaultPct: 15, minPct: 8 },
+      { category: "paving", marginPct: 12 },
+      { category: "electrical", marginPct: 14 },
+      { category: "hvac", marginPct: 13 },
+      { category: "plumbing", marginPct: 13 },
+      { category: "concrete", marginPct: 11 },
+      { category: "framing", marginPct: 12 },
+      { category: "roofing", marginPct: 12 },
+      { category: "landscaping", marginPct: 15 },
     ],
   });
 
@@ -327,14 +328,14 @@ async function main() {
 
   for (const l of listings) {
     const { owner, ...rest } = l;
-    // Spread pricing (PRD §7B): the listed `price` is the PUBLIC buyer price;
-    // back out a private seller net at a 12% margin so the demo shows a spread.
+    // Margin pricing (PRD §7B, corrected model): the listed `price` is the PUBLIC
+    // buyer price; back out a private seller net at a 12% margin so the demo shows
+    // a spread. acceptsOffers defaults true (negotiable).
     const priceFields =
       rest.type === "price" && "price" in rest && rest.price
         ? {
             sellerNet: Math.round((Number(rest.price) / 1.12) * 100) / 100,
             marginPct: 12,
-            agreement: "agreed" as const,
             listedAt: rest.createdAt ?? new Date(),
           }
         : {};

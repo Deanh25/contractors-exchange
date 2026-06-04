@@ -12,7 +12,6 @@ import type { Capability } from "@/lib/admin";
 
 const NAV: { key: string; label: string; href: string; cap: Capability }[] = [
   { key: "dashboard", label: "Dashboard", href: "/admin", cap: "dashboard" },
-  { key: "pricing", label: "Pricing queue", href: "/admin/pricing", cap: "pricing" },
   { key: "verification", label: "Verification", href: "/admin/verification", cap: "verification" },
   { key: "listings", label: "Listings", href: "/admin/listings", cap: "moderation" },
   { key: "users", label: "Users", href: "/admin/users", cap: "users" },

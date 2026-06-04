@@ -160,8 +160,6 @@ export default async function ListingsPage({
     ...(hasPriceFilter ? { price: priceFilter } : {}),
     ...(condition ? { condition: condition as Prisma.ListingWhereInput["condition"] } : {}),
     ...(manufacturer ? { manufacturer: { contains: manufacturer } } : {}),
-    // Hide listings held for pricing review (§7B); show agreed + non-priced.
-    AND: [{ OR: [{ agreement: null }, { agreement: "agreed" }] }],
   };
 
   const where: Prisma.ListingWhereInput = radiusActive

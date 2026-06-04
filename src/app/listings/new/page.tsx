@@ -8,7 +8,7 @@ import { SearchSelect } from "@/components/SearchSelect";
 import { MediaUpload } from "@/components/MediaUpload";
 import { tradeOptions } from "@/lib/trades";
 import { LISTING_CONDITIONS } from "@/lib/listings";
-import { getAllMarginBands, DEFAULT_BAND } from "@/lib/pricing";
+import { getAllCategoryMargins, DEFAULT_MARGIN_PCT } from "@/lib/pricing";
 
 const ERRORS: Record<string, string> = {
   title: "A title is required.",
@@ -36,7 +36,7 @@ export default async function NewListingPage({
     include: { company: true },
     orderBy: { createdAt: "asc" },
   });
-  const bands = await getAllMarginBands();
+  const margins = await getAllCategoryMargins();
 
   return (
     <main className="flex-1">
@@ -111,7 +111,7 @@ export default async function NewListingPage({
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Listing type
             </label>
-            <ListingTypeFields bands={bands} defaultBand={DEFAULT_BAND} />
+            <ListingTypeFields margins={margins} defaultMargin={DEFAULT_MARGIN_PCT} />
           </div>
 
           {/* Unit + freight */}

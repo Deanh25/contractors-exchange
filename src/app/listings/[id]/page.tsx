@@ -96,9 +96,6 @@ export default async function ListingDetailPage({
     canManage = m?.role === "owner";
   }
 
-  // A listing held for pricing review (§7B) is not public - only its owner sees it.
-  if (listing.agreement === "pending_admin" && !canManage) notFound();
-
   // Record a view for Marketplace Insights - but not the owner's own views. Repeat
   // views by the same signed-in viewer are de-duped inside the helper.
   if (!canManage) {
@@ -270,9 +267,10 @@ export default async function ListingDetailPage({
                     <span>Buyer pays</span>
                     <span>{formatMoney(listing.price)}</span>
                   </div>
-                  {listing.agreement === "pending_admin" && (
-                    <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                      Held for a quick pricing review - not visible to buyers yet.
+                  {listing.acceptsOffers && (
+                    <p className="mt-2 rounded bg-slate-100 px-2 py-1 text-xs text-slate-500">
+                      Open to offers - an accepted offer lowers your net at the
+                      same margin.
                     </p>
                   )}
                 </div>

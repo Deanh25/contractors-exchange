@@ -8,13 +8,12 @@ import { saveMediaFiles } from "@/lib/storage";
 import { TRADES } from "@/lib/trades";
 import { parseCoord } from "@/lib/form";
 import { canManageListing } from "@/lib/listing-access";
-import { getMarginBand, computePricing } from "@/lib/pricing";
+import { getCategoryMargin, computeListingPricing } from "@/lib/pricing";
 import { Prisma } from "@/generated/prisma/client";
 import type {
   ListingType,
   TradeKind,
   ListingStatus,
-  PriceAgreement,
   ListingCondition,
 } from "@/generated/prisma/client";
 import type { ListingChoice } from "@/lib/listings";
@@ -48,10 +47,9 @@ type TypeFields = {
   price: number | null;
   startReserve: number | null;
   closesAt: Date | null;
-  // Set-price spread inputs (PRD §7B):
+  // Set-price inputs (PRD §7B): the seller's private net + whether offers are allowed.
   sellerNet?: number;
-  customPrice?: number | null;
-  counterReason?: string | null;
+  acceptsOffers?: boolean;
 };
 
 /** Resolve the type-exclusive fields (PRD §10 constraint), or an error code. */
@@ -60,21 +58,20 @@ function parseTypeFields(
   choice: ListingChoice,
 ): TypeFields | { error: string } {
   if (choice === "price") {
-    // The seller enters their NET; the public price is computed (spread pricing).
+    // The seller enters their NET; the public price is net x (1 + category margin %).
     const sellerNet = parseMoney(String(formData.get("sellerNet") ?? ""));
     if (sellerNet === null) return { error: "price" };
-    const customPrice = parseMoney(String(formData.get("customPrice") ?? ""));
-    const counterReason =
-      String(formData.get("counterReason") ?? "").trim() || null;
+    // Negotiable by default; the seller can switch offers off (firm price). The
+    // checkbox sends "on" only when checked; absence means offers are off.
+    const acceptsOffers = formData.get("acceptsOffers") === "on";
     return {
       type: "price",
       tradeKind: null,
-      price: null, // computed from the band in the action
+      price: null, // computed from the category margin in the action
       startReserve: null,
       closesAt: null,
       sellerNet,
-      customPrice,
-      counterReason,
+      acceptsOffers,
     };
   }
   if (choice === "bid") {
@@ -122,8 +119,7 @@ type PricingData = {
   price: number | null;
   sellerNet: number | null;
   marginPct: number | null;
-  agreement: PriceAgreement | null;
-  counterReason: string | null;
+  acceptsOffers: boolean;
   listedAt: Date | null;
 };
 
@@ -134,7 +130,7 @@ function readQuantity(formData: FormData, tf: TypeFields): number {
   return Number.isFinite(n) && n >= 1 ? n : 1;
 }
 
-/** Spread pricing for set-price listings; nulls for bid/trade. */
+/** Margin pricing for set-price listings; nulls for bid/trade. */
 async function pricingData(
   tf: TypeFields,
   category: string,
@@ -144,25 +140,17 @@ async function pricingData(
       price: tf.price,
       sellerNet: null,
       marginPct: null,
-      agreement: null,
-      counterReason: null,
+      acceptsOffers: false,
       listedAt: null,
     };
   }
-  const band = await getMarginBand(category);
-  const p = computePricing(
-    band,
-    tf.sellerNet,
-    tf.customPrice ?? null,
-    tf.counterReason ?? null,
-    new Date(),
-  );
+  const marginPct = await getCategoryMargin(category);
+  const p = computeListingPricing(tf.sellerNet, marginPct, new Date());
   return {
     price: p.price,
     sellerNet: p.sellerNet,
     marginPct: p.marginPct,
-    agreement: p.agreement,
-    counterReason: p.counterReason,
+    acceptsOffers: tf.acceptsOffers ?? true,
     listedAt: p.listedAt,
   };
 }
@@ -215,8 +203,7 @@ export async function createListingAction(formData: FormData) {
     price: pricing.price,
     sellerNet: pricing.sellerNet,
     marginPct: pricing.marginPct,
-    agreement: pricing.agreement,
-    counterReason: pricing.counterReason,
+    acceptsOffers: pricing.acceptsOffers,
     listedAt: pricing.listedAt,
     quantityAvailable: readQuantity(formData, tf),
     startReserve: tf.startReserve,
@@ -278,8 +265,7 @@ export async function updateListingAction(formData: FormData) {
       price: pricing.price,
       sellerNet: pricing.sellerNet,
       marginPct: pricing.marginPct,
-      agreement: pricing.agreement,
-      counterReason: pricing.counterReason,
+      acceptsOffers: pricing.acceptsOffers,
       listedAt: pricing.listedAt,
       quantityAvailable: readQuantity(formData, tf),
       startReserve: tf.startReserve,

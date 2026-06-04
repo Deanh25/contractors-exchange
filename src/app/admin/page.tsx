@@ -1,28 +1,17 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { requireAdmin, can, ROLE_LABEL } from "@/lib/admin";
 
 /**
  * Admin home (PRD §7C). The full KPI dashboard lands here in Module 1; for now
- * it's a role-aware launchpad: a "Needs attention" strip (live queue counts) plus
- * cards for the modules this admin's role can reach. Everything is gated by
- * capability, so a moderator sees a different set than a superadmin.
+ * it's a role-aware launchpad with cards for the modules this admin's role can
+ * reach. Everything is gated by capability, so a moderator sees a different set
+ * than a superadmin.
  */
 export default async function AdminHome() {
   const admin = await requireAdmin();
   const role = admin.adminRole;
 
-  const pendingPricing = can(role, "pricing")
-    ? await prisma.listing.count({ where: { agreement: "pending_admin" } })
-    : null;
-
   const cards: { href: string; title: string; blurb: string; show: boolean }[] = [
-    {
-      href: "/admin/pricing",
-      title: "Pricing queue",
-      blurb: "Approve, counter, or reject seller pricing held for review.",
-      show: can(role, "pricing"),
-    },
     {
       href: "/admin/verification",
       title: "Verification",
@@ -50,7 +39,7 @@ export default async function AdminHome() {
     {
       href: "/admin/margins",
       title: "Margins",
-      blurb: "Edit per-category margin bands (affects future listings).",
+      blurb: "Edit per-category margin % (affects future listings).",
       show: can(role, "margins"),
     },
     {
@@ -72,31 +61,6 @@ export default async function AdminHome() {
         {ROLE_LABEL[role]}. The full KPI dashboard arrives next; meanwhile, jump
         into a module below.
       </p>
-
-      {/* Needs attention */}
-      {pendingPricing !== null && (
-        <div className="mt-5">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Needs attention
-          </h2>
-          <Link
-            href="/admin/pricing"
-            className={`inline-flex items-center gap-3 rounded-xl border px-4 py-3 ${
-              pendingPricing > 0
-                ? "border-amber-200 bg-amber-50 hover:bg-amber-100"
-                : "border-slate-200 bg-white hover:bg-slate-50"
-            }`}
-          >
-            <span className="text-2xl font-bold text-slate-900">
-              {pendingPricing}
-            </span>
-            <span className="text-sm font-medium text-slate-600">
-              {pendingPricing === 1 ? "listing" : "listings"} awaiting pricing
-              review
-            </span>
-          </Link>
-        </div>
-      )}
 
       {/* Module cards */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

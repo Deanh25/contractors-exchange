@@ -5,15 +5,17 @@ import { LISTING_CHOICES, type ListingChoice } from "@/lib/listings";
 
 const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
 
-type Band = { defaultPct: number; minPct: number };
-const FALLBACK_BAND: Band = { defaultPct: 12, minPct: 6 };
+const FALLBACK_MARGIN = 12;
+const usd = (n: number) =>
+  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
 /**
  * The four listing-type choices + the fields for the selected one (PRD §3). For
- * set-price listings (PRD §7B) the seller enters their NET; CX adds the selected
- * trade category's margin to set the buyer price (live estimate). A seller may
- * counter with a custom buyer price: in-band it goes live, BELOW the category
- * minimum it triggers a red warning + a confirm that it must be reviewed first.
+ * set-price listings (PRD §7B, corrected model) the seller enters their NET and
+ * sees the full pricing calculator: their net, the fixed CX margin (% and $), and
+ * the resulting buyer price = net x (1 + margin%). The margin is fixed per
+ * category and not negotiable; buyers later negotiate the net via offers, which
+ * the seller can turn off per listing ("Accept offers").
  */
 export function ListingTypeFields({
   defaultChoice = "price",
@@ -21,26 +23,28 @@ export function ListingTypeFields({
   defaultStartReserve = "",
   defaultClosesAt = "",
   defaultQuantity = "1",
-  bands = {},
-  defaultBand = FALLBACK_BAND,
+  defaultAcceptsOffers = true,
+  margins = {},
+  defaultMargin = FALLBACK_MARGIN,
 }: {
   defaultChoice?: ListingChoice;
   defaultSellerNet?: string;
   defaultStartReserve?: string;
   defaultClosesAt?: string;
   defaultQuantity?: string;
-  /** Per-category margin bands; the selected category's band drives the math. */
-  bands?: Record<string, Band>;
-  defaultBand?: Band;
+  defaultAcceptsOffers?: boolean;
+  /** Per-category flat margin %; the selected category's margin drives the math. */
+  margins?: Record<string, number>;
+  defaultMargin?: number;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [choice, setChoice] = useState<ListingChoice>(defaultChoice);
   const [net, setNet] = useState(defaultSellerNet);
-  const [custom, setCustom] = useState("");
   const [category, setCategory] = useState("");
+  const [showBuyerView, setShowBuyerView] = useState(false);
 
   // Track the form's selected trade category (a sibling SearchSelect writes a
-  // hidden input) so the band math matches the chosen category.
+  // hidden input) so the margin math matches the chosen category.
   useEffect(() => {
     const form = rootRef.current?.closest("form");
     if (!form) return;
@@ -62,32 +66,11 @@ export function ListingTypeFields({
     };
   }, []);
 
-  const band = bands[category] ?? defaultBand;
+  const marginPct = margins[category] ?? defaultMargin;
   const netNum = Number(String(net).replace(/[^0-9.]/g, ""));
-  const estimate = netNum > 0 ? netNum * (1 + band.defaultPct / 100) : 0;
-  const customNum = Number(String(custom).replace(/[^0-9.]/g, ""));
-  const impliedPct =
-    netNum > 0 && customNum > 0 ? (customNum / netNum - 1) * 100 : null;
-  const belowMin = impliedPct !== null && impliedPct < band.minPct;
-
-  // Confirm-on-submit when below the category minimum (the case we discourage).
-  const needsConfirmRef = useRef(false);
-  useEffect(() => {
-    needsConfirmRef.current = belowMin;
-  }, [belowMin]);
-  useEffect(() => {
-    const form = rootRef.current?.closest("form");
-    if (!form) return;
-    const onSubmit = (e: Event) => {
-      if (!needsConfirmRef.current) return;
-      const ok = window.confirm(
-        "This buyer price is below the category minimum, so it must be reviewed before it can go live and won't be visible to buyers until approved. Submit it for review anyway?",
-      );
-      if (!ok) e.preventDefault();
-    };
-    form.addEventListener("submit", onSubmit);
-    return () => form.removeEventListener("submit", onSubmit);
-  }, []);
+  const hasNet = netNum > 0;
+  const buyerPrice = hasNet ? netNum * (1 + marginPct / 100) : 0;
+  const marginAmt = hasNet ? buyerPrice - netNum : 0;
 
   return (
     <div ref={rootRef} className="space-y-4">
@@ -118,22 +101,72 @@ export function ListingTypeFields({
       </div>
 
       {choice === "price" && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700">
-            Your net price (USD){" "}
-            <span className="font-normal text-slate-400">
-              - what you take home
-            </span>
-          </label>
-          <input
-            name="sellerNet"
-            required
-            inputMode="decimal"
-            value={net}
-            onChange={(e) => setNet(e.target.value)}
-            placeholder="2500.00"
-            className={inputCls}
-          />
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Your net price (USD){" "}
+              <span className="font-normal text-slate-400">
+                - what you take home
+              </span>
+            </label>
+            <input
+              name="sellerNet"
+              required
+              inputMode="decimal"
+              value={net}
+              onChange={(e) => setNet(e.target.value)}
+              placeholder="2500.00"
+              className={`mt-1 ${inputCls}`}
+            />
+          </div>
+
+          {/* Pricing calculator: full breakdown (seller's consent moment). */}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Pricing
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowBuyerView((v) => !v)}
+                className="text-xs font-medium text-brand-700 hover:underline"
+              >
+                {showBuyerView ? "Show full breakdown" : "What the buyer sees"}
+              </button>
+            </div>
+
+            {showBuyerView ? (
+              <div className="mt-2">
+                <p className="text-xs text-slate-500">Buyers see only:</p>
+                <p className="text-2xl font-extrabold text-slate-900">
+                  {hasNet ? usd(buyerPrice) : "$-"}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Your net and the margin are never shown to buyers.
+                </p>
+              </div>
+            ) : (
+              <dl className="mt-2 space-y-1 text-sm">
+                <Row label="Your net" value={hasNet ? usd(netNum) : "$-"} />
+                <Row
+                  label={`CX margin (${marginPct}%)`}
+                  value={hasNet ? usd(marginAmt) : "$-"}
+                  muted
+                />
+                <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1">
+                  <dt className="font-semibold text-slate-900">Buyer pays</dt>
+                  <dd className="text-lg font-extrabold text-slate-900">
+                    {hasNet ? usd(buyerPrice) : "$-"}
+                  </dd>
+                </div>
+              </dl>
+            )}
+            <p className="mt-2 text-xs text-slate-400">
+              The {marginPct}% category margin is fixed and always applies. You
+              keep your full net.
+            </p>
+          </div>
+
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">
               Quantity available
@@ -151,67 +184,24 @@ export function ListingTypeFields({
               quantity (capped at what you have).
             </p>
           </div>
-          <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            CX adds the category margin ({band.defaultPct}%) to set the
-            buyer&apos;s price - you keep your full net.
-            {netNum > 0 && (
-              <>
-                {" "}
-                Buyers would pay about{" "}
-                <strong className="text-slate-900">${estimate.toFixed(2)}</strong>
-                ; you keep{" "}
-                <strong className="text-slate-900">${netNum.toFixed(2)}</strong>.
-              </>
-            )}
-          </p>
 
-          <details className="text-sm">
-            <summary className="cursor-pointer text-xs font-medium text-brand-700">
-              Set the buyer&apos;s price yourself (advanced)
-            </summary>
-            <div className="mt-2 space-y-2">
-              <input
-                name="customPrice"
-                inputMode="decimal"
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                placeholder="Buyer price you want, e.g. 2800.00"
-                className={inputCls}
-              />
-              <input
-                name="counterReason"
-                placeholder="Why this price? (used if it needs review)"
-                className={inputCls}
-              />
-
-              {belowMin ? (
-                <div className="rounded-md border border-red-300 bg-red-50 p-2.5">
-                  <p className="text-xs font-semibold text-red-700">
-                    ⚠ Below the {band.minPct}% category minimum (your price implies
-                    just a {impliedPct!.toFixed(1)}% margin).
-                  </p>
-                  <p className="mt-1 text-xs text-red-600">
-                    This price must be reviewed before it can be posted, and your
-                    listing won&apos;t be visible to buyers until it&apos;s
-                    approved. Consider raising it to at least{" "}
-                    <strong>
-                      ${(netNum * (1 + band.minPct / 100)).toFixed(2)}
-                    </strong>{" "}
-                    to go live right away.
-                  </p>
-                </div>
-              ) : impliedPct !== null ? (
-                <p className="text-xs font-medium text-emerald-700">
-                  At or above the {band.minPct}% minimum - goes live immediately.
-                </p>
-              ) : (
-                <p className="text-xs text-slate-400">
-                  At or above the category minimum it goes live immediately; below
-                  it, it waits for a quick review.
-                </p>
-              )}
-            </div>
-          </details>
+          {/* Negotiable by default; uncheck for a firm price. */}
+          <label className="flex items-start gap-2 rounded-md border border-slate-200 p-3">
+            <input
+              type="checkbox"
+              name="acceptsOffers"
+              value="on"
+              defaultChecked={defaultAcceptsOffers}
+              className="mt-0.5 accent-brand-600"
+            />
+            <span className="text-sm text-slate-700">
+              <span className="font-medium">Accept offers</span>
+              <span className="block text-xs text-slate-500">
+                Let buyers negotiate. An accepted offer lowers your net; the
+                margin % stays the same. Uncheck for a firm price.
+              </span>
+            </span>
+          </label>
         </div>
       )}
 
@@ -252,6 +242,25 @@ export function ListingTypeFields({
           what you&apos;re after in the description below.
         </p>
       )}
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  muted,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <dt className={muted ? "text-slate-500" : "text-slate-700"}>{label}</dt>
+      <dd className={muted ? "text-slate-600" : "font-medium text-slate-900"}>
+        {value}
+      </dd>
     </div>
   );
 }

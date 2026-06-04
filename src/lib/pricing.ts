@@ -1,32 +1,29 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import type { PriceAgreement } from "@/generated/prisma/client";
 
 /**
- * Spread/margin pricing (PRD §7B). A seller enters a private NET; CX adds a
- * per-category margin to form the public buyer price. Only the buyer price is
- * ever public; sellerNet / marginPct stay private (owner + admin only).
+ * Margin pricing (PRD §7B, corrected revenue model). A FLAT, fixed margin % per
+ * assignable category (the trade slug). The public buyer price is always
+ *   buyerPrice = sellerNet x (1 + marginPct/100)
+ * Only the buyer price is public; sellerNet / marginPct stay private (owner +
+ * admin only). The margin % never flexes during a sale: buyer negotiation moves
+ * the seller's NET, and the buyer price is recomputed at the SAME margin. There
+ * is no floor on the net and no per-deal pricing approval.
  */
 
-export type MarginBand = { defaultPct: number; minPct: number };
+export const DEFAULT_MARGIN_PCT = 12;
 
-/** Fallback band when a category has no configured CategoryMargin row. */
-export const DEFAULT_BAND: MarginBand = { defaultPct: 12, minPct: 6 };
-
-export async function getMarginBand(category: string): Promise<MarginBand> {
+/** The flat margin % for a category (falls back to the code default). */
+export async function getCategoryMargin(category: string): Promise<number> {
   const row = await prisma.categoryMargin.findUnique({ where: { category } });
-  return row
-    ? { defaultPct: row.defaultPct, minPct: row.minPct }
-    : DEFAULT_BAND;
+  return row ? row.marginPct : DEFAULT_MARGIN_PCT;
 }
 
-/** All configured bands keyed by category (for the listing form's live math). */
-export async function getAllMarginBands(): Promise<Record<string, MarginBand>> {
+/** All configured category margins keyed by category (for the live calculator). */
+export async function getAllCategoryMargins(): Promise<Record<string, number>> {
   const rows = await prisma.categoryMargin.findMany();
-  const out: Record<string, MarginBand> = {};
-  for (const r of rows) {
-    out[r.category] = { defaultPct: r.defaultPct, minPct: r.minPct };
-  }
+  const out: Record<string, number> = {};
+  for (const r of rows) out[r.category] = r.marginPct;
   return out;
 }
 
@@ -35,10 +32,13 @@ export function buyerPriceFor(sellerNet: number, marginPct: number): number {
   return Math.round(sellerNet * (1 + marginPct / 100) * 100) / 100;
 }
 
-/** The margin % implied by a chosen buyer price over a seller net. */
-export function impliedMarginPct(sellerNet: number, buyerPrice: number): number {
-  if (sellerNet <= 0) return 0;
-  return (buyerPrice / sellerNet - 1) * 100;
+/**
+ * Back-calculate the seller net implied by a buyer price at a margin %. Used by
+ * the buyer-offer flow: a buyer offers a buyer price, and the seller is shown the
+ * net they would take ( net = buyerPrice / (1 + marginPct/100) ).
+ */
+export function impliedNet(buyerPrice: number, marginPct: number): number {
+  return Math.round((buyerPrice / (1 + marginPct / 100)) * 100) / 100;
 }
 
 /** The CX margin amount (spread) on a set-price listing, or null. */
@@ -53,44 +53,23 @@ export function marginAmount(listing: {
 export type ComputedPricing = {
   price: number; // public buyer price
   sellerNet: number; // private
-  marginPct: number; // private
-  agreement: PriceAgreement;
-  counterReason: string | null;
-  listedAt: Date | null;
+  marginPct: number; // private (the category's flat margin)
+  listedAt: Date;
 };
 
 /**
- * Resolve a set-price listing's pricing. Default: buyer price = net + default
- * margin (auto-agreed). Counter: the seller sets a custom buyer price - any
- * price AT OR ABOVE the minimum margin auto-agrees (no maximum); below the
- * minimum it is held for admin review (pending_admin, not public).
+ * Pricing for a set-price listing under the flat model: the seller's net plus the
+ * category's fixed margin. Always live - no floor, no review.
  */
-export function computePricing(
-  band: MarginBand,
+export function computeListingPricing(
   sellerNet: number,
-  customPrice: number | null,
-  counterReason: string | null,
+  marginPct: number,
   now: Date,
 ): ComputedPricing {
-  const defaultPrice = buyerPriceFor(sellerNet, band.defaultPct);
-  if (customPrice != null && Math.abs(customPrice - defaultPrice) > 0.005) {
-    const pct = impliedMarginPct(sellerNet, customPrice);
-    const ok = pct >= band.minPct;
-    return {
-      price: customPrice,
-      sellerNet,
-      marginPct: Math.round(pct * 100) / 100,
-      agreement: ok ? "agreed" : "pending_admin",
-      counterReason: ok ? null : counterReason,
-      listedAt: ok ? now : null,
-    };
-  }
   return {
-    price: defaultPrice,
+    price: buyerPriceFor(sellerNet, marginPct),
     sellerNet,
-    marginPct: band.defaultPct,
-    agreement: "agreed",
-    counterReason: null,
+    marginPct,
     listedAt: now,
   };
 }

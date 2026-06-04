@@ -31,11 +31,10 @@ export type Capability =
   | "dashboard" // view the KPI dashboard (financial KPIs gated separately)
   | "moderation" // close/reopen/remove/recategorize listings, content moderation
   | "verification" // approve/deny the verified badge
-  | "pricing" // view + resolve the pricing approval queue
   | "financials" // view sellerNet/marginPct + revenue KPIs
   | "users" // user & company management (verify, soft-suspend)
   | "audit" // view the AdminAction audit log
-  | "margins" // edit CategoryMargin bands
+  | "margins" // edit the per-category margin table
   | "manageAdmins" // grant/revoke admin roles
   | "hardDelete"; // irreversible deletes
 
@@ -44,7 +43,6 @@ const MIN_ROLE: Record<Capability, AdminRole> = {
   dashboard: "moderator",
   moderation: "moderator",
   verification: "moderator",
-  pricing: "admin",
   financials: "admin",
   users: "admin",
   audit: "admin",

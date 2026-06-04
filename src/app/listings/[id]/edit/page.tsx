@@ -14,7 +14,7 @@ import { MediaUpload } from "@/components/MediaUpload";
 import { ConfirmSubmit } from "@/components/ConfirmSubmit";
 import { tradeOptions } from "@/lib/trades";
 import { listingChoice, photosFromJson, LISTING_CONDITIONS } from "@/lib/listings";
-import { getAllMarginBands, DEFAULT_BAND } from "@/lib/pricing";
+import { getAllCategoryMargins, DEFAULT_MARGIN_PCT } from "@/lib/pricing";
 
 const ERRORS: Record<string, string> = {
   title: "A title is required.",
@@ -51,7 +51,7 @@ export default async function EditListingPage({
   const statusDefault = ["active", "sold", "closed"].includes(listing.status)
     ? listing.status
     : "active";
-  const bands = await getAllMarginBands();
+  const margins = await getAllCategoryMargins();
 
   return (
     <main className="flex-1">
@@ -112,8 +112,8 @@ export default async function EditListingPage({
               Listing type
             </label>
             <ListingTypeFields
-              bands={bands}
-              defaultBand={DEFAULT_BAND}
+              margins={margins}
+              defaultMargin={DEFAULT_MARGIN_PCT}
               defaultChoice={choice}
               defaultSellerNet={
                 listing.sellerNet !== null
@@ -127,6 +127,7 @@ export default async function EditListingPage({
               }
               defaultClosesAt={listing.closesAt ? toDatetimeLocal(listing.closesAt) : ""}
               defaultQuantity={String(listing.quantityAvailable)}
+              defaultAcceptsOffers={listing.acceptsOffers}
             />
           </div>
 
