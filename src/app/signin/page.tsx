@@ -8,17 +8,21 @@ export default async function SignInPage({
 }: {
   searchParams: Promise<{ error?: string; email?: string; next?: string }>;
 }) {
-  const user = await getCurrentUser();
-  if (user) redirect("/me");
-
   const { error, email, next } = await searchParams;
+
+  const user = await getCurrentUser();
+  // A signed-in user normally skips sign-in - except when they were bounced here
+  // for lacking admin access (show the form so they can switch accounts).
+  if (user && error !== "forbidden") redirect("/me");
 
   const message =
     error === "email"
       ? "Please enter a valid email address."
       : error === "name"
         ? "Looks like you're new here - please add your name to create your account."
-        : null;
+        : error === "forbidden"
+          ? "That account doesn't have admin access. Sign in with an admin account to continue."
+          : null;
 
   return (
     <main className="flex-1">

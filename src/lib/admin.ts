@@ -84,7 +84,9 @@ export async function getAdmin(): Promise<User | null> {
 export async function requireAdmin(min: AdminRole = "moderator"): Promise<User> {
   const u = await getCurrentUser();
   if (!u) redirect("/signin?next=/admin");
-  if (!hasRole(u.adminRole, min)) redirect("/");
+  // Send under-privileged users to sign-in (NOT "/", which loops on the admin
+  // subdomain where the proxy rewrites "/" back to "/admin").
+  if (!hasRole(u.adminRole, min)) redirect("/signin?error=forbidden&next=/admin");
   return u;
 }
 
@@ -92,7 +94,7 @@ export async function requireAdmin(min: AdminRole = "moderator"): Promise<User> 
 export async function requireCapability(capability: Capability): Promise<User> {
   const u = await getCurrentUser();
   if (!u) redirect("/signin?next=/admin");
-  if (!can(u.adminRole, capability)) redirect("/");
+  if (!can(u.adminRole, capability)) redirect("/signin?error=forbidden&next=/admin");
   return u;
 }
 
