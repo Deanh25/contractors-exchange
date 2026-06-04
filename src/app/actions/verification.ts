@@ -59,9 +59,12 @@ export async function requestVerificationAction(formData: FormData) {
     where: { ...subjectWhere, status: "pending" },
   });
 
-  const docs = existing
-    ? [...docsFromJson(existing.documents), ...newDocs]
-    : newDocs;
+  // Keep only the already-attached docs the submitter chose to keep (validated
+  // against the request's real docs), then append the newly uploaded ones.
+  const existingDocs = existing ? docsFromJson(existing.documents) : [];
+  const keep = formData.getAll("keepDocuments").map(String);
+  const kept = existingDocs.filter((u) => keep.includes(u));
+  const docs = [...kept, ...newDocs];
   const data = {
     legalName,
     licenseNumber,

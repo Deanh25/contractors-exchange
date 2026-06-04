@@ -1,4 +1,5 @@
 import { requestVerificationAction } from "@/app/actions/verification";
+import { DocumentUpload } from "@/components/DocumentUpload";
 import type { VerificationRequest } from "@/generated/prisma/client";
 
 /**
@@ -143,15 +144,9 @@ function Form({ request }: { request: VerificationRequest | null }) {
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-600">
-          Documents (license, registration, insurance) - PDF or image
+          Documents (license, registration, insurance)
         </label>
-        <input
-          type="file"
-          name="documents"
-          multiple
-          accept=".pdf,image/*"
-          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-        />
+        <DocumentUpload existing={docs(request?.documents)} />
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-600">
