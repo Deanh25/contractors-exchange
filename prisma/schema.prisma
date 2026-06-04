@@ -56,6 +56,7 @@ model User {
   taggedInPosts      PostTag[] @relation("PostTagUser") // posts that mention this user
   adminActions       AdminAction[] @relation("AdminActions") // moderation actions this admin took
   listingViews       ListingView[] @relation("ListingViewViewer") // listing detail views by this user
+  offersAsBuyer      Offer[] @relation("OfferBuyerUser") // offers this user made as a buyer
 }
 
 model Company {
@@ -87,6 +88,7 @@ model Company {
   notifications      Notification[] @relation("NotifRecipientCompany") // alerts for this company's team
   notificationsActed Notification[] @relation("NotifActorCompany") // alerts this company triggered
   taggedInPosts      PostTag[] @relation("PostTagCompany") // posts that mention this company
+  offersAsBuyer      Offer[] @relation("OfferBuyerCompany") // offers this company made as a buyer
 }
 
 enum MembershipRole {
@@ -202,6 +204,7 @@ model Listing {
   transactions Transaction[] // purchase / bid / trade-request records
   savedBy      SavedListing[] // users who bookmarked this listing
   views        ListingView[] // detail-page view events (Marketplace Insights)
+  offers       Offer[] // buyer offers / counters (negotiation)
 
   @@index([tradeCategory])
   @@index([type])
@@ -474,6 +477,56 @@ model Transaction {
 }
 
 // -----------------------------------------------------------------------------
+// Offers / negotiation (PRD §7B, corrected model). A buyer negotiates a set-price
+// listing by proposing a BUYER PRICE; the system back-calculates the implied
+// seller net at the listing's FIXED margin ( net = buyerPrice / (1 + margin%) ).
+// The margin % never moves - only the net. Counters alternate buyer/seller and
+// chain via parentId; the latest pending offer awaits the OTHER side. On accept a
+// Transaction is created. sellerNet/marginPct are private (seller/admin only).
+// -----------------------------------------------------------------------------
+
+enum OfferSide {
+  buyer
+  seller
+}
+
+enum OfferStatus {
+  pending // open, awaiting the other side
+  accepted // accepted -> a Transaction was created
+  declined // declined by the recipient
+  countered // superseded by the recipient's counter
+  withdrawn // the sender withdrew it
+}
+
+model Offer {
+  id String @id @default(cuid())
+  listingId String
+  // The buyer party in this negotiation (constant across the counter chain).
+  buyerType      PartyType
+  buyerUserId    String?
+  buyerCompanyId String?
+  fromSide   OfferSide // who proposed THIS offer (negotiation alternates)
+  buyerPrice Decimal   @db.Decimal(12, 2) // proposed PUBLIC buyer price
+  sellerNet  Decimal   @db.Decimal(12, 2) // private: implied net at the fixed margin
+  marginPct  Float // private: listing's fixed margin % at offer time
+  message    String?   @db.Text
+  status     OfferStatus @default(pending)
+  parentId   String? // the offer this one counters (chain)
+  threadId   String? // the messaging thread the negotiation lives in
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listing      Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerUser    User?    @relation("OfferBuyerUser", fields: [buyerUserId], references: [id], onDelete: Cascade)
+  buyerCompany Company? @relation("OfferBuyerCompany", fields: [buyerCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, status])
+  @@index([buyerUserId])
+  @@index([buyerCompanyId])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
 // Notifications (PRD §8 + company-as-actor). In-app alerts on key events. The
 // recipient is a PARTY: a user, OR a company (its permitted team sees the single
 // record in their bell, labeled with the company; shared read - first reader
@@ -488,6 +541,8 @@ enum NotificationType {
   review_new // you received a review
   follow_new // someone followed you
   post_mention // you (or your company) were tagged in a post
+  offer_new // someone made an offer on your listing
+  offer_update // an offer you are in was countered / accepted / declined
 }
 
 model Notification {

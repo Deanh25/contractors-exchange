@@ -13,6 +13,8 @@ import { getActingContext, getActingCompanies } from "@/lib/identity";
 import { buyerWhere, sellerWhere } from "@/lib/orders";
 import { marginAmount } from "@/lib/pricing";
 import { recordListingView } from "@/lib/insights";
+import { getActiveOffer } from "@/lib/offers";
+import { makeOfferAction } from "@/app/actions/offers";
 import { SaveButton } from "@/components/SaveButton";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
@@ -106,6 +108,8 @@ export default async function ListingDetailPage({
   // show their latest request on this listing (unless they own/control it).
   const sellerParty = listingOwnerParty(listing);
   let myTx = null;
+  let myOffer = null;
+  let canMakeOffer = false;
   if (viewer && sellerParty) {
     const ctx = await getActingContext(viewer.id);
     const buyerParty =
@@ -114,10 +118,19 @@ export default async function ListingDetailPage({
         : { type: "user" as const, id: viewer.id };
     const acting = new Set((await getActingCompanies(viewer.id)).map((c) => c.id));
     if (!partiesEqual(buyerParty, sellerParty) && !controlsParty(sellerParty, viewer.id, acting)) {
-      myTx = await prisma.transaction.findFirst({
-        where: { listingId: listing.id, ...buyerWhere(buyerParty) },
-        orderBy: { createdAt: "desc" },
-      });
+      [myTx, myOffer] = await Promise.all([
+        prisma.transaction.findFirst({
+          where: { listingId: listing.id, ...buyerWhere(buyerParty) },
+          orderBy: { createdAt: "desc" },
+        }),
+        getActiveOffer(listing.id, buyerParty),
+      ]);
+      // Offer entry only on negotiable set-price listings with no offer in flight.
+      canMakeOffer =
+        listing.type === "price" &&
+        listing.acceptsOffers &&
+        listing.sellerNet !== null &&
+        !myOffer;
     }
   }
   const myTxActive =
@@ -337,6 +350,46 @@ export default async function ListingDetailPage({
                           : "request"}
                     </Link>
                   )}
+
+                  {/* Negotiation: make an offer, or resume one in progress. */}
+                  {!myTxActive && myOffer ? (
+                    <Link
+                      href={myOffer.threadId ? `/messages/${myOffer.threadId}` : "/messages"}
+                      className="block rounded-md border border-amber-300 bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-800 hover:bg-amber-100"
+                    >
+                      Offer in progress ({formatMoney(myOffer.buyerPrice)}) →
+                    </Link>
+                  ) : !myTxActive && canMakeOffer ? (
+                    <details>
+                      <summary className="block cursor-pointer list-none rounded-md border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        Make an offer
+                      </summary>
+                      <form
+                        action={makeOfferAction}
+                        className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3"
+                      >
+                        <input type="hidden" name="listingId" value={listing.id} />
+                        <input
+                          name="buyerPrice"
+                          inputMode="decimal"
+                          required
+                          placeholder={`Your offer (asking ${formatMoney(listing.price)})`}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                        <input
+                          name="message"
+                          placeholder="Add a note (optional)"
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        />
+                        <button
+                          type="submit"
+                          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                        >
+                          Send offer
+                        </button>
+                      </form>
+                    </details>
+                  ) : null}
 
                   {viewer ? (
                     <div className="flex gap-2">

@@ -16,9 +16,11 @@ import {
 } from "@/lib/messaging";
 import { getActingCompanies } from "@/lib/identity";
 import { buyerWhere } from "@/lib/orders";
+import { getActiveOffer } from "@/lib/offers";
 import { timeAgo } from "@/lib/time";
 import { ownerInclude, isVideoUrl } from "@/lib/listings";
 import { TransactionPanel } from "@/components/TransactionPanel";
+import { NegotiationPanel } from "@/components/NegotiationPanel";
 import { MarkThreadRead } from "@/components/MarkThreadRead";
 import { MediaInput } from "@/components/MediaInput";
 
@@ -67,16 +69,20 @@ export default async function ConversationPage({
   let dealActive = false;
   let dealIsBuyer = false;
   let tx = null;
+  let activeOffer = null;
   if (listing) {
     const sellerParty = listingOwnerParty(listing);
     if (sellerParty && (partiesEqual(sellerParty, a) || partiesEqual(sellerParty, b))) {
       const buyerParty = partiesEqual(sellerParty, a) ? b : a;
       dealActive = true;
       dealIsBuyer = partiesEqual(myParty, buyerParty);
-      tx = await prisma.transaction.findFirst({
-        where: { listingId: listing.id, ...buyerWhere(buyerParty) },
-        orderBy: { createdAt: "desc" },
-      });
+      [tx, activeOffer] = await Promise.all([
+        prisma.transaction.findFirst({
+          where: { listingId: listing.id, ...buyerWhere(buyerParty) },
+          orderBy: { createdAt: "desc" },
+        }),
+        getActiveOffer(listing.id, buyerParty),
+      ]);
     }
   }
 
@@ -101,10 +107,19 @@ export default async function ConversationPage({
           </Link>
         </div>
 
-        {/* Leakage-aware deal panel (thread about a listing, seller is a party) */}
-        {listing && dealActive && (
-          <TransactionPanel listing={listing} tx={tx} isBuyer={dealIsBuyer} />
-        )}
+        {/* Leakage-aware deal panel (thread about a listing, seller is a party).
+            An open negotiation shows the offer panel; otherwise the deal/order. */}
+        {listing &&
+          dealActive &&
+          (activeOffer ? (
+            <NegotiationPanel
+              listing={listing}
+              offer={activeOffer}
+              viewerIsSeller={!dealIsBuyer}
+            />
+          ) : (
+            <TransactionPanel listing={listing} tx={tx} isBuyer={dealIsBuyer} />
+          ))}
 
         {/* Messages */}
         <div className="flex-1 space-y-3 overflow-y-auto py-4">
