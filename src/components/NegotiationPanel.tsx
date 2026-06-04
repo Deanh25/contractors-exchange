@@ -65,17 +65,24 @@ export function NegotiationPanel({
 
         {/* Seller-only: resulting net + concession awareness (informational). */}
         {viewerIsSeller && (
-          <p className="mt-1 text-sm text-slate-700">
-            You would net{" "}
-            <span className="font-semibold text-slate-900">{formatMoney(offerNet)}</span>
-            {concession !== null && concession > 0 && (
-              <span className="text-slate-500">
-                {" "}
-                (down {formatMoney(concession)} from your {formatMoney(originalNet)} ask)
-              </span>
-            )}
-            .
-          </p>
+          <>
+            <p className="mt-1 text-sm text-slate-700">
+              You would net{" "}
+              <span className="font-semibold text-slate-900">{formatMoney(offerNet)}</span>
+              {concession !== null && concession > 0 && (
+                <span className="text-slate-500">
+                  {" "}
+                  (down {formatMoney(concession)} from your {formatMoney(originalNet)} ask)
+                </span>
+              )}
+              .
+            </p>
+            {/* Time-to-sell hint: inert placeholder until there's enough sales data. */}
+            <p className="mt-0.5 text-xs text-slate-400">
+              Time-to-sell insight will appear here once there&apos;s enough sales
+              data for similar items.
+            </p>
+          </>
         )}
 
         {canRespond ? (

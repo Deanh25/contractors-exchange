@@ -161,6 +161,7 @@ export async function createTransactionAction(formData: FormData) {
         buyerPrice: amount, // §7B: the public price the buyer pays
         sellerNet, // private: what the seller takes home
         margin, // private: CX spread
+        quantity: qty, // units bought (decrements stock on completion)
         message,
       },
     });
@@ -223,6 +224,21 @@ export async function updateTransactionAction(formData: FormData) {
     where: { id: txId },
     data: { status: next },
   });
+
+  // On completion of a set-price sale, decrement the listing's stock by the units
+  // bought; if it hits zero, mark the listing sold (admin decision §7C #6).
+  if (next === "completed" && tx.listing.type === "price") {
+    const remaining = Math.max(0, tx.listing.quantityAvailable - tx.quantity);
+    await prisma.listing.update({
+      where: { id: tx.listingId },
+      data: {
+        quantityAvailable: remaining,
+        ...(remaining <= 0 ? { status: "sold" as const } : {}),
+      },
+    });
+    revalidatePath(`/listings/${tx.listingId}`);
+    revalidatePath("/listings");
+  }
 
   // The acting side (the one the user controls) authors the status message.
   const actingSide: Party = isSeller ? seller : buyer;
