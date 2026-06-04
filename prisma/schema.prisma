@@ -152,6 +152,15 @@ enum ListingStatus {
   closed // withdrawn / expired
 }
 
+// Why a seller closed a listing (PRD §7C). Selectable + skippable when they close;
+// "sold_elsewhere" is the key leakage signal for the admin dashboard.
+enum ListingCloseReason {
+  sold_on_cx
+  sold_elsewhere
+  no_longer_available
+  other
+}
+
 model Listing {
   id String @id @default(cuid())
   // Polymorphic owner via two optional FKs (exactly one is set). This keeps clean
@@ -196,7 +205,9 @@ model Listing {
   listedAt        DateTime? // when the listing went live (consent moment / aging)
   lastRepricedAt  DateTime? // last aging reprice
 
-  status    ListingStatus @default(active)
+  status         ListingStatus       @default(active)
+  closeReason    ListingCloseReason? // why the seller closed it (leakage signal)
+  closeReasonNote String?            @db.Text
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 

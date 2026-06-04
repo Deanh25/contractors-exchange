@@ -15,7 +15,15 @@ import type {
   TradeKind,
   ListingStatus,
   ListingCondition,
+  ListingCloseReason,
 } from "@/generated/prisma/client";
+
+const CLOSE_REASONS = new Set([
+  "sold_on_cx",
+  "sold_elsewhere",
+  "no_longer_available",
+  "other",
+]);
 import type { ListingChoice } from "@/lib/listings";
 
 const CONDITIONS = new Set(["new", "like_new", "good", "fair", "salvage"]);
@@ -289,10 +297,22 @@ export async function updateListingStatusAction(formData: FormData) {
   if (!(await canManageListing(user.id, listing))) redirect(`/listings/${id}`);
   if (!EDITABLE_STATUS.has(statusRaw)) redirect(`/listings/${id}`);
 
-  await prisma.listing.update({
-    where: { id },
-    data: { status: statusRaw as ListingStatus },
-  });
+  // Capture the seller's close reason (selectable, skippable) when closing; clear
+  // it on reactivate. This feeds the leakage signal on the admin dashboard.
+  const data: Prisma.ListingUpdateInput = { status: statusRaw as ListingStatus };
+  if (statusRaw === "closed") {
+    const cr = String(formData.get("closeReason") ?? "").trim();
+    data.closeReason = CLOSE_REASONS.has(cr)
+      ? (cr as ListingCloseReason)
+      : null;
+    data.closeReasonNote =
+      String(formData.get("closeReasonNote") ?? "").trim() || null;
+  } else if (statusRaw === "active") {
+    data.closeReason = null;
+    data.closeReasonNote = null;
+  }
+
+  await prisma.listing.update({ where: { id }, data });
   revalidatePath(`/listings/${id}`);
   revalidatePath("/listings");
   redirect(`/listings/${id}`);

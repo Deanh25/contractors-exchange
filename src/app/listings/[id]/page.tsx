@@ -310,16 +310,50 @@ export default async function ListingDetailPage({
                       Requests{pendingCount > 0 ? ` (${pendingCount})` : ""}
                     </Link>
                   </div>
-                  <div className="flex gap-2">
-                    {listing.status === "active" ? (
-                      <>
+                  {listing.status === "active" ? (
+                    <>
+                      <div className="flex gap-2">
                         <StatusBtn id={listing.id} status="sold" label="Mark sold" />
-                        <StatusBtn id={listing.id} status="closed" label="Close" />
-                      </>
-                    ) : (
+                      </div>
+                      <details className="rounded-md border border-slate-300">
+                        <summary className="cursor-pointer list-none px-3 py-1.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50">
+                          Close listing
+                        </summary>
+                        <form
+                          action={updateListingStatusAction}
+                          className="space-y-2 border-t border-slate-200 p-3"
+                        >
+                          <input type="hidden" name="listingId" value={listing.id} />
+                          <input type="hidden" name="status" value="closed" />
+                          <select
+                            name="closeReason"
+                            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          >
+                            <option value="">Reason (optional)</option>
+                            <option value="sold_on_cx">Sold on Contractors Exchange</option>
+                            <option value="sold_elsewhere">Sold somewhere else</option>
+                            <option value="no_longer_available">No longer available</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <input
+                            name="closeReasonNote"
+                            placeholder="Add a note (optional)"
+                            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          />
+                          <button
+                            type="submit"
+                            className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            Close listing
+                          </button>
+                        </form>
+                      </details>
+                    </>
+                  ) : (
+                    <div className="flex gap-2">
                       <StatusBtn id={listing.id} status="active" label="Reactivate" />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
