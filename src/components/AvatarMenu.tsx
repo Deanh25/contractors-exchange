@@ -151,7 +151,9 @@ export function AvatarMenu({
           {isAdmin && (
             <>
               <div className="my-1 border-t border-slate-100" />
-              <Link
+              {/* Full-page navigation: the public host redirects /admin to the
+                  admin subdomain (see src/proxy.ts), which needs a hard load. */}
+              <a
                 href="/admin"
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
@@ -160,7 +162,7 @@ export function AvatarMenu({
                   A
                 </span>
                 Admin backend
-              </Link>
+              </a>
             </>
           )}
           <div className="my-1 border-t border-slate-100" />

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { MobileTabBar } from "@/components/MobileTabBar";
@@ -28,9 +29,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // On the admin subdomain the AdminShell provides all chrome, so the public
+  // header / mobile tab bar are hidden (the proxy ensures only /admin renders here).
+  const onAdminHost = ((await headers()).get("host") ?? "").startsWith("admin.");
+
   const user = await getCurrentUser();
   let unread = 0;
-  if (user) {
+  if (user && !onAdminHost) {
     const ctx = await getActingContext(user.id);
     const party =
       ctx.type === "company"
@@ -43,10 +48,14 @@ export default async function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-white pb-14 text-slate-900 sm:pb-0">
-        <SiteHeader />
+      <body
+        className={`flex min-h-full flex-col bg-white text-slate-900 ${
+          onAdminHost ? "" : "pb-14 sm:pb-0"
+        }`}
+      >
+        {!onAdminHost && <SiteHeader />}
         {children}
-        {user && <MobileTabBar unread={unread} />}
+        {user && !onAdminHost && <MobileTabBar unread={unread} />}
       </body>
     </html>
   );

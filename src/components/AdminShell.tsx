@@ -30,11 +30,18 @@ export function AdminShell({
       ? pathname === "/admin"
       : pathname === href || pathname.startsWith(href + "/");
 
+  // The admin portal runs on the admin subdomain; "Back to site" targets the
+  // public host (the same host minus the "admin." prefix).
+  const backToSite = () => {
+    const h = window.location.host.replace(/^admin\./, "");
+    window.location.href = `${window.location.protocol}//${h}/`;
+  };
+
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-slate-100">
+    <div className="min-h-screen bg-slate-100">
       <div className="mx-auto flex max-w-7xl flex-col gap-0 lg:flex-row">
         {/* Left rail */}
-        <aside className="shrink-0 bg-[#1f2a37] text-slate-200 lg:min-h-[calc(100vh-3.5rem)] lg:w-60">
+        <aside className="shrink-0 bg-[#1f2a37] text-slate-200 lg:min-h-screen lg:w-60">
           <div className="px-4 py-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold uppercase tracking-wide text-white">
@@ -67,12 +74,13 @@ export function AdminShell({
             })}
           </nav>
           <div className="hidden px-4 py-3 lg:block">
-            <Link
-              href="/"
+            <button
+              type="button"
+              onClick={backToSite}
               className="text-xs text-slate-400 hover:text-slate-200"
             >
               ← Back to site
-            </Link>
+            </button>
           </div>
         </aside>
 
