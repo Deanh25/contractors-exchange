@@ -12,6 +12,7 @@ import { listingOwnerParty, controlsParty, partiesEqual } from "@/lib/messaging"
 import { getActingContext, getActingCompanies } from "@/lib/identity";
 import { buyerWhere, sellerWhere } from "@/lib/orders";
 import { marginAmount } from "@/lib/pricing";
+import { recordListingView } from "@/lib/insights";
 import { SaveButton } from "@/components/SaveButton";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { tradeLabel } from "@/lib/trades";
@@ -97,6 +98,12 @@ export default async function ListingDetailPage({
 
   // A listing held for pricing review (§7B) is not public - only its owner sees it.
   if (listing.agreement === "pending_admin" && !canManage) notFound();
+
+  // Record a view for Marketplace Insights - but not the owner's own views. Repeat
+  // views by the same signed-in viewer are de-duped inside the helper.
+  if (!canManage) {
+    await recordListingView(listing.id, viewer?.id ?? null, "detail");
+  }
 
   // Deal context (PRD §7). The buyer is the viewer's current acting identity;
   // show their latest request on this listing (unless they own/control it).

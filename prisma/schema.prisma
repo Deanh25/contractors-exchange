@@ -32,6 +32,7 @@ model User {
   lng       Float?
   avatarUrl String?
   verified  Boolean  @default(false) // manual trust flag (PRD §7)
+  isAdmin   Boolean  @default(false) // can access the /admin backend (PRD §7C)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -51,6 +52,8 @@ model User {
   savedListings      SavedListing[] // listings this user bookmarked
   collections        Collection[] // named folders for saved listings
   taggedInPosts      PostTag[] @relation("PostTagUser") // posts that mention this user
+  adminActions       AdminAction[] @relation("AdminActions") // moderation actions this admin took
+  listingViews       ListingView[] @relation("ListingViewViewer") // listing detail views by this user
 }
 
 model Company {
@@ -202,6 +205,7 @@ model Listing {
   threads      Thread[] // message threads about this listing
   transactions Transaction[] // purchase / bid / trade-request records
   savedBy      SavedListing[] // users who bookmarked this listing
+  views        ListingView[] // detail-page view events (Marketplace Insights)
 
   @@index([tradeCategory])
   @@index([type])
@@ -209,6 +213,43 @@ model Listing {
   @@index([ownerUserId])
   @@index([ownerCompanyId])
   @@index([createdAt])
+}
+
+// A listing detail-page view event (PRD: Marketplace Insights, seller analytics).
+// One row per counted visit; the owner's own views are not recorded. viewerUserId
+// is null for logged-out visitors. The SAME event source feeds the seller's
+// per-listing insight AND (later) the admin dashboard, so it lives here once.
+// Repeat views by the same signed-in user within a short window are de-duped at
+// write time (see src/lib/insights.ts) so a refresh doesn't inflate Views.
+model ListingView {
+  id           String   @id @default(cuid())
+  listingId    String
+  viewerUserId String? // null = anonymous / logged-out
+  source       String? // where the view came from, e.g. "detail"
+  createdAt    DateTime @default(now())
+
+  listing    Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  viewerUser User?   @relation("ListingViewViewer", fields: [viewerUserId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([viewerUserId])
+}
+
+// Admin audit log (PRD §7C): every moderation/config action an admin takes is
+// recorded here for accountability (who did what to which entity, when).
+model AdminAction {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String // e.g. "pricing.approve", "user.verify", "margin.update"
+  targetType String // "listing" | "user" | "company" | "margin"
+  targetId   String?
+  detail     String?  @db.Text // human-readable summary / notes
+  createdAt  DateTime @default(now())
+
+  admin User @relation("AdminActions", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([adminId])
 }
 
 // Per-category margin band (PRD §7B): the spread CX adds on top of a seller's

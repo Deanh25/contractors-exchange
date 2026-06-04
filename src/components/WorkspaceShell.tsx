@@ -17,6 +17,7 @@ import type { User } from "@/generated/prisma/client";
 type ItemKey =
   | "messages"
   | "orders"
+  | "insights"
   | "saved"
   | "notifications"
   | "profile"
@@ -31,6 +32,7 @@ type NavItem = { key: ItemKey; label: string; href: string };
 const PERSONAL_ITEMS: NavItem[] = [
   { key: "messages", label: "Inbox", href: "/messages" },
   { key: "orders", label: "Orders", href: "/orders" },
+  { key: "insights", label: "Insights", href: "/insights" },
   { key: "saved", label: "Saved", href: "/saved" },
   { key: "notifications", label: "Notifications", href: "/notifications" },
   { key: "profile", label: "Profile", href: "/me" },
@@ -68,6 +70,7 @@ export async function WorkspaceShell({
       { key: "storefront", label: "Storefront", href: `/company/${company.slug}?tab=storefront` },
       { key: "messages", label: "Inbox", href: "/messages" },
       { key: "orders", label: "Orders", href: "/orders" },
+      { key: "insights", label: "Insights", href: "/insights" },
       { key: "team", label: "Team", href: `/company/${company.slug}?tab=team` },
       { key: "reviews", label: "Reviews", href: `/company/${company.slug}?tab=reviews` },
     ];

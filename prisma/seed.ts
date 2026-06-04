@@ -79,6 +79,7 @@ function txCols(buyer: SeedParty, seller: SeedParty) {
 
 async function main() {
   console.log("Clearing existing data...");
+  await prisma.listingView.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.savedListing.deleteMany();
   await prisma.collection.deleteMany();
@@ -720,6 +721,35 @@ async function main() {
     filed = true;
   }
 
+  console.log("Seeding listing views (Marketplace Insights)...");
+  // Give Dean's personal listings + the Hughes company storefront a believable
+  // spread of views over the past ~2 weeks, attributed to other members (and some
+  // anonymous), so /insights shows real numbers for both acting identities.
+  const viewers = await prisma.user.findMany({
+    where: { id: { not: dean.id } },
+    select: { id: true },
+    take: 6,
+  });
+  const insightListings = await prisma.listing.findMany({
+    where: { OR: [{ ownerUserId: dean.id }, { ownerCompanyId: hughes.id }] },
+    select: { id: true },
+  });
+  for (let idx = 0; idx < insightListings.length; idx++) {
+    const l = insightListings[idx];
+    const n = 3 + ((idx * 7) % 18); // 3..20 views, varied per listing
+    for (let k = 0; k < n; k++) {
+      const anon = k % 3 === 0; // every third view is logged-out
+      await prisma.listingView.create({
+        data: {
+          listingId: l.id,
+          viewerUserId: anon ? null : viewers[(idx + k) % viewers.length]?.id ?? null,
+          source: "detail",
+          createdAt: hoursAgo((k * 11 + idx * 5) % (24 * 14)),
+        },
+      });
+    }
+  }
+
   const [u, c, li, p, f] = await Promise.all([
     prisma.user.count(),
     prisma.company.count(),
@@ -727,16 +757,17 @@ async function main() {
     prisma.post.count(),
     prisma.follow.count(),
   ]);
-  const [th, ms, tx, rv, nt, sv] = await Promise.all([
+  const [th, ms, tx, rv, nt, sv, vw] = await Promise.all([
     prisma.thread.count(),
     prisma.message.count(),
     prisma.transaction.count(),
     prisma.review.count(),
     prisma.notification.count(),
     prisma.savedListing.count(),
+    prisma.listingView.count(),
   ]);
   console.log(
-    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions, ${rv} reviews, ${nt} notifications, ${sv} saved.`,
+    `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions, ${rv} reviews, ${nt} notifications, ${sv} saved, ${vw} views.`,
   );
   console.log("Sign in with kerinhughes50@gmail.com to use the Dean Hughes demo account.");
 }
