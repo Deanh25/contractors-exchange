@@ -17,6 +17,7 @@ const TYPE_LABEL: Record<NotificationType, { label: string; cls: string }> = {
   post_mention: { label: "Mention", cls: "bg-rose-100 text-rose-700" },
   offer_new: { label: "Offer", cls: "bg-amber-100 text-amber-700" },
   offer_update: { label: "Offer", cls: "bg-amber-100 text-amber-700" },
+  verification_update: { label: "Verification", cls: "bg-sky-100 text-sky-700" },
 };
 
 function FilterTab({

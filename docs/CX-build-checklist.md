@@ -18,7 +18,10 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   subdomain; role-filtered nav; non-admins bounced. Test each role sees the right nav.
 - [ ] **Dashboard (home launchpad)** — role-aware module cards. *(Full KPI dashboard still to build — Module 1.)*
 - [ ] **Verification** — search; filter by Pending / Verified / New / All and by
-  Companies / Users; **Verify** and **Remove badge**. *(Open question: verification criteria — see §D.)*
+  Companies / Users; **Verify** and **Remove badge**. **Request flow:** accounts
+  submit legal name + contractor license + address + **uploaded documents** (on
+  `/me` and the company workspace); the admin queue shows pending requests with
+  the docs and **Approve / Deny (with note)**; the submitter is notified.
 - [ ] **Listings (moderation)** — search + status filter; close/reopen/mark-sold with
   reason; recategorize; superadmin remove. Moderators load **no** financial fields.
 - [ ] **Users** — search; verify/unverify; suspend/unsuspend; superadmin delete (typed confirm).
@@ -54,7 +57,6 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 
 ## D. Open product decisions (need your call)
 
-- [ ] **Verification criteria** — what *makes* a company/user verified? (Proposed default +
-  options are in the chat.) This decides whether we add a verification **request** flow and a
-  **checklist/notes** field on the verify action.
+- [x] **Verification criteria** — DECIDED: verified = valid contractor license + confirmed
+  business identity, via a request → review (with notes) → approve/deny flow + doc upload. Built.
 - [ ] Anything else you flag while testing.

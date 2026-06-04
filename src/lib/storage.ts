@@ -15,6 +15,15 @@ const PUBLIC_PREFIX = "/uploads";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
 const MAX_VIDEO_BYTES = 64 * 1024 * 1024; // 64 MB
+const MAX_DOC_BYTES = 16 * 1024 * 1024; // 16 MB (verification docs)
+
+// Verification documents: PDFs + images (license, registration, insurance).
+const DOC_TYPES = new Map<string, string>([
+  ["application/pdf", "pdf"],
+  ["image/jpeg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+]);
 
 const IMAGE_TYPES = new Map<string, string>([
   ["image/jpeg", "jpg"],
@@ -62,5 +71,17 @@ export async function saveMedia(file: File): Promise<string | null> {
 /** Save many images/videos, dropping any invalid ones. Order preserved. */
 export async function saveMediaFiles(files: File[]): Promise<string[]> {
   const urls = await Promise.all(files.map(saveMedia));
+  return urls.filter((u): u is string => u !== null);
+}
+
+/** Save one verification document (PDF or image), or null if invalid/oversized. */
+export async function saveDocument(file: File): Promise<string | null> {
+  if (!file || file.size === 0 || file.size > MAX_DOC_BYTES) return null;
+  const ext = DOC_TYPES.get(file.type);
+  return ext ? write(file, ext) : null;
+}
+
+export async function saveDocuments(files: File[]): Promise<string[]> {
+  const urls = await Promise.all(files.map(saveDocument));
   return urls.filter((u): u is string => u !== null);
 }

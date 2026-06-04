@@ -81,6 +81,7 @@ function txCols(buyer: SeedParty, seller: SeedParty) {
 
 async function main() {
   console.log("Clearing existing data...");
+  await prisma.verificationRequest.deleteMany();
   await prisma.category.deleteMany();
   await prisma.listingView.deleteMany();
   await prisma.notification.deleteMany();
@@ -821,6 +822,21 @@ async function main() {
       });
     }
   }
+
+  console.log("Seeding a verification request...");
+  // Carolina Framing (unverified) has submitted a verification request, so the
+  // admin queue shows one pending. Sign in as Dean to review it.
+  await prisma.verificationRequest.create({
+    data: {
+      companyId: carolina.id,
+      legalName: "Carolina Framing LLC",
+      licenseNumber: "NC-77421",
+      licenseState: "NC",
+      businessAddress: "120 Trade St, Raleigh, NC 27601",
+      note: "Framing and finish carpentry, licensed since 2016.",
+      status: "pending",
+    },
+  });
 
   const [u, c, li, p, f] = await Promise.all([
     prisma.user.count(),

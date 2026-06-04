@@ -58,6 +58,8 @@ model User {
   adminActions       AdminAction[] @relation("AdminActions") // moderation actions this admin took
   listingViews       ListingView[] @relation("ListingViewViewer") // listing detail views by this user
   offersAsBuyer      Offer[] @relation("OfferBuyerUser") // offers this user made as a buyer
+  verificationRequests VerificationRequest[] @relation("VerifReqUser") // this user's verification submissions
+  reviewedVerifications VerificationRequest[] @relation("VerifReqReviewer") // requests this admin reviewed
 }
 
 model Company {
@@ -91,6 +93,7 @@ model Company {
   notificationsActed Notification[] @relation("NotifActorCompany") // alerts this company triggered
   taggedInPosts      PostTag[] @relation("PostTagCompany") // posts that mention this company
   offersAsBuyer      Offer[] @relation("OfferBuyerCompany") // offers this company made as a buyer
+  verificationRequests VerificationRequest[] @relation("VerifReqCompany") // this company's verification submissions
 }
 
 enum MembershipRole {
@@ -245,6 +248,43 @@ model ListingView {
 
   @@index([listingId, createdAt])
   @@index([viewerUserId])
+}
+
+// Verification requests (PRD §7C). An account (user or company) submits its
+// business identity + contractor license + supporting DOCUMENTS to earn the
+// verified badge; an admin reviews and approves/denies with a recorded note.
+// Approval flips the subject's `verified` flag (which drives the badge).
+enum VerificationRequestStatus {
+  pending
+  approved
+  denied
+}
+
+model VerificationRequest {
+  id        String  @id @default(cuid())
+  // Subject: exactly one of these is set.
+  userId    String?
+  companyId String?
+  legalName       String // legal business name
+  licenseNumber   String // contractor license number
+  licenseState    String // issuing state
+  businessAddress String @db.Text
+  note            String? @db.Text // submitter's note
+  documents       Json? // uploaded doc URLs (license, registration, insurance)
+  status      VerificationRequestStatus @default(pending)
+  adminNote   String?   @db.Text // reviewer's note (why approved/denied)
+  reviewedById String?
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user       User?    @relation("VerifReqUser", fields: [userId], references: [id], onDelete: Cascade)
+  company    Company? @relation("VerifReqCompany", fields: [companyId], references: [id], onDelete: Cascade)
+  reviewedBy User?    @relation("VerifReqReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([userId])
+  @@index([companyId])
 }
 
 // Admin privilege levels (PRD §7C). Clean hierarchy + one inversion: a moderator
@@ -579,6 +619,7 @@ enum NotificationType {
   post_mention // you (or your company) were tagged in a post
   offer_new // someone made an offer on your listing
   offer_update // an offer you are in was countered / accepted / declined
+  verification_update // your verification request was approved or denied
 }
 
 model Notification {

@@ -7,6 +7,7 @@ import { ListingCard } from "@/components/ListingCard";
 import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { VerificationRequestCard } from "@/components/VerificationRequestCard";
 import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getUserRating, getUserReviews } from "@/lib/reviews";
@@ -62,17 +63,22 @@ export default async function MyProfilePage({
     ? (sp.tab as Tab)
     : "overview";
 
-  const [memberships, listings, rating, reviews, savedCount] = await Promise.all([
-    getUserCompanies(user.id),
-    prisma.listing.findMany({
-      where: { ownerUserId: user.id },
-      include: ownerInclude,
-      orderBy: { createdAt: "desc" },
-    }),
-    getUserRating(user.id),
-    getUserReviews(user.id, 20),
-    getSavedCount(user.id),
-  ]);
+  const [memberships, listings, rating, reviews, savedCount, verifReq] =
+    await Promise.all([
+      getUserCompanies(user.id),
+      prisma.listing.findMany({
+        where: { ownerUserId: user.id },
+        include: ownerInclude,
+        orderBy: { createdAt: "desc" },
+      }),
+      getUserRating(user.id),
+      getUserReviews(user.id, 20),
+      getSavedCount(user.id),
+      prisma.verificationRequest.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
   const incomplete =
     !user.title && !user.bio && tradesFromJson(user.trades).length === 0;
@@ -142,6 +148,12 @@ export default async function MyProfilePage({
         {/* Tab content */}
         {tab === "overview" && (
           <div className="mt-6 space-y-6">
+            <VerificationRequestCard
+              verified={user.verified}
+              request={verifReq}
+              subjectLabel="Your account"
+            />
+
             {/* Quick stats */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="Listings" value={listings.length} href="/me?tab=listings" />

@@ -12,6 +12,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { VerificationRequestCard } from "@/components/VerificationRequestCard";
 import { messageCompanyAction } from "@/app/actions/message";
 import { isFollowing } from "@/lib/follows";
 import { getCompanyRating, getCompanyReviews } from "@/lib/reviews";
@@ -46,7 +47,7 @@ export default async function CompanyPage({
 
   if (!company) notFound();
 
-  const [listings, rating, reviews] = await Promise.all([
+  const [listings, rating, reviews, verifReq] = await Promise.all([
     prisma.listing.findMany({
       where: { ownerCompanyId: company.id, status: "active" },
       include: ownerInclude,
@@ -54,6 +55,10 @@ export default async function CompanyPage({
     }),
     getCompanyRating(company.id),
     getCompanyReviews(company.id),
+    prisma.verificationRequest.findFirst({
+      where: { companyId: company.id },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const trades = tradesFromJson(company.trades);
@@ -310,6 +315,14 @@ export default async function CompanyPage({
                 <Stat label="Team" value={company.memberships.length} href={`/company/${company.slug}?tab=team`} />
                 <Stat label="Reviews" value={rating.count} href={`/company/${company.slug}?tab=reviews`} />
               </div>
+
+              {isOwner && (
+                <VerificationRequestCard
+                  verified={company.verified}
+                  request={verifReq}
+                  subjectLabel={company.name}
+                />
+              )}
 
               <section>{storefrontBlock}</section>
             </div>
