@@ -32,6 +32,7 @@ model User {
   lng       Float?
   avatarUrl String?
   verified  Boolean  @default(false) // manual trust flag (PRD §7)
+  suspended Boolean  @default(false) // soft-suspended by an admin (reversible, PRD §7C)
   // Admin backend access + privilege level (PRD §7C). `none` = not an admin.
   // Hierarchy: superadmin > admin > moderator. Gating is server-side only.
   adminRole AdminRole @default(none)
@@ -72,6 +73,7 @@ model Company {
   logoUrl     String?
   description String?  @db.Text
   verified    Boolean  @default(false)
+  suspended   Boolean  @default(false) // soft-suspended by an admin (reversible, PRD §7C)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
