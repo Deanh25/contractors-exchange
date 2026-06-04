@@ -297,14 +297,14 @@ async function main() {
   const listings = [
     // Set price
     { owner: { ownerCompany: { connect: { id: hughes.id } } }, title: "2019 Bobcat S650 skid steer, 1,200 hrs", tradeCategory: "paving", ...CITY.charlotte, type: "price", price: 38500, unit: "each", freightNote: "Buyer arranges pickup", description: "Well maintained, enclosed cab, two-speed. Fresh service.", createdAt: hoursAgo(4) },
-    { owner: { ownerUser: { connect: { id: tyler.id } } }, title: "Pallet of 60lb concrete mix (56 bags)", tradeCategory: "concrete", ...CITY.denver, type: "price", price: 310, unit: "per pallet", description: "Overordered on a job. High-early strength mix.", createdAt: hoursAgo(9) },
-    { owner: { ownerCompany: { connect: { id: peachtree.id } } }, title: "3-ton condenser unit, new in box", tradeCategory: "hvac", ...CITY.atlanta, type: "price", price: 1950, unit: "each", description: "14 SEER, never installed. Customer changed scope.", createdAt: hoursAgo(20) },
+    { owner: { ownerUser: { connect: { id: tyler.id } } }, title: "Pallet of 60lb concrete mix (56 bags)", tradeCategory: "concrete", ...CITY.denver, type: "price", price: 310, unit: "per pallet", quantityAvailable: 6, description: "Overordered on a job. High-early strength mix.", createdAt: hoursAgo(9) },
+    { owner: { ownerCompany: { connect: { id: peachtree.id } } }, title: "3-ton condenser unit, new in box", tradeCategory: "hvac", ...CITY.atlanta, type: "price", price: 1950, unit: "each", quantityAvailable: 4, description: "14 SEER, never installed. Customer changed scope.", createdAt: hoursAgo(20) },
     { owner: { ownerUser: { connect: { id: brandon.id } } }, title: "Commercial zero-turn mower, 60in deck", tradeCategory: "landscaping", ...CITY.phoenix, type: "price", price: 4200, unit: "each", freightNote: "Can deliver within 50 mi", description: "Upgrading the fleet. Runs great, ~400 hrs.", createdAt: daysAgo(1) },
     { owner: { ownerUser: { connect: { id: whitney.id } } }, title: "Graco airless paint sprayer", tradeCategory: "painting", ...CITY.dallas, type: "price", price: 520, unit: "each", description: "Magnum X7, light use, extra tips included.", createdAt: daysAgo(1) },
-    { owner: { ownerCompany: { connect: { id: carolina.id } } }, title: "Bulk 2x4 SPF studs", tradeCategory: "framing", ...CITY.raleigh, type: "price", price: 4.85, unit: "each", freightNote: "Pickup in Raleigh", description: "Kiln-dried, straight stock. Volume discount available.", createdAt: daysAgo(2) },
+    { owner: { ownerCompany: { connect: { id: carolina.id } } }, title: "Bulk 2x4 SPF studs", tradeCategory: "framing", ...CITY.raleigh, type: "price", price: 4.85, unit: "each", quantityAvailable: 800, freightNote: "Pickup in Raleigh", description: "Kiln-dried, straight stock. Volume discount available.", createdAt: daysAgo(2) },
     { owner: { ownerCompany: { connect: { id: rivera.id } } }, title: "Bucket truck, 40ft boom", tradeCategory: "electrical", ...CITY.phoenix, type: "price", price: 28000, unit: "each", description: "Altec boom, recent inspection. Fleet reduction.", createdAt: daysAgo(2) },
-    { owner: { ownerUser: { connect: { id: alicia.id } } }, title: "Roofing nailer + compressor combo", tradeCategory: "roofing", ...CITY.tampa, type: "price", price: 380, unit: "each", description: "Coil nailer, hose, and pancake compressor.", createdAt: daysAgo(3) },
-    { owner: { ownerUser: { connect: { id: dean.id } } }, title: "Surplus crushed stone (#57)", tradeCategory: "paving", ...CITY.charlotte, type: "price", price: 24, unit: "per ton", freightNote: "Load-out at our Charlotte yard", description: "Clean #57 stone. Will load your truck.", createdAt: hoursAgo(30) },
+    { owner: { ownerUser: { connect: { id: alicia.id } } }, title: "Roofing nailer + compressor combo", tradeCategory: "roofing", ...CITY.tampa, type: "price", price: 380, unit: "each", quantityAvailable: 3, description: "Coil nailer, hose, and pancake compressor.", createdAt: daysAgo(3) },
+    { owner: { ownerUser: { connect: { id: dean.id } } }, title: "Surplus crushed stone (#57)", tradeCategory: "paving", ...CITY.charlotte, type: "price", price: 24, unit: "per ton", quantityAvailable: 40, freightNote: "Load-out at our Charlotte yard", description: "Clean #57 stone. Will load your truck.", createdAt: hoursAgo(30) },
 
     // Open for bid
     { owner: { ownerCompany: { connect: { id: rivera.id } } }, title: "Reconditioned 200A panels (lot of 10)", tradeCategory: "electrical", ...CITY.phoenix, type: "bid", startReserve: 1200, closesAt: daysAgo(-7), unit: "lot", description: "Tested and labeled. Selling as one lot.", createdAt: hoursAgo(6) },
@@ -521,6 +521,57 @@ async function main() {
       },
     });
   }
+
+  console.log("Creating additional sample reviews...");
+  // A few more completed sales so several sellers show a star rating on their
+  // marketplace cards - while OTHERS (Tyler, Whitney, Carolina, ...) stay
+  // unrated to exercise the "No reviews yet" empty state.
+  async function seedSale(
+    titleLike: string,
+    buyerUserId: string,
+    stars: number,
+    body: string,
+    when: Date,
+  ) {
+    const l = await prisma.listing.findFirst({
+      where: { title: { contains: titleLike } },
+    });
+    if (!l) return;
+    const sellerParty: SeedParty = l.ownerCompanyId
+      ? C(l.ownerCompanyId)
+      : U(l.ownerUserId!);
+    const amount = l.price
+      ? Number(l.price)
+      : l.startReserve
+        ? Number(l.startReserve)
+        : null;
+    const tx = await prisma.transaction.create({
+      data: {
+        listingId: l.id,
+        ...txCols(U(buyerUserId), sellerParty),
+        type: l.type === "bid" ? "bid" : "purchase",
+        amount,
+        buyerPrice: amount,
+        status: "completed",
+      },
+    });
+    await prisma.review.create({
+      data: {
+        transactionId: tx.id,
+        raterUserId: buyerUserId,
+        rateeUserId: sellerParty.type === "user" ? sellerParty.id : null,
+        rateeCompanyId: sellerParty.type === "company" ? sellerParty.id : null,
+        stars,
+        body,
+        createdAt: when,
+      },
+    });
+  }
+  // Rivera gets a 2nd review (-> "4.x (2)"); Brandon and Alicia get their first.
+  await seedSale("Bucket truck", chris.id, 4, "Boom worked great, clean truck. Smooth deal.", hoursAgo(40));
+  await seedSale("zero-turn mower", whitney.id, 5, "Mower started right up, fair price.", daysAgo(2));
+  await seedSale("Roofing nailer", sam.id, 5, "Great combo and quick handoff.", daysAgo(3));
+
   // A pending purchase request TO Dean (so the Dean demo account has an incoming
   // order + a badge on the Orders nav).
   const stone = await prisma.listing.findFirst({

@@ -25,10 +25,10 @@ export default async function CheckoutPage({
   searchParams,
 }: {
   params: Promise<{ listingId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; qty?: string }>;
 }) {
   const { listingId } = await params;
-  const { error } = await searchParams;
+  const { error, qty: qtyRaw } = await searchParams;
   const user = await requireUser(`/checkout/${listingId}`);
 
   const listing = await prisma.listing.findUnique({
@@ -57,6 +57,16 @@ export default async function CheckoutPage({
   if (existing) redirect(`/orders/${existing.id}`);
 
   const type = txTypeForListing(listing.type);
+  // Quantity (set-price stockable only), clamped to what the seller has.
+  const qty =
+    type === "purchase"
+      ? Math.min(
+          Math.max(1, Math.floor(Number(qtyRaw)) || 1),
+          listing.quantityAvailable,
+        )
+      : 1;
+  const unitPrice = listing.price === null ? null : Number(listing.price);
+  const lineTotal = unitPrice === null ? null : unitPrice * qty;
   const owner = listingOwner(listing);
   const photo = photosFromJson(listing.photos)[0];
   const badge = listingBadge(listing.type, listing.tradeKind);
@@ -103,6 +113,7 @@ export default async function CheckoutPage({
           {/* Order summary + terms */}
           <form action={createTransactionAction} className="space-y-5">
             <input type="hidden" name="listingId" value={listing.id} />
+            <input type="hidden" name="qty" value={qty} />
 
             <section className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -134,6 +145,11 @@ export default async function CheckoutPage({
                       {listing.unit && (
                         <span className="ml-1 text-xs font-medium text-slate-500">
                           {listing.unit}
+                        </span>
+                      )}
+                      {qty > 1 && (
+                        <span className="ml-1 text-xs font-medium text-slate-500">
+                          × {qty}
                         </span>
                       )}
                     </p>
@@ -183,8 +199,10 @@ export default async function CheckoutPage({
             {type === "purchase" && (
               <section className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
                 <div className="flex justify-between text-slate-600">
-                  <span>Item price</span>
-                  <span>{formatMoney(listing.price)}</span>
+                  <span>
+                    Item price{qty > 1 ? ` × ${qty}` : ""}
+                  </span>
+                  <span>{formatMoney(lineTotal)}</span>
                 </div>
                 <div className="mt-1 flex justify-between text-slate-600">
                   <span>Platform fee (v1)</span>
@@ -192,7 +210,7 @@ export default async function CheckoutPage({
                 </div>
                 <div className="mt-2 flex justify-between border-t border-slate-100 pt-2 font-bold text-slate-900">
                   <span>Total</span>
-                  <span>{formatMoney(listing.price)}</span>
+                  <span>{formatMoney(lineTotal)}</span>
                 </div>
               </section>
             )}

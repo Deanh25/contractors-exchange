@@ -118,6 +118,13 @@ type PricingData = {
   listedAt: Date | null;
 };
 
+/** Quantity available - only meaningful for set-price listings (else 1). */
+function readQuantity(formData: FormData, tf: TypeFields): number {
+  if (tf.type !== "price") return 1;
+  const n = Math.floor(Number(formData.get("quantityAvailable")));
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
 /** Spread pricing for set-price listings; nulls for bid/trade. */
 async function pricingData(
   tf: TypeFields,
@@ -200,6 +207,7 @@ export async function createListingAction(formData: FormData) {
     agreement: pricing.agreement,
     counterReason: pricing.counterReason,
     listedAt: pricing.listedAt,
+    quantityAvailable: readQuantity(formData, tf),
     startReserve: tf.startReserve,
     closesAt: tf.closesAt,
     ...(ownerCompanyId
@@ -260,6 +268,7 @@ export async function updateListingAction(formData: FormData) {
       agreement: pricing.agreement,
       counterReason: pricing.counterReason,
       listedAt: pricing.listedAt,
+      quantityAvailable: readQuantity(formData, tf),
       startReserve: tf.startReserve,
       closesAt: tf.closesAt,
       status,

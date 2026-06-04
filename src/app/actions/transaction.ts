@@ -109,9 +109,17 @@ export async function createTransactionAction(formData: FormData) {
   }
 
   const type = txTypeForListing(listing.type);
+  // Quantity for a stockable set-price buy, clamped to available stock.
+  const qty =
+    type === "purchase"
+      ? Math.min(
+          Math.max(1, Math.floor(Number(formData.get("qty"))) || 1),
+          listing.quantityAvailable,
+        )
+      : 1;
   let amount: number | null = null;
   if (type === "purchase") {
-    amount = listing.price === null ? null : Number(listing.price);
+    amount = listing.price === null ? null : Number(listing.price) * qty;
   } else if (type === "bid") {
     const raw = String(formData.get("amount") ?? "").replace(/[^0-9.]/g, "");
     const n = Number(raw);
@@ -125,8 +133,8 @@ export async function createTransactionAction(formData: FormData) {
   let sellerNet: number | null = null;
   let margin: number | null = null;
   if (type === "purchase" && listing.sellerNet != null && listing.price != null) {
-    sellerNet = Number(listing.sellerNet);
-    margin = Number(listing.price) - sellerNet;
+    sellerNet = Number(listing.sellerNet) * qty;
+    margin = (Number(listing.price) - Number(listing.sellerNet)) * qty;
   }
 
   // Deal thread = buyer party <-> seller party (aligns with messaging).

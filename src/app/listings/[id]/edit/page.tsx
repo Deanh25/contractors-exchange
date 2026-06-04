@@ -126,6 +126,7 @@ export default async function EditListingPage({
                 listing.startReserve !== null ? String(Number(listing.startReserve)) : ""
               }
               defaultClosesAt={listing.closesAt ? toDatetimeLocal(listing.closesAt) : ""}
+              defaultQuantity={String(listing.quantityAvailable)}
             />
           </div>
 

@@ -20,6 +20,7 @@ export function ListingTypeFields({
   defaultSellerNet = "",
   defaultStartReserve = "",
   defaultClosesAt = "",
+  defaultQuantity = "1",
   bands = {},
   defaultBand = FALLBACK_BAND,
 }: {
@@ -27,6 +28,7 @@ export function ListingTypeFields({
   defaultSellerNet?: string;
   defaultStartReserve?: string;
   defaultClosesAt?: string;
+  defaultQuantity?: string;
   /** Per-category margin bands; the selected category's band drives the math. */
   bands?: Record<string, Band>;
   defaultBand?: Band;
@@ -132,6 +134,23 @@ export function ListingTypeFields({
             placeholder="2500.00"
             className={inputCls}
           />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">
+              Quantity available
+            </label>
+            <input
+              name="quantityAvailable"
+              type="number"
+              min={1}
+              step={1}
+              defaultValue={defaultQuantity}
+              className={inputCls}
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              1 = a single/unique item (one Buy). More than 1 lets buyers pick a
+              quantity (capped at what you have).
+            </p>
+          </div>
           <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
             CX adds the category margin ({band.defaultPct}%) to set the
             buyer&apos;s price - you keep your full net.

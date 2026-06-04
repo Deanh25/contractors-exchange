@@ -168,6 +168,10 @@ model Listing {
   closesAt     DateTime? // type=bid
   tradeKind    TradeKind? // type=trade
 
+  // Stock for set-price listings: 1 = a unique item (single "Buy"), >1 = stockable
+  // (quantity stepper capped at this number, "Add to cart").
+  quantityAvailable Int @default(1)
+
   // Spread pricing (PRD §7B), set-price listings only. The seller enters a
   // PRIVATE net; the public `price` is net + margin (per-category band). These
   // are NEVER shown to buyers - filtered out everywhere except the owner/admin.

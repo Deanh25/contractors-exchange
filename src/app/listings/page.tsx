@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { ListingCard } from "@/components/ListingCard";
+import { MarketplaceCard } from "@/components/MarketplaceCard";
 import { SortSelect } from "@/components/SortSelect";
-import { FilterPanel } from "@/components/FilterPanel";
 import { tradesByCategory, tradeLabel } from "@/lib/trades";
 import { LocationPicker } from "@/components/LocationPicker";
 import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
+import { listingOwnerParty } from "@/lib/messaging";
 import { haversineMiles, boundingBox } from "@/lib/geo";
 import { getSavedMap, getViewerCollections } from "@/lib/saved";
+import { getSellerRatings } from "@/lib/reviews";
 import type { Prisma } from "@/generated/prisma/client";
 
 type Search = {
@@ -21,6 +22,8 @@ type Search = {
   lng?: string;
   radius?: string;
   sort?: string;
+  priceMin?: string;
+  priceMax?: string;
 };
 
 const RADII = [10, 25, 50, 100, 250];
@@ -55,10 +58,7 @@ function priceOf(l: { price: unknown; startReserve: unknown }): number | null {
 }
 
 /** Build a /listings URL from the current params, dropping the omitted keys. */
-function buildQuery(
-  params: Record<string, string>,
-  omit: string[] = [],
-): string {
+function buildQuery(params: Record<string, string>, omit: string[] = []): string {
   const usp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v && !omit.includes(k)) usp.set(k, v);
@@ -67,7 +67,7 @@ function buildQuery(
   return s ? `/listings?${s}` : "/listings";
 }
 
-/** Renders hidden inputs so a form preserves params it doesn't directly edit. */
+/** Hidden inputs so a form preserves params it doesn't directly edit. */
 function HiddenParams({ params }: { params: Record<string, string> }) {
   return (
     <>
@@ -79,6 +79,36 @@ function HiddenParams({ params }: { params: Record<string, string> }) {
 }
 
 const inputCls = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+
+/** A collapsible filter group in the navy rail. */
+function FilterGroup({
+  label,
+  open = false,
+  children,
+}: {
+  label: string;
+  open?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details open={open} className="group border-b border-white/10 last:border-0">
+      <summary className="flex cursor-pointer list-none items-center justify-between py-2.5 text-sm font-medium text-white">
+        {label}
+        <svg
+          className="h-4 w-4 text-white/60 transition-transform group-open:rotate-180"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.25"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </summary>
+      <div className="mb-2 rounded-md bg-white p-3 text-slate-700">{children}</div>
+    </details>
+  );
+}
 
 export default async function ListingsPage({
   searchParams,
@@ -98,14 +128,21 @@ export default async function ListingsPage({
   const radius = Number(sp.radius);
   const hasCenter =
     Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
-  const radiusActive =
-    !!city && hasCenter && Number.isFinite(radius) && radius > 0;
+  const radiusActive = !!city && hasCenter && Number.isFinite(radius) && radius > 0;
+
+  const priceMinNum = Number(sp.priceMin);
+  const priceMaxNum = Number(sp.priceMax);
+  const priceFilter: { gte?: number; lte?: number } = {};
+  if (Number.isFinite(priceMinNum) && priceMinNum > 0) priceFilter.gte = priceMinNum;
+  if (Number.isFinite(priceMaxNum) && priceMaxNum > 0) priceFilter.lte = priceMaxNum;
+  const hasPriceFilter = priceFilter.gte !== undefined || priceFilter.lte !== undefined;
 
   const baseWhere: Prisma.ListingWhereInput = {
     status: "active",
     ...(q ? { title: { contains: q } } : {}),
     ...(trade ? { tradeCategory: trade } : {}),
     ...(type ? typeWhere(type) : {}),
+    ...(hasPriceFilter ? { price: priceFilter } : {}),
     // Hide listings held for pricing review (§7B); show agreed + non-priced.
     AND: [{ OR: [{ agreement: null }, { agreement: "agreed" }] }],
   };
@@ -165,14 +202,22 @@ export default async function ListingsPage({
     rows.sort(byNewest);
   }
   const visible = rows.slice(0, 60);
-  const [savedMap, collections] = await Promise.all([
+
+  // Viewer saves + the sellers' overall ratings (batched) for the cards.
+  const sellerParties = visible
+    .map((r) => listingOwnerParty(r.listing))
+    .filter((p): p is { type: "user" | "company"; id: string } => p !== null);
+  const [savedMap, collections, sellerRatings] = await Promise.all([
     getSavedMap(viewer?.id),
     getViewerCollections(viewer?.id),
+    getSellerRatings(sellerParties),
   ]);
 
   const latStr = hasCenter ? String(lat) : "";
   const lngStr = hasCenter ? String(lng) : "";
   const radiusStr = sp.radius ?? "";
+  const priceMinStr = sp.priceMin ?? "";
+  const priceMaxStr = sp.priceMax ?? "";
   const allParams: Record<string, string> = {
     q,
     trade,
@@ -183,17 +228,22 @@ export default async function ListingsPage({
     lng: lngStr,
     radius: radiusStr,
     sort,
+    priceMin: priceMinStr,
+    priceMax: priceMaxStr,
   };
 
   const activeCount =
-    (trade ? 1 : 0) + (type ? 1 : 0) + (city || state ? 1 : 0) + (radiusActive ? 1 : 0);
-  const hasActiveFilters = activeCount > 0;
+    (trade ? 1 : 0) +
+    (type ? 1 : 0) +
+    (city || state ? 1 : 0) +
+    (radiusActive ? 1 : 0) +
+    (hasPriceFilter ? 1 : 0);
   const hasAnything = activeCount > 0 || !!q || !!sort;
   const radiusNoCenter = !!sp.radius && !city;
   const centerLabel = city && state ? `${city}, ${state}` : city || state;
   const sortSelected = effectiveSort === "newest" ? "" : effectiveSort;
 
-  // Removable active-filter chips (visible even when the panel is collapsed).
+  // Removable active-filter chips.
   const chips: { key: string; label: string; href: string }[] = [];
   if (q) chips.push({ key: "q", label: `"${q}"`, href: buildQuery(allParams, ["q"]) });
   if (trade)
@@ -211,85 +261,44 @@ export default async function ListingsPage({
       href: buildQuery(allParams, ["city", "state", "lat", "lng", "radius"]),
     });
   if (radiusActive)
+    chips.push({ key: "radius", label: `Within ${radius} mi`, href: buildQuery(allParams, ["radius"]) });
+  if (hasPriceFilter)
     chips.push({
-      key: "radius",
-      label: `Within ${radius} mi`,
-      href: buildQuery(allParams, ["radius"]),
+      key: "price",
+      label: `${priceMinStr ? `$${priceMinStr}` : "$0"} - ${priceMaxStr ? `$${priceMaxStr}` : "any"}`,
+      href: buildQuery(allParams, ["priceMin", "priceMax"]),
     });
 
-  const countText =
-    visible.length === 0
-      ? "No listings match."
-      : radiusActive
-        ? `${visible.length} listing${visible.length === 1 ? "" : "s"} within ${radius} mi of ${centerLabel}`
-        : `${visible.length} listing${visible.length === 1 ? "" : "s"}`;
+  const heading = trade ? tradeLabel(trade) : "All listings";
+  const countText = `${visible.length} listing${visible.length === 1 ? "" : "s"}`;
 
   return (
     <main className="flex-1">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Marketplace
-            </h1>
-            <p className="text-sm text-slate-500">
-              Buy, bid, and exchange across every trade and location.
-            </p>
-          </div>
-          <Link
-            href={viewer ? "/listings/new" : "/signin?next=/listings/new"}
-            className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
-          >
-            + List something
-          </Link>
-        </div>
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="grid gap-6 lg:grid-cols-[230px_1fr]">
+          {/* ---- Navy filter rail ------------------------------------------ */}
+          <aside className="lg:sticky lg:top-20 lg:self-start">
+            <form
+              method="get"
+              className="rounded-xl bg-slate-900 p-4 text-white"
+            >
+              <HiddenParams params={{ q, sort }} />
+              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-white">
+                Filters
+              </h2>
 
-        {/* Sticky search + sort toolbar (stays put while scrolling results). */}
-        <div className="sticky top-14 z-10 -mx-4 mt-6 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-          <div className="flex items-center gap-2">
-            <form method="get" className="flex flex-1 gap-2">
-              <HiddenParams
-                params={{
-                  trade,
-                  type,
-                  city,
-                  state,
-                  lat: latStr,
-                  lng: lngStr,
-                  radius: radiusStr,
-                  sort,
-                }}
-              />
-              <input
-                name="q"
-                defaultValue={q}
-                placeholder="Search the marketplace (skid steer, rebar, crew…)"
-                className="flex-1 rounded-md border border-slate-300 px-4 py-2 text-sm"
-              />
-              <button
-                type="submit"
-                className="rounded-md bg-brand-500 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-600"
-              >
-                Search
-              </button>
-            </form>
-            <SortSelect
-              sort={sortSelected}
-              options={SORTS}
-              params={{ q, trade, type, city, state, lat: latStr, lng: lngStr, radius: radiusStr }}
-            />
-          </div>
-        </div>
+              <FilterGroup label="Listing type" open={!!type}>
+                <select name="type" defaultValue={type} className={inputCls}>
+                  <option value="">Any type</option>
+                  {LISTING_CHOICES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </FilterGroup>
 
-        {/* Filters panel (collapsible, remembers state). */}
-        <form method="get">
-          <HiddenParams params={{ q, sort }} />
-          <FilterPanel defaultOpen={hasActiveFilters} activeCount={activeCount}>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">
-                  Trade
-                </label>
+              <FilterGroup label="Trade" open={!!trade}>
                 <select name="trade" defaultValue={trade} className={inputCls}>
                   <option value="">All trades</option>
                   {tradesByCategory().map((g) => (
@@ -302,21 +311,9 @@ export default async function ListingsPage({
                     </optgroup>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">
-                  Type
-                </label>
-                <select name="type" defaultValue={type} className={inputCls}>
-                  <option value="">Any type</option>
-                  {LISTING_CHOICES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="lg:col-span-2">
+              </FilterGroup>
+
+              <FilterGroup label="Location" open={!!city || radiusActive}>
                 <LocationPicker
                   mode="filter"
                   defaultCity={city}
@@ -324,9 +321,7 @@ export default async function ListingsPage({
                   defaultLat={hasCenter ? lat : undefined}
                   defaultLng={hasCenter ? lng : undefined}
                 />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">
+                <label className="mb-1 mt-3 block text-xs font-medium text-slate-600">
                   Distance
                 </label>
                 <select name="radius" defaultValue={radiusStr} className={inputCls}>
@@ -337,98 +332,205 @@ export default async function ListingsPage({
                     </option>
                   ))}
                 </select>
+                {radiusNoCenter && (
+                  <p className="mt-2 text-xs text-amber-600">
+                    Pick a city to use as the distance center.
+                  </p>
+                )}
+              </FilterGroup>
+
+              <FilterGroup label="Price" open={hasPriceFilter}>
+                <div className="flex items-center gap-2">
+                  <input
+                    name="priceMin"
+                    inputMode="decimal"
+                    defaultValue={priceMinStr}
+                    placeholder="Min"
+                    className={inputCls}
+                  />
+                  <span className="text-slate-400">to</span>
+                  <input
+                    name="priceMax"
+                    inputMode="decimal"
+                    defaultValue={priceMaxStr}
+                    placeholder="Max"
+                    className={inputCls}
+                  />
+                </div>
+              </FilterGroup>
+
+              <FilterGroup label="Condition">
+                <p className="text-xs text-slate-400">
+                  Coming soon - listings don&apos;t capture condition yet.
+                </p>
+              </FilterGroup>
+
+              <FilterGroup label="Manufacturer">
+                <p className="text-xs text-slate-400">
+                  Coming soon - listings don&apos;t capture manufacturer yet.
+                </p>
+              </FilterGroup>
+
+              <div className="mt-3 space-y-2">
+                <button
+                  type="submit"
+                  className="w-full rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+                >
+                  Apply filters
+                </button>
+                {hasAnything && (
+                  <Link
+                    href="/listings"
+                    className="block text-center text-xs font-medium text-white/70 underline hover:text-white"
+                  >
+                    Clear all
+                  </Link>
+                )}
               </div>
+            </form>
+          </aside>
+
+          {/* ---- Product column -------------------------------------------- */}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                  {heading}{" "}
+                  <span className="text-base font-medium text-slate-400">
+                    ({countText})
+                  </span>
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Buy, bid, and exchange across every trade and location.
+                </p>
+              </div>
+              <Link
+                href={viewer ? "/listings/new" : "/signin?next=/listings/new"}
+                className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+              >
+                + List something
+              </Link>
             </div>
 
-            {radiusNoCenter && (
-              <p className="mt-3 text-xs text-amber-600">
-                Pick a city above to use it as the center for distance search.
-              </p>
-            )}
-
-            <div className="mt-3">
-              <button
-                type="submit"
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-              >
-                Apply filters
-              </button>
-            </div>
-          </FilterPanel>
-        </form>
-
-        {/* Active filter chips (removable) + Clear all. */}
-        {(chips.length > 0 || hasAnything) && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {chips.map((c) => (
-              <Link
-                key={c.key}
-                href={c.href}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-              >
-                {c.label}
-                <span className="text-slate-400" aria-hidden>
-                  ✕
-                </span>
-              </Link>
-            ))}
-            {hasAnything && (
-              <Link
-                href="/listings"
-                className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
-              >
-                Clear all
-              </Link>
-            )}
-          </div>
-        )}
-
-        {/* Results */}
-        <p className="mt-4 text-sm text-slate-500">{countText}</p>
-
-        {visible.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
-            {hasAnything ? (
-              <>
-                Nothing here yet.{" "}
-                <Link href="/listings" className="font-semibold underline">
-                  Clear filters
-                </Link>{" "}
-                or{" "}
-                <Link
-                  href={viewer ? "/listings/new" : "/signin?next=/listings/new"}
-                  className="font-semibold underline"
+            {/* Search + sort toolbar */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <form method="get" className="flex min-w-0 flex-1 gap-2">
+                <HiddenParams
+                  params={{
+                    trade,
+                    type,
+                    city,
+                    state,
+                    lat: latStr,
+                    lng: lngStr,
+                    radius: radiusStr,
+                    sort,
+                    priceMin: priceMinStr,
+                    priceMax: priceMaxStr,
+                  }}
+                />
+                <input
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Search the marketplace (skid steer, rebar, crew…)"
+                  className="min-w-0 flex-1 rounded-md border border-slate-300 px-4 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="rounded-md bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700"
                 >
-                  list something
-                </Link>
-                .
-              </>
-            ) : (
-              <>
-                The marketplace is empty.{" "}
-                <Link
-                  href={viewer ? "/listings/new" : "/signin?next=/listings/new"}
-                  className="font-semibold underline"
-                >
-                  Be the first to list →
-                </Link>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {visible.map((row) => (
-              <ListingCard
-                key={row.listing.id}
-                listing={row.listing}
-                distanceMi={row.distanceMi}
-                saved={viewer ? savedMap.has(row.listing.id) : undefined}
-                currentCollectionId={savedMap.get(row.listing.id) ?? null}
-                collections={collections}
+                  Search
+                </button>
+              </form>
+              <SortSelect
+                sort={sortSelected}
+                options={SORTS}
+                params={{
+                  q,
+                  trade,
+                  type,
+                  city,
+                  state,
+                  lat: latStr,
+                  lng: lngStr,
+                  radius: radiusStr,
+                  priceMin: priceMinStr,
+                  priceMax: priceMaxStr,
+                }}
               />
-            ))}
+            </div>
+
+            {/* Active filter chips */}
+            {chips.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {chips.map((c) => (
+                  <Link
+                    key={c.key}
+                    href={c.href}
+                    className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    {c.label}
+                    <span className="text-slate-400" aria-hidden>
+                      ✕
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Grid */}
+            {visible.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
+                {hasAnything ? (
+                  <>
+                    Nothing matches.{" "}
+                    <Link href="/listings" className="font-semibold underline">
+                      Clear filters
+                    </Link>{" "}
+                    or{" "}
+                    <Link
+                      href={viewer ? "/listings/new" : "/signin?next=/listings/new"}
+                      className="font-semibold underline"
+                    >
+                      list something
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  <>
+                    The marketplace is empty.{" "}
+                    <Link
+                      href={viewer ? "/listings/new" : "/signin?next=/listings/new"}
+                      className="font-semibold underline"
+                    >
+                      Be the first to list →
+                    </Link>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {visible.map((row) => {
+                  const op = listingOwnerParty(row.listing);
+                  const rating = op
+                    ? sellerRatings.get(`${op.type}:${op.id}`) ?? null
+                    : null;
+                  return (
+                    <MarketplaceCard
+                      key={row.listing.id}
+                      listing={row.listing}
+                      distanceMi={row.distanceMi}
+                      saved={viewer ? savedMap.has(row.listing.id) : undefined}
+                      currentCollectionId={savedMap.get(row.listing.id) ?? null}
+                      collections={collections}
+                      sellerRating={rating}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </main>
   );
