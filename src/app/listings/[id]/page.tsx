@@ -22,9 +22,9 @@ import {
   photosFromJson,
   listingOwner,
   ownerInclude,
-  isVideoUrl,
   conditionLabel,
 } from "@/lib/listings";
+import { MediaGallery } from "@/components/MediaGallery";
 
 function StatusBtn({
   id,
@@ -163,52 +163,9 @@ export default async function ListingDetailPage({
         </Link>
 
         <div className="mt-4 grid gap-8 md:grid-cols-2">
-          {/* Photos */}
+          {/* Photos / videos - browsable gallery */}
           <div>
-            <div className="aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-              {photos[0] ? (
-                isVideoUrl(photos[0]) ? (
-                  <video
-                    src={photos[0]}
-                    controls
-                    className="h-full w-full object-contain"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photos[0]}
-                    alt={listing.title}
-                    className="h-full w-full object-cover"
-                  />
-                )
-              ) : (
-                <div className="grid h-full w-full place-items-center text-slate-300">
-                  <span className="text-6xl">🏗️</span>
-                </div>
-              )}
-            </div>
-            {photos.length > 1 && (
-              <div className="mt-3 grid grid-cols-4 gap-2">
-                {photos.slice(1, 5).map((src) =>
-                  isVideoUrl(src) ? (
-                    <video
-                      key={src}
-                      src={src}
-                      muted
-                      className="aspect-square w-full rounded-md border border-slate-200 object-cover"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={src}
-                      src={src}
-                      alt={listing.title}
-                      className="aspect-square w-full rounded-md border border-slate-200 object-cover"
-                    />
-                  ),
-                )}
-              </div>
-            )}
+            <MediaGallery media={photos} title={listing.title} />
           </div>
 
           {/* Details */}
