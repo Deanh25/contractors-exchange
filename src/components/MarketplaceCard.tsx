@@ -5,6 +5,7 @@ import {
   photosFromJson,
   listingOwner,
   isVideoUrl,
+  conditionLabel,
   type ListingWithOwner,
 } from "@/lib/listings";
 import { tradeLabel } from "@/lib/trades";
@@ -99,6 +100,11 @@ export function MarketplaceCard({
           <span className="rounded-full border border-slate-200 px-2 py-0.5 font-medium text-slate-600">
             {tradeLabel(listing.tradeCategory)}
           </span>
+          {conditionLabel(listing.condition) && (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
+              {conditionLabel(listing.condition)}
+            </span>
+          )}
           {location && <span>📍 {location}</span>}
           {distanceMi !== undefined && (
             <span className="font-medium text-brand-700">
@@ -106,6 +112,11 @@ export function MarketplaceCard({
             </span>
           )}
         </div>
+        {listing.manufacturer && (
+          <p className="mt-1 truncate text-xs text-slate-400">
+            {listing.manufacturer}
+          </p>
+        )}
 
         <p className="mt-2 text-base font-bold text-slate-900">{terms(listing)}</p>
 

@@ -42,6 +42,19 @@ export const LISTING_CHOICES: {
   },
 ];
 
+/** Condition options for physical goods (controlled vocab; filterable). */
+export const LISTING_CONDITIONS: { value: string; label: string }[] = [
+  { value: "new", label: "New" },
+  { value: "like_new", label: "Like new" },
+  { value: "good", label: "Good" },
+  { value: "fair", label: "Fair" },
+  { value: "salvage", label: "For parts / salvage" },
+];
+const CONDITION_LABEL = new Map(LISTING_CONDITIONS.map((c) => [c.value, c.label]));
+export function conditionLabel(c: string | null | undefined): string | null {
+  return c ? CONDITION_LABEL.get(c) ?? null : null;
+}
+
 /** Map a stored (type, tradeKind) pair back to its UI choice. */
 export function listingChoice(
   type: string,

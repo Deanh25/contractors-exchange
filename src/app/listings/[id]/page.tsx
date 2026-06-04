@@ -23,6 +23,7 @@ import {
   listingOwner,
   ownerInclude,
   isVideoUrl,
+  conditionLabel,
 } from "@/lib/listings";
 
 function StatusBtn({
@@ -264,6 +265,13 @@ export default async function ListingDetailPage({
 
             {location && (
               <p className="mt-3 text-sm text-slate-500">📍 {location}</p>
+            )}
+            {(conditionLabel(listing.condition) || listing.manufacturer) && (
+              <p className="mt-1 text-sm text-slate-500">
+                {[conditionLabel(listing.condition), listing.manufacturer]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
             )}
             {listing.freightNote && (
               <p className="mt-1 text-sm text-slate-500">

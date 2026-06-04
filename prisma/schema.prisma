@@ -127,6 +127,15 @@ enum TradeKind {
   service
 }
 
+// Condition for physical goods (PRD marketplace filters).
+enum ListingCondition {
+  new
+  like_new
+  good
+  fair
+  salvage
+}
+
 enum ListingStatus {
   active
   sold // a set-price listing that completed
@@ -158,6 +167,8 @@ model Listing {
   description   String? @db.Text
   unit          String? // e.g. "per ton", "each", "per pallet"
   freightNote   String? // free-text only in v1 (PRD §9 - no freight calc)
+  condition     ListingCondition? // physical-goods condition (filterable)
+  manufacturer  String? // brand / make (filterable), free text
   photos        Json? // JSON array of public URL strings (see src/lib/storage.ts)
 
   type ListingType

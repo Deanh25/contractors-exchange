@@ -7,6 +7,7 @@ import { LocationPicker } from "@/components/LocationPicker";
 import { SearchSelect } from "@/components/SearchSelect";
 import { MediaUpload } from "@/components/MediaUpload";
 import { tradeOptions } from "@/lib/trades";
+import { LISTING_CONDITIONS } from "@/lib/listings";
 import { getAllMarginBands, DEFAULT_BAND } from "@/lib/pricing";
 
 const ERRORS: Record<string, string> = {
@@ -132,6 +133,29 @@ export default async function NewListingPage({
               <input
                 name="freightNote"
                 placeholder="Buyer arranges pickup · can deliver 50 mi"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Condition <span className="text-slate-400">(optional)</span>
+              </label>
+              <select name="condition" defaultValue="" className={inputCls}>
+                <option value="">Not specified</option>
+                {LISTING_CONDITIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Manufacturer / brand <span className="text-slate-400">(optional)</span>
+              </label>
+              <input
+                name="manufacturer"
+                placeholder="Bobcat · Graco · Goodman"
                 className={inputCls}
               />
             </div>

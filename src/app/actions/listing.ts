@@ -15,8 +15,15 @@ import type {
   TradeKind,
   ListingStatus,
   PriceAgreement,
+  ListingCondition,
 } from "@/generated/prisma/client";
 import type { ListingChoice } from "@/lib/listings";
+
+const CONDITIONS = new Set(["new", "like_new", "good", "fair", "salvage"]);
+function parseCondition(v: FormDataEntryValue | null): ListingCondition | null {
+  const c = String(v ?? "").trim();
+  return CONDITIONS.has(c) ? (c as ListingCondition) : null;
+}
 
 const TRADE_SLUGS = new Set(TRADES.map((t) => t.slug));
 const CHOICES = new Set<ListingChoice>([
@@ -99,6 +106,8 @@ function readCommon(formData: FormData) {
     description: String(formData.get("description") ?? "").trim(),
     unit: String(formData.get("unit") ?? "").trim(),
     freightNote: String(formData.get("freightNote") ?? "").trim(),
+    condition: parseCondition(formData.get("condition")),
+    manufacturer: String(formData.get("manufacturer") ?? "").trim(),
     choice: String(formData.get("type") ?? "") as ListingChoice,
   };
 }
@@ -198,6 +207,8 @@ export async function createListingAction(formData: FormData) {
     description: c.description || null,
     unit: c.unit || null,
     freightNote: c.freightNote || null,
+    condition: c.condition,
+    manufacturer: c.manufacturer || null,
     photos: photos.length > 0 ? photos : undefined,
     type: tf.type,
     tradeKind: tf.tradeKind,
@@ -260,6 +271,8 @@ export async function updateListingAction(formData: FormData) {
       description: c.description || null,
       unit: c.unit || null,
       freightNote: c.freightNote || null,
+      condition: c.condition,
+      manufacturer: c.manufacturer || null,
       type: tf.type,
       tradeKind: tf.tradeKind,
       price: pricing.price,

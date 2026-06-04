@@ -5,7 +5,13 @@ import { MarketplaceCard } from "@/components/MarketplaceCard";
 import { SortSelect } from "@/components/SortSelect";
 import { tradesByCategory, tradeLabel } from "@/lib/trades";
 import { LocationPicker } from "@/components/LocationPicker";
-import { LISTING_CHOICES, ownerInclude, type ListingChoice } from "@/lib/listings";
+import {
+  LISTING_CHOICES,
+  LISTING_CONDITIONS,
+  conditionLabel,
+  ownerInclude,
+  type ListingChoice,
+} from "@/lib/listings";
 import { listingOwnerParty } from "@/lib/messaging";
 import { haversineMiles, boundingBox } from "@/lib/geo";
 import { getSavedMap, getViewerCollections } from "@/lib/saved";
@@ -24,7 +30,11 @@ type Search = {
   sort?: string;
   priceMin?: string;
   priceMax?: string;
+  condition?: string;
+  manufacturer?: string;
 };
+
+const CONDITION_VALUES = new Set(["new", "like_new", "good", "fair", "salvage"]);
 
 const RADII = [10, 25, 50, 100, 250];
 const SORTS = [
@@ -137,12 +147,19 @@ export default async function ListingsPage({
   if (Number.isFinite(priceMaxNum) && priceMaxNum > 0) priceFilter.lte = priceMaxNum;
   const hasPriceFilter = priceFilter.gte !== undefined || priceFilter.lte !== undefined;
 
+  const condition = CONDITION_VALUES.has((sp.condition ?? "").trim())
+    ? (sp.condition ?? "").trim()
+    : "";
+  const manufacturer = (sp.manufacturer ?? "").trim();
+
   const baseWhere: Prisma.ListingWhereInput = {
     status: "active",
     ...(q ? { title: { contains: q } } : {}),
     ...(trade ? { tradeCategory: trade } : {}),
     ...(type ? typeWhere(type) : {}),
     ...(hasPriceFilter ? { price: priceFilter } : {}),
+    ...(condition ? { condition: condition as Prisma.ListingWhereInput["condition"] } : {}),
+    ...(manufacturer ? { manufacturer: { contains: manufacturer } } : {}),
     // Hide listings held for pricing review (§7B); show agreed + non-priced.
     AND: [{ OR: [{ agreement: null }, { agreement: "agreed" }] }],
   };
@@ -207,11 +224,20 @@ export default async function ListingsPage({
   const sellerParties = visible
     .map((r) => listingOwnerParty(r.listing))
     .filter((p): p is { type: "user" | "company"; id: string } => p !== null);
-  const [savedMap, collections, sellerRatings] = await Promise.all([
+  const [savedMap, collections, sellerRatings, mfrRows] = await Promise.all([
     getSavedMap(viewer?.id),
     getViewerCollections(viewer?.id),
     getSellerRatings(sellerParties),
+    prisma.listing.findMany({
+      where: { status: "active", manufacturer: { not: null } },
+      select: { manufacturer: true },
+      distinct: ["manufacturer"],
+      orderBy: { manufacturer: "asc" },
+    }),
   ]);
+  const manufacturers = mfrRows
+    .map((m) => m.manufacturer)
+    .filter((m): m is string => !!m);
 
   const latStr = hasCenter ? String(lat) : "";
   const lngStr = hasCenter ? String(lng) : "";
@@ -230,6 +256,8 @@ export default async function ListingsPage({
     sort,
     priceMin: priceMinStr,
     priceMax: priceMaxStr,
+    condition,
+    manufacturer,
   };
 
   const activeCount =
@@ -237,7 +265,9 @@ export default async function ListingsPage({
     (type ? 1 : 0) +
     (city || state ? 1 : 0) +
     (radiusActive ? 1 : 0) +
-    (hasPriceFilter ? 1 : 0);
+    (hasPriceFilter ? 1 : 0) +
+    (condition ? 1 : 0) +
+    (manufacturer ? 1 : 0);
   const hasAnything = activeCount > 0 || !!q || !!sort;
   const radiusNoCenter = !!sp.radius && !city;
   const centerLabel = city && state ? `${city}, ${state}` : city || state;
@@ -267,6 +297,18 @@ export default async function ListingsPage({
       key: "price",
       label: `${priceMinStr ? `$${priceMinStr}` : "$0"} - ${priceMaxStr ? `$${priceMaxStr}` : "any"}`,
       href: buildQuery(allParams, ["priceMin", "priceMax"]),
+    });
+  if (condition)
+    chips.push({
+      key: "condition",
+      label: conditionLabel(condition) ?? condition,
+      href: buildQuery(allParams, ["condition"]),
+    });
+  if (manufacturer)
+    chips.push({
+      key: "manufacturer",
+      label: manufacturer,
+      href: buildQuery(allParams, ["manufacturer"]),
     });
 
   const heading = trade ? tradeLabel(trade) : "All listings";
@@ -359,16 +401,39 @@ export default async function ListingsPage({
                 </div>
               </FilterGroup>
 
-              <FilterGroup label="Condition">
-                <p className="text-xs text-slate-400">
-                  Coming soon - listings don&apos;t capture condition yet.
-                </p>
+              <FilterGroup label="Condition" open={!!condition}>
+                <select name="condition" defaultValue={condition} className={inputCls}>
+                  <option value="">Any condition</option>
+                  {LISTING_CONDITIONS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
               </FilterGroup>
 
-              <FilterGroup label="Manufacturer">
-                <p className="text-xs text-slate-400">
-                  Coming soon - listings don&apos;t capture manufacturer yet.
-                </p>
+              <FilterGroup label="Manufacturer" open={!!manufacturer}>
+                {manufacturers.length > 0 ? (
+                  <select
+                    name="manufacturer"
+                    defaultValue={manufacturer}
+                    className={inputCls}
+                  >
+                    <option value="">Any manufacturer</option>
+                    {manufacturers.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    name="manufacturer"
+                    defaultValue={manufacturer}
+                    placeholder="Brand / make"
+                    className={inputCls}
+                  />
+                )}
               </FilterGroup>
 
               <div className="mt-3 space-y-2">
@@ -427,6 +492,8 @@ export default async function ListingsPage({
                     sort,
                     priceMin: priceMinStr,
                     priceMax: priceMaxStr,
+                    condition,
+                    manufacturer,
                   }}
                 />
                 <input
@@ -456,6 +523,8 @@ export default async function ListingsPage({
                   radius: radiusStr,
                   priceMin: priceMinStr,
                   priceMax: priceMaxStr,
+                  condition,
+                  manufacturer,
                 }}
               />
             </div>
