@@ -35,8 +35,8 @@ export async function setCategoryMarginAction(formData: FormData) {
     category,
     `${category} = ${marginPct}%`,
   );
+  // Revalidate in place (no redirect) so the manager keeps its search / expanded state.
   revalidatePath("/admin/margins");
-  redirect("/admin/margins");
 }
 
 export async function removeCategoryMarginAction(formData: FormData) {
@@ -53,5 +53,4 @@ export async function removeCategoryMarginAction(formData: FormData) {
     `${category} reverted to the code default`,
   );
   revalidatePath("/admin/margins");
-  redirect("/admin/margins");
 }
