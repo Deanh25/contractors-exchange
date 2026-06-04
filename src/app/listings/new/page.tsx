@@ -6,7 +6,7 @@ import { ListingTypeFields } from "@/components/ListingTypeFields";
 import { LocationPicker } from "@/components/LocationPicker";
 import { SearchSelect } from "@/components/SearchSelect";
 import { MediaUpload } from "@/components/MediaUpload";
-import { tradeOptions } from "@/lib/trades";
+import { getLeafOptions } from "@/lib/categories";
 import { LISTING_CONDITIONS } from "@/lib/listings";
 import { getAllCategoryMargins, DEFAULT_MARGIN_PCT } from "@/lib/pricing";
 
@@ -36,7 +36,10 @@ export default async function NewListingPage({
     include: { company: true },
     orderBy: { createdAt: "asc" },
   });
-  const margins = await getAllCategoryMargins();
+  const [margins, tradeOpts] = await Promise.all([
+    getAllCategoryMargins(),
+    getLeafOptions(),
+  ]);
 
   return (
     <main className="flex-1">
@@ -95,7 +98,7 @@ export default async function NewListingPage({
             </label>
             <SearchSelect
               name="tradeCategory"
-              options={tradeOptions()}
+              options={tradeOpts}
               placeholder="Search a trade…"
             />
           </div>

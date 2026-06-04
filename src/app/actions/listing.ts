@@ -5,10 +5,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { saveMediaFiles } from "@/lib/storage";
-import { TRADES } from "@/lib/trades";
 import { parseCoord } from "@/lib/form";
 import { canManageListing } from "@/lib/listing-access";
 import { getCategoryMargin, computeListingPricing } from "@/lib/pricing";
+import { getLeafSlugSet } from "@/lib/categories";
 import { Prisma } from "@/generated/prisma/client";
 import type {
   ListingType,
@@ -32,7 +32,6 @@ function parseCondition(v: FormDataEntryValue | null): ListingCondition | null {
   return CONDITIONS.has(c) ? (c as ListingCondition) : null;
 }
 
-const TRADE_SLUGS = new Set(TRADES.map((t) => t.slug));
 const CHOICES = new Set<ListingChoice>([
   "price",
   "bid",
@@ -172,7 +171,7 @@ export async function createListingAction(formData: FormData) {
 
   const fail = (code: string): never => redirect(`/listings/new?error=${code}`);
   if (!c.title) fail("title");
-  if (!TRADE_SLUGS.has(c.tradeCategory)) fail("trade");
+  if (!(await getLeafSlugSet()).has(c.tradeCategory)) fail("trade");
   if (!CHOICES.has(c.choice)) fail("type");
 
   let ownerUserId: string | null = null;
@@ -239,7 +238,7 @@ export async function updateListingAction(formData: FormData) {
   const fail = (code: string): never =>
     redirect(`/listings/${id}/edit?error=${code}`);
   if (!c.title) fail("title");
-  if (!TRADE_SLUGS.has(c.tradeCategory)) fail("trade");
+  if (!(await getLeafSlugSet()).has(c.tradeCategory)) fail("trade");
   if (!CHOICES.has(c.choice)) fail("type");
 
   const tf = parseTypeFields(formData, c.choice);

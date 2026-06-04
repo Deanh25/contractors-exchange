@@ -12,7 +12,7 @@ import { LocationPicker } from "@/components/LocationPicker";
 import { SearchSelect } from "@/components/SearchSelect";
 import { MediaUpload } from "@/components/MediaUpload";
 import { ConfirmSubmit } from "@/components/ConfirmSubmit";
-import { tradeOptions } from "@/lib/trades";
+import { getLeafOptions } from "@/lib/categories";
 import { listingChoice, photosFromJson, LISTING_CONDITIONS } from "@/lib/listings";
 import { getAllCategoryMargins, DEFAULT_MARGIN_PCT } from "@/lib/pricing";
 
@@ -51,7 +51,10 @@ export default async function EditListingPage({
   const statusDefault = ["active", "sold", "closed"].includes(listing.status)
     ? listing.status
     : "active";
-  const margins = await getAllCategoryMargins();
+  const [margins, tradeOpts] = await Promise.all([
+    getAllCategoryMargins(),
+    getLeafOptions(),
+  ]);
 
   return (
     <main className="flex-1">
@@ -93,7 +96,7 @@ export default async function EditListingPage({
             </label>
             <SearchSelect
               name="tradeCategory"
-              options={tradeOptions()}
+              options={tradeOpts}
               defaultValue={[listing.tradeCategory]}
               placeholder="Search a trade…"
             />

@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireCapability, can } from "@/lib/admin";
 import { Avatar } from "@/components/Avatar";
 import { formatMoney, photosFromJson } from "@/lib/listings";
-import { tradeLabel, TRADES } from "@/lib/trades";
+import { tradeLabel } from "@/lib/trades";
+import { getLeafOptions } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 import { timeAgo } from "@/lib/time";
 import {
@@ -53,12 +54,15 @@ export default async function AdminListingsPage({
       ? { status: status as ListingStatus }
       : {}),
   };
-  const listings = await prisma.listing.findMany({
-    where,
-    select: listingSelect,
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const [listings, leafOpts] = await Promise.all([
+    prisma.listing.findMany({
+      where,
+      select: listingSelect,
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    getLeafOptions(),
+  ]);
 
   const inputCls = "rounded-md border border-slate-300 px-3 py-2 text-sm";
 
@@ -216,9 +220,9 @@ export default async function AdminListingsPage({
                         defaultValue={l.tradeCategory}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs"
                       >
-                        {TRADES.map((t) => (
-                          <option key={t.slug} value={t.slug}>
-                            {t.label}
+                        {leafOpts.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.group}: {o.label}
                           </option>
                         ))}
                       </select>

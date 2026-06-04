@@ -1,6 +1,6 @@
 import { requireCapability } from "@/lib/admin";
 import { getAllCategoryMargins, DEFAULT_MARGIN_PCT } from "@/lib/pricing";
-import { TRADES, TRADE_CATEGORIES } from "@/lib/trades";
+import { getLeafOptions, getCategoryTree } from "@/lib/categories";
 import { MarginsManager, type MarginItem } from "@/components/MarginsManager";
 
 export default async function AdminMarginsPage({
@@ -10,14 +10,20 @@ export default async function AdminMarginsPage({
 }) {
   await requireCapability("margins");
   const sp = await searchParams;
-  const margins = await getAllCategoryMargins();
+  const [margins, leaves, tree] = await Promise.all([
+    getAllCategoryMargins(),
+    getLeafOptions(),
+    getCategoryTree(),
+  ]);
 
-  const items: MarginItem[] = TRADES.map((t) => ({
-    slug: t.slug,
-    label: t.label,
-    category: t.category,
-    configured: margins[t.slug] ?? null,
+  // Leaf categories grouped under their top-level category (from the DB tree).
+  const items: MarginItem[] = leaves.map((l) => ({
+    slug: l.value,
+    label: l.label,
+    category: l.group,
+    configured: margins[l.value] ?? null,
   }));
+  const categories = tree.map((n) => n.name);
 
   return (
     <div>
@@ -38,7 +44,7 @@ export default async function AdminMarginsPage({
       <div className="mt-4">
         <MarginsManager
           items={items}
-          categories={TRADE_CATEGORIES}
+          categories={categories}
           defaultPct={DEFAULT_MARGIN_PCT}
         />
       </div>
