@@ -35,6 +35,7 @@ export type Capability =
   | "users" // user & company management (verify, soft-suspend)
   | "audit" // view the AdminAction audit log
   | "margins" // edit the per-category margin table
+  | "categories" // manage the catalog taxonomy (category tree)
   | "manageAdmins" // grant/revoke admin roles
   | "hardDelete"; // irreversible deletes
 
@@ -47,6 +48,7 @@ const MIN_ROLE: Record<Capability, AdminRole> = {
   users: "admin",
   audit: "admin",
   margins: "superadmin",
+  categories: "superadmin",
   manageAdmins: "superadmin",
   hardDelete: "superadmin",
 };

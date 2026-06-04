@@ -12,6 +12,8 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { TRADES, TRADE_CATEGORIES } from "../src/lib/trades";
+import { slugify } from "../src/lib/slug";
 
 function buildAdapter() {
   const url = process.env.DATABASE_URL;
@@ -79,6 +81,7 @@ function txCols(buyer: SeedParty, seller: SeedParty) {
 
 async function main() {
   console.log("Clearing existing data...");
+  await prisma.category.deleteMany();
   await prisma.listingView.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.savedListing.deleteMany();
@@ -94,6 +97,28 @@ async function main() {
   await prisma.membership.deleteMany();
   await prisma.company.deleteMany();
   await prisma.user.deleteMany();
+
+  console.log("Seeding category tree...");
+  // The catalog taxonomy (admin-editable). Seed the 7 main categories as
+  // top-level nodes and the 44 trades as their leaf children, preserving the
+  // trade slug as the leaf slug so existing listings keep resolving.
+  for (let ci = 0; ci < TRADE_CATEGORIES.length; ci++) {
+    const catName = TRADE_CATEGORIES[ci];
+    const parent = await prisma.category.create({
+      data: { slug: `cat-${slugify(catName)}`, name: catName, sortOrder: ci },
+    });
+    const leaves = TRADES.filter((t) => t.category === catName);
+    for (let li = 0; li < leaves.length; li++) {
+      await prisma.category.create({
+        data: {
+          slug: leaves[li].slug,
+          name: leaves[li].label,
+          parentId: parent.id,
+          sortOrder: li,
+        },
+      });
+    }
+  }
 
   console.log("Creating category margins...");
   // Flat per-category margin % (PRD §7B, corrected model). Others fall back to

@@ -16,6 +16,7 @@ const NAV: { key: string; label: string; href: string; cap: Capability }[] = [
   { key: "listings", label: "Listings", href: "/admin/listings", cap: "moderation" },
   { key: "users", label: "Users", href: "/admin/users", cap: "users" },
   { key: "companies", label: "Companies", href: "/admin/companies", cap: "users" },
+  { key: "categories", label: "Categories", href: "/admin/categories", cap: "categories" },
   { key: "margins", label: "Margins", href: "/admin/margins", cap: "margins" },
   { key: "audit", label: "Audit log", href: "/admin/audit", cap: "audit" },
 ];

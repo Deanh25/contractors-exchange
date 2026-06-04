@@ -284,9 +284,31 @@ model AdminAction {
 // by a superadmin in the admin panel without code. Falls back to a code default.
 model CategoryMargin {
   id        String   @id @default(cuid())
-  category  String   @unique // trade slug (src/lib/trades.ts)
+  category  String   @unique // leaf category slug (Category.slug)
   marginPct Float
   updatedAt DateTime @updatedAt
+}
+
+// Catalog taxonomy (PRD §7C). An admin-managed tree of arbitrary depth via a
+// self-relation. Listings are assigned to LEAF categories only (a node with no
+// children); parents are for grouping/browsing. Margins attach per leaf with NO
+// inheritance (the flat-margin rule still holds). Seeded from src/lib/trades.ts,
+// preserving the original trade slugs so existing Listing.tradeCategory /
+// User.trades / Post.tradeTag keep resolving.
+model Category {
+  id        String   @id @default(cuid())
+  slug      String   @unique // stable id stored on listings/users/posts
+  name      String
+  parentId  String? // null = top-level
+  sortOrder Int      @default(0) // order among siblings
+  archived  Boolean  @default(false) // hidden from pickers/filters, kept for history
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children Category[] @relation("CategoryTree")
+
+  @@index([parentId])
 }
 
 // -----------------------------------------------------------------------------
