@@ -30,9 +30,12 @@ type Identity = {
 export function AvatarMenu({
   current,
   options,
+  isAdmin = false,
 }: {
   current: Identity;
   options: Identity[];
+  /** Show the link into the /admin backend (any admin role). */
+  isAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -145,6 +148,21 @@ export function AvatarMenu({
               {l.label}
             </Link>
           ))}
+          {isAdmin && (
+            <>
+              <div className="my-1 border-t border-slate-100" />
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+              >
+                <span className="grid h-5 w-5 place-items-center rounded bg-[#1f2a37] text-[10px] font-bold text-white">
+                  A
+                </span>
+                Admin backend
+              </Link>
+            </>
+          )}
           <div className="my-1 border-t border-slate-100" />
           <form action={signOutAction}>
             <button

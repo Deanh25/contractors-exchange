@@ -176,7 +176,11 @@ export async function SiteHeader() {
               </Link>
               {switcherCurrent && (
                 <div className="ml-1">
-                  <AvatarMenu current={switcherCurrent} options={switcherOptions} />
+                  <AvatarMenu
+                    current={switcherCurrent}
+                    options={switcherOptions}
+                    isAdmin={user.adminRole !== "none"}
+                  />
                 </div>
               )}
             </>

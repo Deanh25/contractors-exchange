@@ -32,7 +32,9 @@ model User {
   lng       Float?
   avatarUrl String?
   verified  Boolean  @default(false) // manual trust flag (PRD §7)
-  isAdmin   Boolean  @default(false) // can access the /admin backend (PRD §7C)
+  // Admin backend access + privilege level (PRD §7C). `none` = not an admin.
+  // Hierarchy: superadmin > admin > moderator. Gating is server-side only.
+  adminRole AdminRole @default(none)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -233,6 +235,18 @@ model ListingView {
 
   @@index([listingId, createdAt])
   @@index([viewerUserId])
+}
+
+// Admin privilege levels (PRD §7C). Clean hierarchy + one inversion: a moderator
+// is trust & safety ONLY and must never see financial fields (sellerNet/margin).
+//   superadmin: everything (manage admins, edit margin bands, hard delete, financials)
+//   admin:      operational work + financials, but NOT admin mgmt or margin bands
+//   moderator:  listing/content moderation + verification ONLY, NO financials
+enum AdminRole {
+  none
+  moderator
+  admin
+  superadmin
 }
 
 // Admin audit log (PRD §7C): every moderation/config action an admin takes is

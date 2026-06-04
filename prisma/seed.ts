@@ -120,6 +120,7 @@ async function main() {
       trades: ["electrical", "low-voltage"],
       ...CITY.phoenix,
       verified: true,
+      adminRole: "admin", // demo: operational admin (no margins / admin mgmt)
     },
   });
   const maria = await prisma.user.create({
@@ -130,6 +131,7 @@ async function main() {
       bio: "Commercial and residential plumbing across the DFW metroplex.",
       trades: ["plumbing"],
       ...CITY.dallas,
+      adminRole: "moderator", // demo: trust & safety only (no financials)
     },
   });
   // Demo account using the founder's email so signing in lands in a full account.
@@ -142,6 +144,7 @@ async function main() {
       trades: ["paving", "general-engineering", "concrete"],
       ...CITY.charlotte,
       verified: true,
+      adminRole: "superadmin", // founder: full access
     },
   });
   const sam = await prisma.user.create({
@@ -770,6 +773,9 @@ async function main() {
     `Done. ${u} users, ${c} companies, ${li} listings, ${p} posts, ${f} follows, ${th} threads, ${ms} messages, ${tx} transactions, ${rv} reviews, ${nt} notifications, ${sv} saved, ${vw} views.`,
   );
   console.log("Sign in with kerinhughes50@gmail.com to use the Dean Hughes demo account.");
+  console.log(
+    "Admin roles: kerinhughes50@gmail.com = superadmin, jordan@riveraelectric.test = admin, maria@lonestarplumbing.test = moderator.",
+  );
 }
 
 main()
