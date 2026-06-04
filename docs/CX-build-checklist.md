@@ -45,6 +45,14 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 
 ## C. Remaining build work (not yet started / in progress)
 
+- [ ] **Admin notifications** *(new — not started)* — a notification center inside `/admin`
+  for admin-relevant events (new verification requests, pricing/leakage flags, disputes,
+  new/high-value orders, flagged listings, etc.), with optional delivery to admins by
+  **email** and **SMS/text**. Needs: an email provider (e.g. Resend / SendGrid / SES) and an
+  SMS provider (e.g. Twilio) with API keys/secrets; per-admin **event + channel preferences**;
+  store an admin phone/email. Decisions to settle when we start: which provider(s), which events
+  trigger which channel, and whether to extend the same email/SMS delivery to the existing
+  user-facing notifications.
 - [ ] **Category Chunk 2** — re-point the listing create/edit picker + validation + the
   Margins module to the DB leaf categories (so new categories are immediately listable/priceable).
 - [ ] **Category Chunk 3** — re-point marketplace + feed filters, label lookups everywhere,
