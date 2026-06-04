@@ -96,7 +96,7 @@ export function NegotiationPanel({
                 <input type="hidden" name="op" value="decline" />
                 <button
                   type="submit"
-                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
                 >
                   Decline
                 </button>
@@ -112,7 +112,7 @@ export function NegotiationPanel({
               />
             ) : (
               <details>
-                <summary className="cursor-pointer list-none rounded-md border border-slate-300 bg-white px-3 py-1.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <summary className="cursor-pointer list-none rounded-md border border-brand-300 bg-white px-3 py-1.5 text-center text-sm font-medium text-brand-700 hover:bg-brand-50">
                   Counter
                 </summary>
                 <form action={respondOfferAction} className="mt-2 flex items-center gap-2">
@@ -126,7 +126,7 @@ export function NegotiationPanel({
                   />
                   <button
                     type="submit"
-                    className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-700"
+                    className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-600"
                   >
                     Send
                   </button>

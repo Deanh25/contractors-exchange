@@ -452,15 +452,16 @@ async function main() {
   await prisma.thread.update({ where: { id: t2.id }, data: { updatedAt: hoursAgo(20) } });
 
   console.log("Seeding an offer in flight (negotiation)...");
-  // Tyler offers below ask on the Hughes company's set-price skid steer. Sign in
-  // as Dean and switch to the Hughes company to see the negotiation panel.
+  // Sam (no affiliation with Hughes) offers below ask on the Hughes company's
+  // set-price skid steer. Sign in as Dean and switch to the Hughes company to see
+  // the seller negotiation panel; sign in as Sam to see the buyer's view.
   const skidSteer = await prisma.listing.findFirst({
     where: { ownerCompanyId: hughes.id, type: "price" },
     orderBy: { createdAt: "asc" },
   });
   if (skidSteer && skidSteer.marginPct) {
     const offerThread = await prisma.thread.create({
-      data: { ...pairParties(U(tyler.id), C(hughes.id)), listingId: skidSteer.id },
+      data: { ...pairParties(U(sam.id), C(hughes.id)), listingId: skidSteer.id },
     });
     const offerPrice = 36000;
     const offerNet =
@@ -469,7 +470,7 @@ async function main() {
       data: {
         listingId: skidSteer.id,
         buyerType: "user",
-        buyerUserId: tyler.id,
+        buyerUserId: sam.id,
         fromSide: "buyer",
         buyerPrice: offerPrice,
         sellerNet: offerNet,
@@ -482,7 +483,7 @@ async function main() {
     await prisma.message.create({
       data: {
         threadId: offerThread.id,
-        senderUserId: tyler.id,
+        senderUserId: sam.id,
         body: `Offered $36,000.00 for "${skidSteer.title}". Cash, can pick up this week.`,
         createdAt: hoursAgo(6),
       },
