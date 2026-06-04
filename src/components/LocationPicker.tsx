@@ -173,13 +173,13 @@ export function LocationPicker({
           />
 
           {showResults && (
-            <div className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+            <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto overflow-x-hidden rounded-md border border-slate-200 bg-white py-1 shadow-lg">
               {results.map((r) => (
                 <button
                   key={`${r.city}-${r.state}`}
                   type="button"
                   onClick={() => pickCity(r)}
-                  className="flex w-full items-center gap-1 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  className="block w-full break-words px-3 py-1.5 text-left text-sm leading-snug text-slate-700 hover:bg-slate-50"
                 >
                   <span className="font-medium text-slate-900">{r.city}</span>
                   <span className="text-slate-500">, {r.state}</span>
