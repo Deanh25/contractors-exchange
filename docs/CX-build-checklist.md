@@ -27,7 +27,8 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 - [ ] **Users** — search; verify/unverify; suspend/unsuspend; superadmin delete (typed confirm).
 - [ ] **Companies** — search; verify/unverify; suspend/unsuspend; superadmin delete.
 - [ ] **Categories** *(new)* — tree of any depth; add/rename/move/reorder/archive/delete;
-  leaf = assignable. *(Not yet wired to the public picker/filters — Chunk 2/3.)*
+  leaf = assignable. **Fully wired:** new categories flow into the listing picker, marketplace
+  + feed filters, margins, labels, and profile/post pickers (the static taxonomy is retired).
 - [ ] **Margins** — collapsible main categories; search; All/Configured/Default filter;
   edit % per trade; reset to default. Affects future listings only.
 - [ ] **Audit log** — every admin action, filter by action/target.
@@ -53,10 +54,9 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   store an admin phone/email. Decisions to settle when we start: which provider(s), which events
   trigger which channel, and whether to extend the same email/SMS delivery to the existing
   user-facing notifications.
-- [ ] **Category Chunk 2** — re-point the listing create/edit picker + validation + the
-  Margins module to the DB leaf categories (so new categories are immediately listable/priceable).
-- [ ] **Category Chunk 3** — re-point marketplace + feed filters, label lookups everywhere,
-  and the onboarding/profile/company trade pickers to the DB tree.
+- [x] **Category system (Chunks 2 + 3)** — the DB tree drives the listing picker, validation,
+  margins, marketplace + feed filters, labels everywhere, and profile/company/onboarding/post
+  pickers. Static taxonomy retired. *(Built; ready for your review.)*
 - [ ] **Admin Module 1 — KPI Dashboard** — global filters + Revenue / Marketplace-health /
   **Leakage** / Network-trust KPIs.
 - [ ] **Planning brief update** — refresh `docs/CX-Admin-Panel-Planning-Brief.md` to the
