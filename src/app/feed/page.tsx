@@ -4,9 +4,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { PostComposer } from "@/components/PostComposer";
 import { PostCard } from "@/components/PostCard";
 import { FeedListingCard } from "@/components/FeedListingCard";
-import { FollowButton } from "@/components/FollowButton";
+import { FollowPill } from "@/components/FollowPill";
 import { toggleFollowAction } from "@/app/actions/follow";
 import { getLeafGroups, getCategoryLabelMap } from "@/lib/categories";
+import { usStates, stateName } from "@/lib/cities";
 import { authorInclude } from "@/lib/posts";
 import { ownerInclude } from "@/lib/listings";
 import { getSavedMap, getViewerCollections } from "@/lib/saved";
@@ -172,6 +173,14 @@ export default async function FeedPage({
               )}
             </div>
 
+            {viewer && (
+              <p className="-mt-2 mb-3 text-xs text-slate-500">
+                {scope === "following"
+                  ? "Showing posts and listings from the trades, areas, companies, and people you follow."
+                  : "Showing everything across the marketplace and community."}
+              </p>
+            )}
+
             {/* Composer / sign-in prompt */}
             {viewer ? (
               <PostComposer
@@ -211,33 +220,19 @@ export default async function FeedPage({
               <form method="get" className="flex flex-wrap gap-2">
                 {scope === "all" && <input type="hidden" name="scope" value="all" />}
                 {show !== "all" && <input type="hidden" name="show" value={show} />}
+                {/* Preserve the trade filter (set from the sidebar) while searching. */}
+                {trade && <input type="hidden" name="trade" value={trade} />}
                 <input
                   name="q"
                   defaultValue={q}
                   placeholder="Search the feed (posts and listings)…"
                   className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
-                <select
-                  name="trade"
-                  defaultValue={trade}
-                  className="rounded-md border border-slate-300 px-2 py-2 text-sm"
-                >
-                  <option value="">All trades</option>
-                  {leafGroups.map((g) => (
-                    <optgroup key={g.category} label={g.category}>
-                      {g.leaves.map((l) => (
-                        <option key={l.slug} value={l.slug}>
-                          {l.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
                 <button
                   type="submit"
-                  className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
                 >
-                  Apply
+                  Search
                 </button>
               </form>
 
@@ -335,21 +330,68 @@ export default async function FeedPage({
 
           {/* -- Sidebar --------------------------------------------------- */}
           <aside className="space-y-6">
+            {/* Filter this view (temporary - not saved) */}
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
+              <h2 className="text-sm font-semibold text-slate-900">Filter this view</h2>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Narrow the feed by one trade. Temporary - not saved to your profile.
+              </p>
+              <form method="get" className="mt-3 space-y-2">
+                {scope === "all" && <input type="hidden" name="scope" value="all" />}
+                {q && <input type="hidden" name="q" value={q} />}
+                {show !== "all" && <input type="hidden" name="show" value={show} />}
+                <select
+                  name="trade"
+                  defaultValue={trade}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                >
+                  <option value="">All trades</option>
+                  {leafGroups.map((g) => (
+                    <optgroup key={g.category} label={g.category}>
+                      {g.leaves.map((l) => (
+                        <option key={l.slug} value={l.slug}>
+                          {l.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-600"
+                  >
+                    Apply
+                  </button>
+                  {trade && (
+                    <Link
+                      href={feedQuery(base, ["trade"])}
+                      className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
+                    >
+                      Clear
+                    </Link>
+                  )}
+                </div>
+              </form>
+            </section>
+
+            {/* Trades you follow (saved) */}
             <section className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="text-sm font-semibold text-slate-900">Trades you follow</h2>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Saved to your profile. Tap the ✕ to unfollow.
+              </p>
               {viewer ? (
                 <>
                   {follows.trades.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {follows.trades.map((slug) => (
-                        <FollowButton
+                        <FollowPill
                           key={slug}
                           targetType="trade"
                           targetValue={slug}
-                          following
-                          path="/feed"
                           label={catLabels[slug] ?? slug}
-                          pill
+                          path="/feed"
                         />
                       ))}
                     </div>
@@ -369,7 +411,7 @@ export default async function FeedPage({
                       className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
                     >
                       <option value="" disabled>
-                        Add a trade…
+                        Follow a trade…
                       </option>
                       {leafGroups.map((g) => {
                         const avail = g.leaves.filter(
@@ -394,9 +436,6 @@ export default async function FeedPage({
                       Add
                     </button>
                   </form>
-                  <p className="mt-2 text-xs text-slate-400">
-                    Tap a trade above to unfollow.
-                  </p>
                 </>
               ) : (
                 <p className="mt-3 text-xs text-slate-500">
@@ -408,31 +447,68 @@ export default async function FeedPage({
               )}
             </section>
 
-            {viewer && follows.locations.length > 0 && (
+            {/* Your areas (saved) */}
+            {viewer && (
               <section className="rounded-xl border border-slate-200 bg-white p-4">
                 <h2 className="text-sm font-semibold text-slate-900">Your areas</h2>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {follows.locations.map((s) => (
-                    <FollowButton
-                      key={s}
-                      targetType="location"
-                      targetValue={s}
-                      following
-                      path="/feed"
-                      label={`📍 ${s}`}
-                      pill
-                    />
-                  ))}
-                </div>
-                <Link
-                  href="/welcome"
-                  className="mt-3 inline-block text-xs font-medium text-brand-700 underline"
-                >
-                  Edit trades &amp; areas
-                </Link>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Saved to your profile. Tap the ✕ to unfollow.
+                </p>
+                {follows.locations.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {follows.locations.map((s) => (
+                      <FollowPill
+                        key={s}
+                        targetType="location"
+                        targetValue={s}
+                        label={`📍 ${stateName(s)}`}
+                        path="/feed"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">No areas followed yet.</p>
+                )}
+
+                <form action={toggleFollowAction} className="mt-3 flex gap-2">
+                  <input type="hidden" name="targetType" value="location" />
+                  <input type="hidden" name="path" value="/feed" />
+                  <select
+                    name="targetValue"
+                    defaultValue=""
+                    required
+                    className="min-w-0 flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  >
+                    <option value="" disabled>
+                      Follow a state…
+                    </option>
+                    {usStates()
+                      .filter((st) => !follows.locations.includes(st.code))
+                      .map((st) => (
+                        <option key={st.code} value={st.code}>
+                          {st.name}
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="submit"
+                    className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-600"
+                  >
+                    Add
+                  </button>
+                </form>
               </section>
             )}
 
+            {viewer && (
+              <p className="px-1 text-xs text-slate-500">
+                Your <span className="font-medium text-slate-700">Following</span>{" "}
+                feed shows anything matching these - the trades, areas, companies,
+                and people you follow. Remove any to narrow it.
+              </p>
+            )}
+
+            {/* Browse */}
             <section className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="text-sm font-semibold text-slate-900">Browse</h2>
               <ul className="mt-2 space-y-1 text-sm">
