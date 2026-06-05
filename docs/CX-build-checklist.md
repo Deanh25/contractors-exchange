@@ -16,7 +16,9 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 
 - [ ] **Roles, gating & subdomain** — admin link in avatar menu; `/admin` only on the
   subdomain; role-filtered nav; non-admins bounced. Test each role sees the right nav.
-- [ ] **Dashboard (home launchpad)** — role-aware module cards. *(Full KPI dashboard still to build — Module 1.)*
+- [ ] **Dashboard** — time-windowed KPIs (7d/30d/90d/YTD/All): Revenue (admin+ only),
+  Marketplace health, **Leakage signal**, Network/trust + deal funnel, a Needs-attention
+  strip, and module shortcuts. Moderators see no financials.
 - [ ] **Verification** — search; filter by Pending / Verified / New / All and by
   Companies / Users; **Verify** and **Remove badge**. **Request flow:** accounts
   submit legal name + contractor license + address + **uploaded documents** (on
@@ -57,8 +59,9 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 - [x] **Category system (Chunks 2 + 3)** — the DB tree drives the listing picker, validation,
   margins, marketplace + feed filters, labels everywhere, and profile/company/onboarding/post
   pickers. Static taxonomy retired. *(Built; ready for your review.)*
-- [ ] **Admin Module 1 — KPI Dashboard** — global filters + Revenue / Marketplace-health /
-  **Leakage** / Network-trust KPIs.
+- [x] **Admin Module 1 — KPI Dashboard** — time filter + Revenue / Marketplace-health /
+  **Leakage** / Network-trust KPIs + deal funnel + needs-attention. *(Built; ready for review.)*
+  Follow-up (optional): add the geography/trade/type/party global filters beyond the time window.
 - [ ] **Planning brief update** — refresh `docs/CX-Admin-Panel-Planning-Brief.md` to the
   corrected revenue model + category system.
 - [ ] **Final end-to-end role-gating pass.**
