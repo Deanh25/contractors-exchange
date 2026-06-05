@@ -7,7 +7,7 @@ import {
   isVideoUrl,
   type ListingWithOwner,
 } from "@/lib/listings";
-import { tradeLabel } from "@/lib/trades";
+import { categoryLabel } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 import { timeAgo } from "@/lib/time";
 import { SaveButton } from "@/components/SaveButton";
@@ -19,7 +19,7 @@ function terms(listing: ListingWithOwner): string {
 }
 
 /** Horizontal listing card for the unified feed (vs. the grid ListingCard). */
-export function FeedListingCard({
+export async function FeedListingCard({
   listing,
   saved,
   currentCollectionId = null,
@@ -35,6 +35,7 @@ export function FeedListingCard({
   const photo = photosFromJson(listing.photos)[0];
   const owner = listingOwner(listing);
   const location = metroLabel(listing.city, listing.state);
+  const tradeName = await categoryLabel(listing.tradeCategory);
 
   return (
     <div className="relative">
@@ -94,7 +95,7 @@ export function FeedListingCard({
 
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
           <span className="rounded-full border border-slate-200 px-2 py-0.5 font-medium text-slate-600">
-            {tradeLabel(listing.tradeCategory)}
+            {tradeName}
           </span>
           {location && <span>📍 {location}</span>}
           {owner && <span className="truncate">· {owner.name}</span>}

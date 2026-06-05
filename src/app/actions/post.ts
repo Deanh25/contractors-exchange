@@ -5,12 +5,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { saveMedia } from "@/lib/storage";
-import { TRADES } from "@/lib/trades";
+import { getLeafSlugSet } from "@/lib/categories";
 import { createNotification } from "@/lib/notifications";
 import type { Party } from "@/lib/messaging";
 import type { Prisma } from "@/generated/prisma/client";
-
-const TRADE_SLUGS = new Set(TRADES.map((t) => t.slug));
 
 /** Parse the composer's "tagIds" field ("user:ID,company:ID,...") into parties. */
 function parseTagParties(raw: string): Party[] {
@@ -57,7 +55,8 @@ export async function createPostAction(formData: FormData) {
     authorCompanyId = owner;
   }
 
-  const tradeTag = TRADE_SLUGS.has(tradeRaw) ? tradeRaw : null;
+  const tradeTag =
+    tradeRaw && (await getLeafSlugSet()).has(tradeRaw) ? tradeRaw : null;
   const regionTag = regionRaw ? regionRaw.toUpperCase().slice(0, 2) : null;
 
   const image = formData.get("image");

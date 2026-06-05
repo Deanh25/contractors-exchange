@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCapability, can } from "@/lib/admin";
 import { Avatar } from "@/components/Avatar";
 import { formatMoney, photosFromJson } from "@/lib/listings";
-import { tradeLabel } from "@/lib/trades";
-import { getLeafOptions } from "@/lib/categories";
+import { getLeafOptions, getCategoryLabelMap } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 import { timeAgo } from "@/lib/time";
 import {
@@ -54,7 +53,7 @@ export default async function AdminListingsPage({
       ? { status: status as ListingStatus }
       : {}),
   };
-  const [listings, leafOpts] = await Promise.all([
+  const [listings, leafOpts, catLabels] = await Promise.all([
     prisma.listing.findMany({
       where,
       select: listingSelect,
@@ -62,6 +61,7 @@ export default async function AdminListingsPage({
       take: 100,
     }),
     getLeafOptions(),
+    getCategoryLabelMap(),
   ]);
 
   const inputCls = "rounded-md border border-slate-300 px-3 py-2 text-sm";
@@ -156,7 +156,7 @@ export default async function AdminListingsPage({
                       </span>
                     </div>
                     <p className="truncate text-xs text-slate-500">
-                      {tradeLabel(l.tradeCategory)}
+                      {catLabels[l.tradeCategory] ?? l.tradeCategory}
                       {l.price !== null ? ` · ${formatMoney(l.price)}` : ""} ·{" "}
                       {owner ? owner.name : "Unknown"}
                       {metroLabel(l.city, l.state) ? ` · ${metroLabel(l.city, l.state)}` : ""} ·{" "}

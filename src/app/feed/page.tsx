@@ -6,7 +6,7 @@ import { PostCard } from "@/components/PostCard";
 import { FeedListingCard } from "@/components/FeedListingCard";
 import { FollowButton } from "@/components/FollowButton";
 import { toggleFollowAction } from "@/app/actions/follow";
-import { tradeLabel, tradesByCategory } from "@/lib/trades";
+import { getLeafGroups, getCategoryLabelMap } from "@/lib/categories";
 import { authorInclude } from "@/lib/posts";
 import { ownerInclude } from "@/lib/listings";
 import { getSavedMap, getViewerCollections } from "@/lib/saved";
@@ -131,11 +131,17 @@ export default async function FeedPage({
       active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
     }`;
 
+  // Category data (DB taxonomy) for the trade filter + labels.
+  const [leafGroups, catLabels] = await Promise.all([
+    getLeafGroups(),
+    getCategoryLabelMap(),
+  ]);
+
   // Removable active-filter chips (marketplace pattern).
   const chips: { key: string; label: string; href: string }[] = [];
   if (q) chips.push({ key: "q", label: `"${q}"`, href: feedQuery(base, ["q"]) });
   if (trade)
-    chips.push({ key: "trade", label: tradeLabel(trade), href: feedQuery(base, ["trade"]) });
+    chips.push({ key: "trade", label: catLabels[trade] ?? trade, href: feedQuery(base, ["trade"]) });
   if (show !== "all")
     chips.push({
       key: "show",
@@ -217,11 +223,11 @@ export default async function FeedPage({
                   className="rounded-md border border-slate-300 px-2 py-2 text-sm"
                 >
                   <option value="">All trades</option>
-                  {tradesByCategory().map((g) => (
+                  {leafGroups.map((g) => (
                     <optgroup key={g.category} label={g.category}>
-                      {g.trades.map((t) => (
-                        <option key={t.slug} value={t.slug}>
-                          {t.label}
+                      {g.leaves.map((l) => (
+                        <option key={l.slug} value={l.slug}>
+                          {l.label}
                         </option>
                       ))}
                     </optgroup>
@@ -342,7 +348,7 @@ export default async function FeedPage({
                           targetValue={slug}
                           following
                           path="/feed"
-                          label={tradeLabel(slug)}
+                          label={catLabels[slug] ?? slug}
                           pill
                         />
                       ))}
@@ -365,16 +371,16 @@ export default async function FeedPage({
                       <option value="" disabled>
                         Add a trade…
                       </option>
-                      {tradesByCategory().map((g) => {
-                        const avail = g.trades.filter(
-                          (t) => !follows.trades.includes(t.slug),
+                      {leafGroups.map((g) => {
+                        const avail = g.leaves.filter(
+                          (l) => !follows.trades.includes(l.slug),
                         );
                         if (avail.length === 0) return null;
                         return (
                           <optgroup key={g.category} label={g.category}>
-                            {avail.map((t) => (
-                              <option key={t.slug} value={t.slug}>
-                                {t.label}
+                            {avail.map((l) => (
+                              <option key={l.slug} value={l.slug}>
+                                {l.label}
                               </option>
                             ))}
                           </optgroup>

@@ -1,6 +1,7 @@
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { tradeLabel, tradesFromJson } from "@/lib/trades";
+import { tradesFromJson } from "@/lib/trades";
+import { getCategoryLabelMap } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 
 type ProfileLike = {
@@ -14,9 +15,10 @@ type ProfileLike = {
   verified?: boolean;
 };
 
-export function ProfileHeader({ profile }: { profile: ProfileLike }) {
+export async function ProfileHeader({ profile }: { profile: ProfileLike }) {
   const trades = tradesFromJson(profile.trades);
   const location = metroLabel(profile.city, profile.state);
+  const labels = await getCategoryLabelMap();
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -41,7 +43,7 @@ export function ProfileHeader({ profile }: { profile: ProfileLike }) {
                 key={t}
                 className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700"
               >
-                {tradeLabel(t)}
+                {labels[t] ?? t}
               </span>
             ))}
           </div>

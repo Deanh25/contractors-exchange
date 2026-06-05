@@ -2,14 +2,15 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { postAuthor, postTags, type PostWithAuthor } from "@/lib/posts";
-import { tradeLabel } from "@/lib/trades";
+import { categoryLabel } from "@/lib/categories";
 import { isVideoUrl } from "@/lib/listings";
 import { timeAgo } from "@/lib/time";
 
 /** A discussion post in the feed (PRD §4): author, body, optional image + tags. */
-export function PostCard({ post }: { post: PostWithAuthor }) {
+export async function PostCard({ post }: { post: PostWithAuthor }) {
   const author = postAuthor(post);
   const tags = postTags(post);
+  const tradeName = post.tradeTag ? await categoryLabel(post.tradeTag) : null;
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4">
@@ -85,7 +86,7 @@ export function PostCard({ post }: { post: PostWithAuthor }) {
               href={`/feed?trade=${post.tradeTag}`}
               className="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
             >
-              {tradeLabel(post.tradeTag)}
+              {tradeName}
             </Link>
           )}
           {post.regionTag && (

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { MarketplaceCard } from "@/components/MarketplaceCard";
 import { SortSelect } from "@/components/SortSelect";
-import { tradesByCategory, tradeLabel } from "@/lib/trades";
+import { getLeafGroups, getCategoryLabelMap } from "@/lib/categories";
 import { LocationPicker } from "@/components/LocationPicker";
 import {
   LISTING_CHOICES,
@@ -271,11 +271,17 @@ export default async function ListingsPage({
   const centerLabel = city && state ? `${city}, ${state}` : city || state;
   const sortSelected = effectiveSort === "newest" ? "" : effectiveSort;
 
+  // Category data (DB taxonomy) for the trade filter + labels.
+  const [leafGroups, catLabels] = await Promise.all([
+    getLeafGroups(),
+    getCategoryLabelMap(),
+  ]);
+
   // Removable active-filter chips.
   const chips: { key: string; label: string; href: string }[] = [];
   if (q) chips.push({ key: "q", label: `"${q}"`, href: buildQuery(allParams, ["q"]) });
   if (trade)
-    chips.push({ key: "trade", label: tradeLabel(trade), href: buildQuery(allParams, ["trade"]) });
+    chips.push({ key: "trade", label: catLabels[trade] ?? trade, href: buildQuery(allParams, ["trade"]) });
   if (type)
     chips.push({
       key: "type",
@@ -309,7 +315,7 @@ export default async function ListingsPage({
       href: buildQuery(allParams, ["manufacturer"]),
     });
 
-  const heading = trade ? tradeLabel(trade) : "All listings";
+  const heading = trade ? catLabels[trade] ?? trade : "All listings";
   const countText = `${visible.length} listing${visible.length === 1 ? "" : "s"}`;
 
   return (
@@ -341,11 +347,11 @@ export default async function ListingsPage({
               <FilterGroup label="Trade" open={!!trade}>
                 <select name="trade" defaultValue={trade} className={inputCls}>
                   <option value="">All trades</option>
-                  {tradesByCategory().map((g) => (
+                  {leafGroups.map((g) => (
                     <optgroup key={g.category} label={g.category}>
-                      {g.trades.map((t) => (
-                        <option key={t.slug} value={t.slug}>
-                          {t.label}
+                      {g.leaves.map((l) => (
+                        <option key={l.slug} value={l.slug}>
+                          {l.label}
                         </option>
                       ))}
                     </optgroup>

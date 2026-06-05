@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { normalizeTrades } from "@/lib/trades";
+import { keepLeafSlugs } from "@/lib/categories";
 import { parseCoord } from "@/lib/form";
 
 export async function updateProfileAction(formData: FormData) {
@@ -17,7 +17,7 @@ export async function updateProfileAction(formData: FormData) {
   const state = String(formData.get("state") ?? "").trim();
   const lat = parseCoord(formData.get("lat"));
   const lng = parseCoord(formData.get("lng"));
-  const trades = normalizeTrades(formData.getAll("trades").map(String));
+  const trades = await keepLeafSlugs(formData.getAll("trades").map(String));
 
   if (!name) {
     redirect("/me/edit?error=name");

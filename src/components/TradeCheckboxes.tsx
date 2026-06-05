@@ -1,17 +1,18 @@
 import { SearchSelect } from "@/components/SearchSelect";
-import { tradeOptions } from "@/lib/trades";
+import { getLeafOptions } from "@/lib/categories";
 
 /**
  * Multi-select trade picker (searchable, grouped by category). Submits the
- * chosen trade slugs as repeated `trades` fields - same contract the profile,
- * company, and onboarding actions already read via formData.getAll("trades").
+ * chosen leaf-category slugs as repeated `trades` fields - same contract the
+ * profile, company, and onboarding actions read via formData.getAll("trades").
  */
-export function TradeCheckboxes({ selected = [] }: { selected?: string[] }) {
+export async function TradeCheckboxes({ selected = [] }: { selected?: string[] }) {
+  const options = await getLeafOptions();
   return (
     <SearchSelect
       name="trades"
       multiple
-      options={tradeOptions()}
+      options={options}
       defaultValue={selected}
       placeholder="Search trades (e.g. electrical, paving)…"
     />

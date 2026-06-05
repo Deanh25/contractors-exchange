@@ -80,6 +80,30 @@ export const getCategoryLabelMap = cache(async (): Promise<Record<string, string
   return m;
 });
 
+/** Display name for a category slug (falls back to the slug). */
+export async function categoryLabel(slug: string): Promise<string> {
+  return (await getCategoryLabelMap())[slug] ?? slug;
+}
+
+export type LeafGroup = { category: string; leaves: { slug: string; label: string }[] };
+
+function leavesUnder(node: CategoryNode): CategoryNode[] {
+  return node.children.length === 0 ? [node] : node.children.flatMap(leavesUnder);
+}
+
+/** Non-archived leaves grouped under their top-level category, for <optgroup> filters. */
+export const getLeafGroups = cache(async (): Promise<LeafGroup[]> => {
+  const tree = await getCategoryTree();
+  return tree
+    .map((top) => ({
+      category: top.name,
+      leaves: leavesUnder(top)
+        .filter((l) => !l.archived)
+        .map((l) => ({ slug: l.slug, label: l.name })),
+    }))
+    .filter((g) => g.leaves.length > 0);
+});
+
 export type LeafOption = { value: string; label: string; group: string };
 
 /** Non-archived LEAF categories as picker options, grouped by their top ancestor. */
@@ -103,3 +127,17 @@ export const getLeafSlugSet = cache(async (): Promise<Set<string>> => {
   const opts = await getLeafOptions();
   return new Set(opts.map((o) => o.value));
 });
+
+/** Keep only valid leaf slugs, de-duplicated (for storing User/Company trades). */
+export async function keepLeafSlugs(slugs: string[]): Promise<string[]> {
+  const set = await getLeafSlugSet();
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of slugs) {
+    if (set.has(s) && !seen.has(s)) {
+      seen.add(s);
+      out.push(s);
+    }
+  }
+  return out;
+}

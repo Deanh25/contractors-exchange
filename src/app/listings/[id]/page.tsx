@@ -17,7 +17,7 @@ import { getActiveOffer } from "@/lib/offers";
 import { makeOfferAction } from "@/app/actions/offers";
 import { SaveButton } from "@/components/SaveButton";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
-import { tradeLabel } from "@/lib/trades";
+import { categoryLabel } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 import {
   formatMoney,
@@ -74,6 +74,7 @@ export default async function ListingDetailPage({
   if (!listing) notFound();
 
   const badge = listingBadge(listing.type, listing.tradeKind);
+  const tradeName = await categoryLabel(listing.tradeCategory);
   const photos = photosFromJson(listing.photos);
   const owner = listingOwner(listing);
   const sellerRating = owner
@@ -194,7 +195,7 @@ export default async function ListingDetailPage({
                 {badge.label}
               </span>
               <span className="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                {tradeLabel(listing.tradeCategory)}
+                {tradeName}
               </span>
             </div>
 

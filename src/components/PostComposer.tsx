@@ -2,7 +2,7 @@ import { createPostAction } from "@/app/actions/post";
 import { Avatar } from "@/components/Avatar";
 import { MediaInput } from "@/components/MediaInput";
 import { PostTagPicker } from "@/components/PostTagPicker";
-import { tradesByCategory } from "@/lib/trades";
+import { getLeafGroups } from "@/lib/categories";
 import { usStates } from "@/lib/cities";
 
 const selectCls =
@@ -13,7 +13,7 @@ const selectCls =
  * authored as the individual or a company they own, optionally tagged by trade
  * and region so they reach the right followers.
  */
-export function PostComposer({
+export async function PostComposer({
   userName,
   avatarUrl,
   companies,
@@ -28,6 +28,7 @@ export function PostComposer({
   const owner = companies.some((c) => c.id === defaultOwner)
     ? defaultOwner
     : "self";
+  const leafGroups = await getLeafGroups();
   return (
     <form
       action={createPostAction}
@@ -62,11 +63,11 @@ export function PostComposer({
 
             <select name="tradeTag" defaultValue="" className={selectCls}>
               <option value="">Trade (optional)</option>
-              {tradesByCategory().map((group) => (
+              {leafGroups.map((group) => (
                 <optgroup key={group.category} label={group.category}>
-                  {group.trades.map((t) => (
-                    <option key={t.slug} value={t.slug}>
-                      {t.label}
+                  {group.leaves.map((l) => (
+                    <option key={l.slug} value={l.slug}>
+                      {l.label}
                     </option>
                   ))}
                 </optgroup>

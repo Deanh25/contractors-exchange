@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ListingCard } from "@/components/ListingCard";
 import { DragScroller } from "@/components/DragScroller";
 import { ownerInclude } from "@/lib/listings";
-import { TRADES, tradeLabel } from "@/lib/trades";
+import { getCategoryLabelMap, getLeafSlugSet } from "@/lib/categories";
 
 // "Shop by trade" tiles. `img` is a circular product photo (TODO: real photos
 // coming from the founder); until then we show an emoji placeholder in the circle.
@@ -91,6 +91,8 @@ export default async function Home() {
     }),
   ]);
   const sellerCount = companyCount + userCount;
+  const catLabels = await getCategoryLabelMap();
+  const tradeCount = (await getLeafSlugSet()).size;
 
   return (
     <main className="flex-1">
@@ -129,7 +131,7 @@ export default async function Home() {
             </Link>
             <span className="hidden text-slate-600 sm:inline">|</span>
             <span>
-              {statLabel(listingCount, "listing", "listings")} · {TRADES.length} trades ·{" "}
+              {statLabel(listingCount, "listing", "listings")} · {tradeCount} trades ·{" "}
               {statLabel(sellerCount, "seller", "sellers")}
             </span>
           </div>
@@ -160,7 +162,7 @@ export default async function Home() {
                 )}
               </span>
               <span className="text-sm font-semibold text-slate-700 group-hover:text-brand-700">
-                {tradeLabel(t.slug)}
+                {catLabels[t.slug] ?? t.slug}
               </span>
             </Link>
           ))}

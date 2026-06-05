@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { tradeLabel, tradesFromJson } from "@/lib/trades";
+import { tradesFromJson } from "@/lib/trades";
+import { getCategoryLabelMap } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 import { ListingCard } from "@/components/ListingCard";
 import { ownerInclude } from "@/lib/listings";
@@ -62,6 +63,7 @@ export default async function CompanyPage({
   ]);
 
   const trades = tradesFromJson(company.trades);
+  const catLabels = await getCategoryLabelMap();
   const location = metroLabel(company.city, company.state);
   const isOwner = company.memberships.some(
     (m) => m.userId === viewer?.id && m.role === "owner",
@@ -105,7 +107,7 @@ export default async function CompanyPage({
                 key={t}
                 className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700"
               >
-                {tradeLabel(t)}
+                {catLabels[t] ?? t}
               </span>
             ))}
           </div>

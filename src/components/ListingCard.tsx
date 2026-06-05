@@ -7,7 +7,7 @@ import {
   isVideoUrl,
   type ListingWithOwner,
 } from "@/lib/listings";
-import { tradeLabel } from "@/lib/trades";
+import { categoryLabel } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 import { formatMiles } from "@/lib/geo";
 import { SaveButton } from "@/components/SaveButton";
@@ -19,7 +19,7 @@ function terms(listing: ListingWithOwner): string {
   return listing.tradeKind === "service" ? "Service swap" : "Goods swap";
 }
 
-export function ListingCard({
+export async function ListingCard({
   listing,
   distanceMi,
   saved,
@@ -37,6 +37,7 @@ export function ListingCard({
   const photo = photosFromJson(listing.photos)[0];
   const owner = listingOwner(listing);
   const location = metroLabel(listing.city, listing.state);
+  const tradeName = await categoryLabel(listing.tradeCategory);
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-sm">
@@ -87,7 +88,7 @@ export function ListingCard({
         <p className="mt-1 text-sm font-bold text-slate-900">{terms(listing)}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
           <span className="rounded-full border border-slate-200 px-2 py-0.5 font-medium text-slate-600">
-            {tradeLabel(listing.tradeCategory)}
+            {tradeName}
           </span>
           {location && <span>📍 {location}</span>}
           {distanceMi !== undefined && (
