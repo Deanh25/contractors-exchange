@@ -6,18 +6,11 @@ import type { ReactionType } from "@/generated/prisma/client";
 /**
  * Post engagement (PRD §4, LinkedIn-style): reactions + comments, both attributed
  * to a PARTY (a user, or a company via acting-as). Reads are batched/cached for
- * the feed; one reaction per party per post (type can change).
+ * the feed; one reaction per party per post (type can change). Reaction icons +
+ * labels live in the client-safe @/lib/reactions module.
  */
 
-export const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
-  { type: "like", emoji: "👍", label: "Like" },
-  { type: "celebrate", emoji: "🎉", label: "Celebrate" },
-  { type: "insightful", emoji: "💡", label: "Insightful" },
-  { type: "helpful", emoji: "🤝", label: "Helpful" },
-];
-export const REACTION_EMOJI: Record<string, string> = Object.fromEntries(
-  REACTIONS.map((r) => [r.type, r.emoji]),
-);
+export { REACTIONS, REACTION_META } from "@/lib/reactions";
 
 export type PostEngagement = {
   total: number;
@@ -73,12 +66,14 @@ export async function getPostEngagement(
   return out;
 }
 
-export type CommentAuthor = {
+/** How a party (user, or company acting-as) shows up in engagement UIs. */
+export type PartyDisplay = {
   name: string;
   avatar: string | null;
   href: string;
   kind: "user" | "company";
 };
+export type CommentAuthor = PartyDisplay;
 
 export type CommentNode = {
   id: string;
@@ -88,10 +83,11 @@ export type CommentNode = {
   replies: CommentNode[];
 };
 
-function authorOf(c: {
+/** Map an engagement row's user/company to the acting party's display info. */
+function partyDisplay(c: {
   user: { id: string; name: string; avatarUrl: string | null };
   company: { name: string; slug: string; logoUrl: string | null } | null;
-}): CommentAuthor {
+}): PartyDisplay {
   if (c.company) {
     return {
       name: c.company.name,
@@ -106,6 +102,48 @@ function authorOf(c: {
     href: `/u/${c.user.id}`,
     kind: "user",
   };
+}
+
+export type Reactor = {
+  type: ReactionType;
+  party: PartyDisplay;
+  isViewer: boolean;
+};
+
+export type PostReactors = {
+  total: number;
+  byType: Partial<Record<ReactionType, number>>;
+  viewerReaction: ReactionType | null;
+  reactors: Reactor[];
+};
+
+/**
+ * Full reactor list for one post (the "who reacted" modal). Lazy: called only
+ * when a viewer opens the modal, never during the feed render. The viewer's own
+ * reaction sorts first, LinkedIn-style.
+ */
+export async function getPostReactors(
+  postId: string,
+  viewer: Party | null,
+): Promise<PostReactors> {
+  const rows = await prisma.reaction.findMany({
+    where: { postId },
+    include: {
+      user: { select: { id: true, name: true, avatarUrl: true } },
+      company: { select: { name: true, slug: true, logoUrl: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const byType: Partial<Record<ReactionType, number>> = {};
+  let viewerReaction: ReactionType | null = null;
+  const reactors: Reactor[] = rows.map((r) => {
+    byType[r.type] = (byType[r.type] ?? 0) + 1;
+    const mine = viewer ? isViewerReaction(r, viewer) : false;
+    if (mine) viewerReaction = r.type;
+    return { type: r.type, party: partyDisplay(r), isViewer: mine };
+  });
+  reactors.sort((a, b) => Number(b.isViewer) - Number(a.isViewer));
+  return { total: rows.length, byType, viewerReaction, reactors };
 }
 
 /** All comments for a post as a one-level tree (top-level + replies). */
@@ -126,7 +164,7 @@ export async function getPostComments(postId: string): Promise<CommentNode[]> {
       id: c.id,
       body: c.body,
       createdAt: c.createdAt,
-      author: authorOf(c),
+      author: partyDisplay(c),
       replies: [],
     };
     byId.set(c.id, node);
@@ -140,7 +178,7 @@ export async function getPostComments(postId: string): Promise<CommentNode[]> {
       id: c.id,
       body: c.body,
       createdAt: c.createdAt,
-      author: authorOf(c),
+      author: partyDisplay(c),
       replies: [],
     });
   }

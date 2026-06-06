@@ -39,3 +39,32 @@ label:has(> input[type="file"]),
 select:not(:disabled) {
   cursor: pointer;
 }
+
+/* Reaction pills (feed post reactions). CSS-only spring micro-interaction: the
+   pill lifts and its icon scales + tilts on hover. Reduced-motion is honored. */
+.reaction-pill {
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.reaction-pill:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px -8px rgba(15, 23, 42, 0.3);
+}
+.reaction-pill-icon {
+  display: inline-flex;
+  transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.reaction-pill:hover .reaction-pill-icon {
+  transform: scale(1.2) rotate(-6deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaction-pill,
+  .reaction-pill:hover,
+  .reaction-pill-icon,
+  .reaction-pill:hover .reaction-pill-icon {
+    transform: none;
+    transition: none;
+  }
+}

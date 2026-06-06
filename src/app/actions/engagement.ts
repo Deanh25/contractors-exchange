@@ -3,10 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { requireUser, getCurrentUser } from "@/lib/auth";
 import { getActingContext } from "@/lib/identity";
 import { createNotification } from "@/lib/notifications";
-import { REACTIONS } from "@/lib/engagement";
+import { REACTIONS } from "@/lib/reactions";
+import { getPostReactors, type PostReactors } from "@/lib/engagement";
 import type { Party } from "@/lib/messaging";
 import type { ReactionType } from "@/generated/prisma/client";
 
@@ -17,6 +18,13 @@ async function actingParty(userId: string): Promise<Party> {
   return ctx.type === "company"
     ? { type: "company", id: ctx.company.id }
     : { type: "user", id: userId };
+}
+
+/** Acting party for a possibly-signed-out viewer (reads, never mutations). */
+async function viewerParty(): Promise<Party | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  return actingParty(user.id);
 }
 
 function postAuthorParty(post: {
@@ -85,19 +93,24 @@ export async function reactToPostAction(formData: FormData) {
   const author = postAuthorParty(post);
   if (added && author && !partiesEqual(author, actor)) {
     const actorName = await partyName(actor, user.name);
-    const emoji = REACTIONS.find((r) => r.type === type)?.emoji ?? "";
+    const label = REACTIONS.find((r) => r.type === type)?.label ?? "reacted";
     await createNotification({
       recipient: author,
       type: "post_like",
       actorUserId: user.id,
       actorCompanyId: actor.type === "company" ? actor.id : null,
-      title: `${actorName} reacted ${emoji} to your post`,
+      title: `${actorName} reacted "${label}" to your post`,
       href: `/posts/${postId}`,
     });
   }
 
   revalidatePath("/feed");
   revalidatePath(`/posts/${postId}`);
+}
+
+/** Lazy read for the "who reacted" modal (only runs when a viewer opens it). */
+export async function getPostReactorsAction(postId: string): Promise<PostReactors> {
+  return getPostReactors(postId, await viewerParty());
 }
 
 // --- Comment / reply ---------------------------------------------------------

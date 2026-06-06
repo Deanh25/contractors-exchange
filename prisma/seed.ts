@@ -436,7 +436,7 @@ async function main() {
     select: { id: true },
   });
   const reactors = [jordan, maria, sam, alicia, chris, tyler];
-  const rtypes = ["like", "celebrate", "insightful", "helpful"] as const;
+  const rtypes = ["like", "insightful", "respect", "helpful"] as const;
   for (let i = 0; i < seedPosts.length; i++) {
     const pid = seedPosts[i].id;
     const n = Math.min(2 + i, reactors.length);

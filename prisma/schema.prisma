@@ -379,7 +379,7 @@ model Post {
   authorUser    User?    @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
   authorCompany Company? @relation(fields: [authorCompanyId], references: [id], onDelete: Cascade)
   tags          PostTag[] // users / companies mentioned in this post
-  reactions     Reaction[] // likes / celebrate / etc. on this post
+  reactions     Reaction[] // like / insightful / respect / helpful on this post
   comments      Comment[] // discussion thread on this post
 
   @@index([tradeTag])
@@ -394,8 +394,8 @@ model Post {
 // /messages/reviews. One reaction per party per post (the type can change).
 enum ReactionType {
   like
-  celebrate
   insightful
+  respect
   helpful
 }
 
