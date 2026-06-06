@@ -102,6 +102,7 @@ model Company {
   comments           Comment[] @relation("CommentCompany") // post comments made as this company
   commentReactions   CommentReaction[] @relation("CommentReactionCompany") // comment reactions made as this company
   commentMentions    Comment[] @relation("CommentMentionCompany") // comment replies that mention this company
+  follows            Follow[] @relation("FollowFollowerCompany") // people/companies this company follows
 }
 
 enum MembershipRole {
@@ -500,15 +501,23 @@ enum FollowTargetType {
 
 model Follow {
   id             String           @id @default(cuid())
-  followerUserId String
-  targetType     FollowTargetType
-  targetValue    String
-  createdAt      DateTime         @default(now())
+  // Follower party: the human (always) + the company they followed as, if any.
+  // For topic follows (trade/location) the company is always null (feed topics
+  // are personal). For people/company follows it carries the acting identity.
+  followerUserId    String
+  followerCompanyId String?
+  targetType        FollowTargetType
+  targetValue       String
+  createdAt         DateTime @default(now())
 
-  follower User @relation(fields: [followerUserId], references: [id], onDelete: Cascade)
+  follower        User     @relation(fields: [followerUserId], references: [id], onDelete: Cascade)
+  followerCompany Company? @relation("FollowFollowerCompany", fields: [followerCompanyId], references: [id], onDelete: Cascade)
 
-  @@unique([followerUserId, targetType, targetValue]) // follow each target once
+  // Best-effort one-per-party-per-target (NULLs distinct in MySQL; the service
+  // de-dupes explicitly).
+  @@unique([followerUserId, followerCompanyId, targetType, targetValue])
   @@index([followerUserId])
+  @@index([followerCompanyId])
   @@index([targetType, targetValue])
 }
 

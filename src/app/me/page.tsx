@@ -12,6 +12,7 @@ import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getUserRating, getUserReviews } from "@/lib/reviews";
 import { getSavedCount } from "@/lib/saved";
+import { getFollowCounts } from "@/lib/follows";
 
 type Tab = "overview" | "companies" | "listings" | "reviews";
 const TABS: { key: Tab; label: string }[] = [
@@ -63,7 +64,7 @@ export default async function MyProfilePage({
     ? (sp.tab as Tab)
     : "overview";
 
-  const [memberships, listings, rating, reviews, savedCount, verifReq] =
+  const [memberships, listings, rating, reviews, savedCount, verifReq, follow] =
     await Promise.all([
       getUserCompanies(user.id),
       prisma.listing.findMany({
@@ -78,6 +79,7 @@ export default async function MyProfilePage({
         where: { userId: user.id },
         orderBy: { createdAt: "desc" },
       }),
+      getFollowCounts({ type: "user", id: user.id }),
     ]);
 
   const incomplete =
@@ -155,7 +157,9 @@ export default async function MyProfilePage({
             />
 
             {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Stat label="Followers" value={follow.followers} href="/network?tab=followers" />
+              <Stat label="Following" value={follow.following} href="/network?tab=following" />
               <Stat label="Listings" value={listings.length} href="/me?tab=listings" />
               <Stat label="Companies" value={memberships.length} href="/me?tab=companies" />
               <Stat label="Reviews" value={rating.count} href="/me?tab=reviews" />

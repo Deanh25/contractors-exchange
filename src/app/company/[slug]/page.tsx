@@ -15,9 +15,10 @@ import { ReviewList } from "@/components/ReviewList";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { VerificationRequestCard } from "@/components/VerificationRequestCard";
 import { messageCompanyAction } from "@/app/actions/message";
-import { isFollowing } from "@/lib/follows";
+import { isFollowing, getFollowCounts } from "@/lib/follows";
 import { getCompanyRating, getCompanyReviews } from "@/lib/reviews";
 import { getActingContext } from "@/lib/identity";
+import type { Party } from "@/lib/messaging";
 import {
   inviteMemberAction,
   setMemberRoleAction,
@@ -70,10 +71,18 @@ export default async function CompanyPage({
   );
   const ctx = viewer ? await getActingContext(viewer.id) : { type: "user" as const };
   const actingAsThis = ctx.type === "company" && ctx.company.id === company.id;
-  const followingCompany =
-    viewer && !isOwner
-      ? await isFollowing(viewer.id, "company", company.id)
-      : false;
+  const viewerParty: Party | null = viewer
+    ? ctx.type === "company"
+      ? { type: "company", id: ctx.company.id }
+      : { type: "user", id: viewer.id }
+    : null;
+  const followTarget: Party = { type: "company", id: company.id };
+  const [followingCompany, followCounts] = await Promise.all([
+    viewerParty && !isOwner && !actingAsThis
+      ? isFollowing(viewerParty, followTarget)
+      : Promise.resolve(false),
+    getFollowCounts(followTarget),
+  ]);
 
   const tab: Tab = (
     ["overview", "storefront", "team", "reviews"] as const
@@ -95,6 +104,26 @@ export default async function CompanyPage({
         </div>
         <div className="mt-1">
           <StarRating rating={rating.avg} count={rating.count} />
+        </div>
+        <div className="mt-2 flex gap-4 text-sm text-slate-600">
+          <Link
+            href={`/network?party=company:${company.id}&tab=followers`}
+            className="hover:underline"
+          >
+            <span className="font-semibold text-slate-900">
+              {followCounts.followers}
+            </span>{" "}
+            followers
+          </Link>
+          <Link
+            href={`/network?party=company:${company.id}&tab=following`}
+            className="hover:underline"
+          >
+            <span className="font-semibold text-slate-900">
+              {followCounts.following}
+            </span>{" "}
+            following
+          </Link>
         </div>
         {location && <p className="mt-1 text-sm text-slate-500">📍 {location}</p>}
         {company.serviceArea && (

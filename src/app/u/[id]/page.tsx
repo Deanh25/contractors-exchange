@@ -8,7 +8,9 @@ import { FollowButton } from "@/components/FollowButton";
 import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
 import { messageUserAction } from "@/app/actions/message";
-import { isFollowing } from "@/lib/follows";
+import { isFollowing, getFollowCounts } from "@/lib/follows";
+import { getActingContext } from "@/lib/identity";
+import type { Party } from "@/lib/messaging";
 import { getUserRating, getUserReviews } from "@/lib/reviews";
 
 export default async function PublicProfilePage({
@@ -29,8 +31,22 @@ export default async function PublicProfilePage({
 
   if (!user) notFound();
   const isOwn = viewer?.id === user.id;
-  const [followingUser, rating, reviews] = await Promise.all([
-    viewer && !isOwn ? isFollowing(viewer.id, "user", user.id) : Promise.resolve(false),
+
+  let viewerParty: Party | null = null;
+  if (viewer) {
+    const ctx = await getActingContext(viewer.id);
+    viewerParty =
+      ctx.type === "company"
+        ? { type: "company", id: ctx.company.id }
+        : { type: "user", id: viewer.id };
+  }
+  const target: Party = { type: "user", id: user.id };
+
+  const [followingUser, counts, rating, reviews] = await Promise.all([
+    viewerParty && !isOwn
+      ? isFollowing(viewerParty, target)
+      : Promise.resolve(false),
+    getFollowCounts(target),
     getUserRating(user.id),
     getUserReviews(user.id),
   ]);
@@ -43,6 +59,27 @@ export default async function PublicProfilePage({
 
           <div className="mt-3">
             <StarRating rating={rating.avg} count={rating.count} />
+          </div>
+
+          <div className="mt-3 flex gap-4 text-sm text-slate-600">
+            <Link
+              href={`/network?party=user:${user.id}&tab=followers`}
+              className="hover:underline"
+            >
+              <span className="font-semibold text-slate-900">
+                {counts.followers}
+              </span>{" "}
+              followers
+            </Link>
+            <Link
+              href={`/network?party=user:${user.id}&tab=following`}
+              className="hover:underline"
+            >
+              <span className="font-semibold text-slate-900">
+                {counts.following}
+              </span>{" "}
+              following
+            </Link>
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
