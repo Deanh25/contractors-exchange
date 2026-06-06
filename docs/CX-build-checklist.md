@@ -94,9 +94,13 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     `src/lib/identity.ts` (cookie session -> Actor). All services + shims use these.
   - [x] **Transactions/deals** — `createDeal` / `updateDeal` in `src/lib/services/transactions.ts`
     (spread + stock decrement); `actions/transaction.ts` is now a thin shim. No behavior change.
-  - [ ] Backfill remaining heavy modules to the service pattern, opportunistically: listing,
-    message, then the feed pair post/engagement (coordinate - the other editor owns feed right now),
-    then the lighter ones (follow, saved, profile, notification, review, verification).
+  - [x] **Messaging** — `startPartyThread` / `startListingThread` / `sendMessage` / `markThreadRead`
+    in `src/lib/services/messages.ts`; shim saves uploads to a URL then calls the service.
+  - [x] **Light modules** — `follows`, `saved`, `profile`, `notifications`, `reviews`, `verification`
+    each extracted to `src/lib/services/*` with thin shims. No behavior change.
+  - [ ] **Remaining: `listing`** (heavy, mostly form-parsing that stays in the shim) — convert next.
+  - [ ] **Feed pair (`post` / `engagement`)** — the other editor owns these; convert AFTER they land
+    their feed-comments work, to avoid collisions.
   - [ ] When mobile starts: monorepo conversion, bearer-token auth path, then API endpoints for the
     flows mobile needs (browse, offers, messages, orders, notifications) + the Expo app.
 
