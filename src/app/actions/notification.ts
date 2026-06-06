@@ -1,44 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
-import { getActingCompanies } from "@/lib/identity";
+import { resolveActor } from "@/lib/identity";
+import { markAllRead, markOneRead } from "@/lib/services/notifications";
 
-/** Notifications addressed to the user OR a company they may act for. */
-async function recipientScope(userId: string) {
-  const companyIds = (await getActingCompanies(userId)).map((c) => c.id);
-  return companyIds.length
-    ? {
-        OR: [
-          { recipientUserId: userId },
-          { recipientCompanyId: { in: companyIds } },
-        ],
-      }
-    : { recipientUserId: userId };
-}
+/**
+ * Web transport shim over the notification SERVICE (src/lib/services/notifications.ts).
+ * Owns only web concerns: resolve the acting identity and revalidate. The recipient
+ * scope (user + their companies) is carried by the Actor. See
+ * docs/CX-build-checklist.md section E.
+ */
 
 /** Mark every unread notification read for the user + their companies. */
 export async function markAllNotificationsReadAction(): Promise<void> {
-  const user = await requireUser("/notifications");
-  const scope = await recipientScope(user.id);
-  await prisma.notification.updateMany({
-    where: { ...scope, readAt: null },
-    data: { readAt: new Date() },
-  });
+  const actor = await resolveActor("/notifications");
+  await markAllRead(actor);
   revalidatePath("/notifications");
   revalidatePath("/", "layout");
 }
 
-/** Mark a single notification read (scoped to the user's reach; for a company
- * notification this clears it for the whole team - shared read). */
+/** Mark a single notification read (shared read for a company notification). */
 export async function markNotificationReadAction(id: string): Promise<void> {
-  const user = await requireUser("/notifications");
-  const scope = await recipientScope(user.id);
-  await prisma.notification.updateMany({
-    where: { id, ...scope, readAt: null },
-    data: { readAt: new Date() },
-  });
+  const actor = await resolveActor("/notifications");
+  await markOneRead(actor, id);
   revalidatePath("/notifications");
   revalidatePath("/", "layout");
 }

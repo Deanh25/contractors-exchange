@@ -2,29 +2,26 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { getActingContext, isCompanyOwner } from "@/lib/identity";
 import { saveDocuments } from "@/lib/storage";
-import { Prisma } from "@/generated/prisma/client";
+import {
+  submitVerificationRequest,
+  type VerificationSubject,
+} from "@/lib/services/verification";
 
 /**
- * Submit (or update) a verification request (PRD §7C). The account provides its
- * legal business name, contractor license + state, business address, and uploads
- * supporting documents. It lands in the admin verification queue as "pending".
- * Companies submit as an OWNER; individuals submit for themselves.
+ * Web transport shim over the verification SERVICE (src/lib/services/verification.ts).
+ * Owns only web concerns: resolve the subject (acting-as + owner permission) and
+ * the return path, persist uploaded documents to URLs, then call the service and
+ * map its result. See docs/CX-build-checklist.md section E.
  */
-
-function docsFromJson(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
-}
-
 export async function requestVerificationAction(formData: FormData) {
   const user = await requireUser("/me");
   const ctx = await getActingContext(user.id);
 
   // Subject: the company being acted for (owner only) or the user themselves.
-  let subject: { type: "user" | "company"; id: string };
+  let subject: VerificationSubject;
   let back: string;
   if (ctx.type === "company") {
     if (!(await isCompanyOwner(user.id, ctx.company.id))) {
@@ -37,6 +34,7 @@ export async function requestVerificationAction(formData: FormData) {
     back = "/me";
   }
 
+  // Validate required fields before persisting any uploads (avoids orphan files).
   const legalName = String(formData.get("legalName") ?? "").trim();
   const licenseNumber = String(formData.get("licenseNumber") ?? "").trim();
   const licenseState = String(formData.get("licenseState") ?? "").trim();
@@ -50,37 +48,15 @@ export async function requestVerificationAction(formData: FormData) {
     .getAll("documents")
     .filter((f): f is File => f instanceof File && f.size > 0);
   const newDocs = await saveDocuments(files);
-
-  const subjectWhere =
-    subject.type === "company"
-      ? { companyId: subject.id }
-      : { userId: subject.id };
-  const existing = await prisma.verificationRequest.findFirst({
-    where: { ...subjectWhere, status: "pending" },
-  });
-
-  // Keep only the already-attached docs the submitter chose to keep (validated
-  // against the request's real docs), then append the newly uploaded ones.
-  const existingDocs = existing ? docsFromJson(existing.documents) : [];
   const keep = formData.getAll("keepDocuments").map(String);
-  const kept = existingDocs.filter((u) => keep.includes(u));
-  const docs = [...kept, ...newDocs];
-  const data = {
-    legalName,
-    licenseNumber,
-    licenseState,
-    businessAddress,
-    note,
-    documents: docs.length > 0 ? docs : Prisma.JsonNull,
-  };
 
-  if (existing) {
-    await prisma.verificationRequest.update({ where: { id: existing.id }, data });
-  } else {
-    await prisma.verificationRequest.create({
-      data: { ...subjectWhere, ...data },
-    });
-  }
+  const result = await submitVerificationRequest(
+    subject,
+    { legalName, licenseNumber, licenseState, businessAddress, note },
+    newDocs,
+    keep,
+  );
+  if (result.status === "error") redirect(`${back}?verify=missing`);
 
   revalidatePath(back);
   revalidatePath("/admin/verification");

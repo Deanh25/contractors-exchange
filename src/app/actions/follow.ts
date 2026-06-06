@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { createNotification } from "@/lib/notifications";
-import type { FollowTargetType } from "@/generated/prisma/client";
+import { toggleFollow } from "@/lib/services/follows";
 
-const TYPES = new Set<FollowTargetType>(["trade", "location", "company", "user"]);
+/**
+ * Web transport shim over the follow SERVICE (src/lib/services/follows.ts).
+ * Owns only web concerns: auth, the safe revalidate path, and mapping the result.
+ * See docs/CX-build-checklist.md section E.
+ */
 
 /** Only allow revalidating same-origin paths we navigated from. */
 function safePath(value: FormDataEntryValue | null): string {
@@ -15,48 +17,19 @@ function safePath(value: FormDataEntryValue | null): string {
   return v.startsWith("/") && !v.startsWith("//") ? v : "/feed";
 }
 
-/**
- * Toggle a follow on/off (PRD §4). Driven by the DB's current state, so the same
- * button both follows and unfollows. Revalidates the page it was clicked from.
- */
+/** Toggle a follow on/off. Revalidates the page it was clicked from. */
 export async function toggleFollowAction(formData: FormData) {
   const user = await requireUser();
-
-  const targetType = String(formData.get("targetType") ?? "") as FollowTargetType;
-  const targetValue = String(formData.get("targetValue") ?? "").trim();
   const path = safePath(formData.get("path"));
 
-  if (!TYPES.has(targetType) || !targetValue) redirect(path);
-  // A user following themselves would be noise; ignore it.
-  if (targetType === "user" && targetValue === user.id) redirect(path);
-
-  const key = {
-    followerUserId_targetType_targetValue: {
-      followerUserId: user.id,
-      targetType,
-      targetValue,
+  const result = await toggleFollow(
+    { id: user.id, name: user.name },
+    {
+      targetType: String(formData.get("targetType") ?? ""),
+      targetValue: String(formData.get("targetValue") ?? ""),
     },
-  };
+  );
 
-  const existing = await prisma.follow.findUnique({ where: key });
-  if (existing) {
-    await prisma.follow.delete({ where: key });
-  } else {
-    await prisma.follow.create({
-      data: { followerUserId: user.id, targetType, targetValue },
-    });
-    // Tell a person when someone follows them (only the "user" target type
-    // maps to a notifiable recipient).
-    if (targetType === "user") {
-      await createNotification({
-        recipient: { type: "user", id: targetValue },
-        actorUserId: user.id,
-        type: "follow_new",
-        title: `${user.name} followed you`,
-        href: `/u/${user.id}`,
-      });
-    }
-  }
-
+  if (result.status === "ignored") redirect(path);
   revalidatePath(path);
 }
