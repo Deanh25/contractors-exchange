@@ -1,6 +1,9 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
+import type { Party } from "@/lib/messaging";
+import type { Actor } from "@/lib/services/actor";
 
 /**
  * Acting-as identity (PRD company-as-actor). A user acts either as themselves or
@@ -102,6 +105,25 @@ export async function getActingContext(
       canActAsCompany: m.canActAsCompany,
     },
   };
+}
+
+/**
+ * Resolve the full service `Actor` for the current web request: require a signed-in
+ * user (redirecting to sign-in if absent), then attach the acting-as party and the
+ * set of companies they control. This is the web transport's bridge into the
+ * service layer; a mobile endpoint will build the same Actor from a bearer token.
+ */
+export async function resolveActor(returnTo?: string): Promise<Actor> {
+  const user = await requireUser(returnTo);
+  const ctx = await getActingContext(user.id);
+  const party: Party =
+    ctx.type === "company"
+      ? { type: "company", id: ctx.company.id }
+      : { type: "user", id: user.id };
+  const actingCompanyIds = new Set(
+    (await getActingCompanies(user.id)).map((c) => c.id),
+  );
+  return { userId: user.id, userName: user.name, party, actingCompanyIds };
 }
 
 /** Set (or clear) the acting context cookie. Pass null to act as the user. */

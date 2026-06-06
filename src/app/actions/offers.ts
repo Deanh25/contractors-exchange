@@ -2,14 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth";
-import { getActingContext, getActingCompanies } from "@/lib/identity";
-import type { Party } from "@/lib/messaging";
-import {
-  makeOffer,
-  respondToOffer,
-  type Actor,
-} from "@/lib/services/offers";
+import { resolveActor } from "@/lib/identity";
+import { makeOffer, respondToOffer } from "@/lib/services/offers";
 
 /**
  * Web transport shim over the offers SERVICE (src/lib/services/offers.ts). This
@@ -18,20 +12,6 @@ import {
  * negotiation logic lives in the service so a mobile API endpoint can reuse it.
  * See docs/CX-build-checklist.md section E.
  */
-
-/** Build the service Actor from the cookie-based session + acting-as context. */
-async function resolveActor(returnTo: string): Promise<Actor> {
-  const user = await requireUser(returnTo);
-  const ctx = await getActingContext(user.id);
-  const party: Party =
-    ctx.type === "company"
-      ? { type: "company", id: ctx.company.id }
-      : { type: "user", id: user.id };
-  const actingCompanyIds = new Set(
-    (await getActingCompanies(user.id)).map((c) => c.id),
-  );
-  return { userId: user.id, userName: user.name, party, actingCompanyIds };
-}
 
 // --- Buyer: make an offer ----------------------------------------------------
 

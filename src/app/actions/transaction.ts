@@ -2,28 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
-import {
-  findOrCreateThread,
-  listingOwnerParty,
-  controlsParty,
-  partiesEqual,
-  type Party,
-} from "@/lib/messaging";
-import { getActingContext, getActingCompanies } from "@/lib/identity";
-import {
-  txPartyColumns,
-  txParties,
-  buyerWhere,
-} from "@/lib/orders";
-import {
-  txTypeForListing,
-  txCreatedMessage,
-  txStatusMessage,
-} from "@/lib/transactions";
-import { createNotification } from "@/lib/notifications";
-import type { TransactionStatus } from "@/generated/prisma/client";
+import { resolveActor } from "@/lib/identity";
+import { createDeal, updateDeal } from "@/lib/services/transactions";
+
+/**
+ * Web transport shim over the deal/order SERVICE (src/lib/services/transactions.ts).
+ * Owns only web concerns: resolve the acting identity from cookies, read FormData,
+ * compute the safe return path, then map the service's typed result to redirect/
+ * revalidate. All deal logic lives in the service so a mobile endpoint can reuse it.
+ * See docs/CX-build-checklist.md section E.
+ */
 
 /** Safe same-origin return path. */
 function safeBack(value: FormDataEntryValue | null, fallback: string): string {
@@ -31,245 +19,52 @@ function safeBack(value: FormDataEntryValue | null, fallback: string): string {
   return v.startsWith("/") && !v.startsWith("//") ? v : fallback;
 }
 
-/** The party the user is currently acting as. */
-async function actingParty(userId: string): Promise<Party> {
-  const ctx = await getActingContext(userId);
-  return ctx.type === "company"
-    ? { type: "company", id: ctx.company.id }
-    : { type: "user", id: userId };
-}
-
-async function actingCompanyIdSet(userId: string): Promise<Set<string>> {
-  const cs = await getActingCompanies(userId);
-  return new Set(cs.map((c) => c.id));
-}
-
-/** Display name of a party (company name, or the acting user's name). */
-async function partyName(party: Party, fallback: string): Promise<string> {
-  if (party.type === "company") {
-    const co = await prisma.company.findUnique({
-      where: { id: party.id },
-      select: { name: true },
-    });
-    return co?.name ?? fallback;
-  }
-  return fallback;
-}
-
-/** Notify a recipient party of an order event, from an actor party (the human
- * who acted + the identity they acted as). */
-async function notifyParty(
-  recipient: Party,
-  actor: Party,
-  userId: string,
-  n: {
-    type: "order_new" | "order_update";
-    title: string;
-    body: string | null;
-    href: string;
-    listingId: string | null;
-    transactionId: string;
-  },
-): Promise<void> {
-  await createNotification({
-    recipient,
-    type: n.type,
-    actorUserId: userId,
-    actorCompanyId: actor.type === "company" ? actor.id : null,
-    title: n.title,
-    body: n.body,
-    href: n.href,
-    listingId: n.listingId,
-    transactionId: n.transactionId,
-  });
-}
-
 /**
- * Confirm a deal from the checkout step. The BUYER is the current acting
- * identity (you, or a company you act for); the SELLER is the listing's owning
- * party. So a personal listing never routes through a company, and each company
- * transacts for its own products. Lands on the order page (checkout feel).
+ * Confirm a deal from the checkout step. Lands on the order page (checkout feel).
  */
 export async function createTransactionAction(formData: FormData) {
-  const user = await requireUser("/listings");
+  const actor = await resolveActor("/listings");
   const listingId = String(formData.get("listingId") ?? "");
-  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
-  if (!listing) redirect("/listings");
 
-  const seller = listingOwnerParty(listing);
-  const buyer = await actingParty(user.id);
-  const acting = await actingCompanyIdSet(user.id);
-  // Can't buy with no seller, your own identity, or a listing you control.
-  if (
-    !seller ||
-    partiesEqual(buyer, seller) ||
-    controlsParty(seller, user.id, acting)
-  ) {
-    redirect(`/listings/${listingId}`);
-  }
-
-  const type = txTypeForListing(listing.type);
-  // Quantity for a stockable set-price buy, clamped to available stock.
-  const qty =
-    type === "purchase"
-      ? Math.min(
-          Math.max(1, Math.floor(Number(formData.get("qty"))) || 1),
-          listing.quantityAvailable,
-        )
-      : 1;
-  let amount: number | null = null;
-  if (type === "purchase") {
-    amount = listing.price === null ? null : Number(listing.price) * qty;
-  } else if (type === "bid") {
-    const raw = String(formData.get("amount") ?? "").replace(/[^0-9.]/g, "");
-    const n = Number(raw);
-    if (!Number.isFinite(n) || n <= 0) redirect(`/checkout/${listingId}?error=bid`);
-    amount = n;
-  }
-  const message = String(formData.get("message") ?? "").trim() || null;
-
-  // Spread (§7B): for a set-price buy, the buyer pays `price`, the seller takes
-  // their net, and CX keeps the margin. (Bids settle on accept; net TBD.)
-  let sellerNet: number | null = null;
-  let margin: number | null = null;
-  if (type === "purchase" && listing.sellerNet != null && listing.price != null) {
-    sellerNet = Number(listing.sellerNet) * qty;
-    margin = (Number(listing.price) - Number(listing.sellerNet)) * qty;
-  }
-
-  // Deal thread = buyer party <-> seller party (aligns with messaging).
-  const thread = await findOrCreateThread(buyer, seller, listingId);
-
-  // One active deal per (listing, buyer party): reuse it instead of duplicating.
-  const existing = await prisma.transaction.findFirst({
-    where: {
-      listingId,
-      ...buyerWhere(buyer),
-      status: { in: ["pending", "accepted"] },
-    },
+  const result = await createDeal(actor, {
+    listingId,
+    qty: formData.get("qty") as string | null,
+    bidAmount: String(formData.get("amount") ?? ""),
+    message: String(formData.get("message") ?? ""),
   });
-  let txId: string;
-  if (existing) {
-    txId = existing.id;
-  } else {
-    const created = await prisma.transaction.create({
-      data: {
-        listingId,
-        ...txPartyColumns(buyer, seller),
-        type,
-        amount,
-        buyerPrice: amount, // §7B: the public price the buyer pays
-        sellerNet, // private: what the seller takes home
-        margin, // private: CX spread
-        quantity: qty, // units bought (decrements stock on completion)
-        message,
-      },
-    });
-    txId = created.id;
-    await prisma.message.create({
-      data: {
-        threadId: thread.id,
-        senderUserId: user.id,
-        senderCompanyId: buyer.type === "company" ? buyer.id : null,
-        body: txCreatedMessage(type, amount, listing.title),
-      },
-    });
-    await prisma.thread.update({
-      where: { id: thread.id },
-      data: { updatedAt: new Date() },
-    });
-    const buyerName = await partyName(buyer, user.name);
-    await notifyParty(seller, buyer, user.id, {
-      type: "order_new",
-      title: `${buyerName} started a deal`,
-      body: txCreatedMessage(type, amount, listing.title),
-      href: `/orders/${txId}`,
-      listingId,
-      transactionId: txId,
-    });
-  }
 
-  revalidatePath("/orders");
-  redirect(`/orders/${txId}`);
+  // redirect() throws, so each branch terminates the action.
+  if (result.status === "ok") {
+    revalidatePath("/orders");
+    redirect(`/orders/${result.transactionId}`);
+  }
+  if (result.code === "no_listing") redirect("/listings");
+  if (result.code === "bad_bid") redirect(`/checkout/${listingId}?error=bid`);
+  redirect(`/listings/${listingId}`); // forbidden
 }
 
 /** Advance a deal: accept / decline (seller), complete (either), cancel (buyer). */
 export async function updateTransactionAction(formData: FormData) {
-  const user = await requireUser("/orders");
-  const txId = String(formData.get("transactionId") ?? "");
-  const op = String(formData.get("op") ?? "");
-
-  const tx = await prisma.transaction.findUnique({
-    where: { id: txId },
-    include: { listing: true },
-  });
-  if (!tx) redirect("/orders");
-
-  const { buyer, seller } = txParties(tx);
-  const acting = await actingCompanyIdSet(user.id);
-  const isSeller = controlsParty(seller, user.id, acting);
-  const isBuyer = controlsParty(buyer, user.id, acting);
-  if (!isSeller && !isBuyer) redirect("/orders");
-
-  let next: TransactionStatus | null = null;
-  if (op === "accept" && isSeller && tx.status === "pending") next = "accepted";
-  else if (op === "decline" && isSeller && tx.status === "pending") next = "declined";
-  else if (op === "complete" && tx.status === "accepted") next = "completed";
-  else if (op === "cancel" && isBuyer && tx.status === "pending") next = "cancelled";
-
+  const actor = await resolveActor("/orders");
   const back = safeBack(formData.get("back"), "/orders");
-  if (!next) redirect(back); // invalid transition - just go back
 
-  await prisma.transaction.update({
-    where: { id: txId },
-    data: { status: next },
+  const result = await updateDeal(actor, {
+    transactionId: String(formData.get("transactionId") ?? ""),
+    op: String(formData.get("op") ?? "") as
+      | "accept"
+      | "decline"
+      | "complete"
+      | "cancel",
   });
 
-  // On completion of a set-price sale, decrement the listing's stock by the units
-  // bought; if it hits zero, mark the listing sold (admin decision §7C #6).
-  if (next === "completed" && tx.listing.type === "price") {
-    const remaining = Math.max(0, tx.listing.quantityAvailable - tx.quantity);
-    await prisma.listing.update({
-      where: { id: tx.listingId },
-      data: {
-        quantityAvailable: remaining,
-        ...(remaining <= 0 ? { status: "sold" as const } : {}),
-      },
-    });
-    revalidatePath(`/listings/${tx.listingId}`);
+  if (result.status === "error") redirect("/orders");
+  if (result.status === "noop") redirect(back); // invalid transition
+
+  revalidatePath(`/messages/${result.threadId}`);
+  revalidatePath("/orders");
+  if (result.stockChanged) {
+    revalidatePath(`/listings/${result.listingId}`);
     revalidatePath("/listings");
   }
-
-  // The acting side (the one the user controls) authors the status message.
-  const actingSide: Party = isSeller ? seller : buyer;
-  const other: Party = isSeller ? buyer : seller;
-  const actorName = await partyName(actingSide, user.name);
-
-  // Reflect the change in the conversation thread (buyer <-> seller party).
-  const thread = await findOrCreateThread(buyer, seller, tx.listingId);
-  await prisma.message.create({
-    data: {
-      threadId: thread.id,
-      senderUserId: user.id,
-      senderCompanyId: actingSide.type === "company" ? actingSide.id : null,
-      body: txStatusMessage(next, actorName),
-    },
-  });
-  await prisma.thread.update({
-    where: { id: thread.id },
-    data: { updatedAt: new Date() },
-  });
-
-  await notifyParty(other, actingSide, user.id, {
-    type: "order_update",
-    title: txStatusMessage(next, actorName),
-    body: tx.listing.title,
-    href: `/orders/${txId}`,
-    listingId: tx.listingId,
-    transactionId: txId,
-  });
-
-  revalidatePath(`/messages/${thread.id}`);
-  revalidatePath("/orders");
   redirect(back);
 }

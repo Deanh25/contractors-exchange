@@ -18,27 +18,17 @@ import {
   viewerCanRespond,
 } from "@/lib/offers";
 import type { OfferSide, NotificationType } from "@/generated/prisma/client";
+import type { Actor } from "@/lib/services/actor";
 
 /**
  * Buyer-offer / negotiation SERVICE (PRD §7B). Framework-agnostic domain logic:
  * no FormData, no redirect/revalidate, no cookies. The caller (a Server Action
- * today, a mobile API endpoint later) resolves WHO is acting -- userId, the
- * acting-as party, and the set of companies the user controls -- from its own
- * transport, then hands that in as an `Actor`. The service returns a typed result
- * the caller maps to a redirect (web) or a JSON response (mobile). See
- * docs/CX-build-checklist.md section E for the house pattern.
+ * today, a mobile API endpoint later) resolves WHO is acting via an `Actor`, then
+ * the service returns a typed result the caller maps to a redirect (web) or a JSON
+ * response (mobile). See docs/CX-build-checklist.md section E for the house pattern.
  */
 
-/** The resolved identity making the call. Built by the caller from cookies (web)
- * or a bearer token (mobile) -- never read inside the service. */
-export type Actor = {
-  userId: string;
-  userName: string;
-  /** The party the user is acting as (self or a company). */
-  party: Party;
-  /** Ids of every company the user may act for (for controlsParty checks). */
-  actingCompanyIds: Set<string>;
-};
+export type { Actor };
 
 export type MakeOfferInput = {
   listingId: string;
