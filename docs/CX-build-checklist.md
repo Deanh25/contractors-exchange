@@ -90,8 +90,13 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 - **Build tasks queued:**
   - [x] **Service-layer PoC — offers module** — extract `makeOffer` / `respondToOffer` into
     `src/lib/services/offers.ts`; action becomes a thin shim, no behavior change. *(Reference pattern.)*
+  - [x] **Shared infra** — `src/lib/services/actor.ts` (the `Actor` type) + `resolveActor()` in
+    `src/lib/identity.ts` (cookie session -> Actor). All services + shims use these.
+  - [x] **Transactions/deals** — `createDeal` / `updateDeal` in `src/lib/services/transactions.ts`
+    (spread + stock decrement); `actions/transaction.ts` is now a thin shim. No behavior change.
   - [ ] Backfill remaining heavy modules to the service pattern, opportunistically: listing,
-    transaction, message, post, engagement (then the lighter ones).
+    message, then the feed pair post/engagement (coordinate - the other editor owns feed right now),
+    then the lighter ones (follow, saved, profile, notification, review, verification).
   - [ ] When mobile starts: monorepo conversion, bearer-token auth path, then API endpoints for the
     flows mobile needs (browse, offers, messages, orders, notifications) + the Expo app.
 
