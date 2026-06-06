@@ -7,6 +7,7 @@ import { FeedListingCard } from "@/components/FeedListingCard";
 import { FollowPill } from "@/components/FollowPill";
 import { toggleFollowAction } from "@/app/actions/follow";
 import { getLeafGroups, getCategoryLabelMap } from "@/lib/categories";
+import { getPostEngagement } from "@/lib/engagement";
 import { usStates, stateName } from "@/lib/cities";
 import { authorInclude } from "@/lib/posts";
 import { ownerInclude } from "@/lib/listings";
@@ -107,9 +108,19 @@ export default async function FeedPage({
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, 40);
 
-  const [savedMap, collections] = await Promise.all([
+  const viewerParty = viewer
+    ? actingCtx.type === "company"
+      ? ({ type: "company", id: actingCtx.company.id } as const)
+      : ({ type: "user", id: viewer.id } as const)
+    : null;
+
+  const [savedMap, collections, postEng] = await Promise.all([
     getSavedMap(viewer?.id),
     getViewerCollections(viewer?.id),
+    getPostEngagement(
+      posts.map((p) => p.id),
+      viewerParty,
+    ),
   ]);
 
   // Companies the viewer may post as (owner OR canActAsCompany), defaulting the
@@ -321,7 +332,12 @@ export default async function FeedPage({
                       collections={collections}
                     />
                   ) : (
-                    <PostCard key={`p-${item.p.id}`} post={item.p} />
+                    <PostCard
+                      key={`p-${item.p.id}`}
+                      post={item.p}
+                      engagement={postEng.get(item.p.id)}
+                      canReact={!!viewer}
+                    />
                   ),
                 )
               )}

@@ -81,6 +81,8 @@ function txCols(buyer: SeedParty, seller: SeedParty) {
 
 async function main() {
   console.log("Clearing existing data...");
+  await prisma.reaction.deleteMany();
+  await prisma.comment.deleteMany();
   await prisma.verificationRequest.deleteMany();
   await prisma.category.deleteMany();
   await prisma.listingView.deleteMany();
@@ -426,6 +428,42 @@ async function main() {
       },
     ],
   });
+
+  console.log("Seeding post reactions + comments...");
+  const seedPosts = await prisma.post.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 4,
+    select: { id: true },
+  });
+  const reactors = [jordan, maria, sam, alicia, chris, tyler];
+  const rtypes = ["like", "celebrate", "insightful", "helpful"] as const;
+  for (let i = 0; i < seedPosts.length; i++) {
+    const pid = seedPosts[i].id;
+    const n = Math.min(2 + i, reactors.length);
+    for (let k = 0; k < n; k++) {
+      await prisma.reaction.create({
+        data: { postId: pid, userId: reactors[k].id, type: rtypes[(i + k) % rtypes.length] },
+      });
+    }
+    if (i === 0) {
+      const c = await prisma.comment.create({
+        data: {
+          postId: pid,
+          userId: maria.id,
+          body: "Great point - we've seen the same on our jobs lately.",
+        },
+      });
+      await prisma.comment.create({
+        data: {
+          postId: pid,
+          parentId: c.id,
+          userId: dean.id,
+          companyId: hughes.id,
+          body: "Agreed. Hughes Paving is happy to compare notes.",
+        },
+      });
+    }
+  }
 
   console.log("Creating follows...");
   const follows = [

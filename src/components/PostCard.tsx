@@ -5,9 +5,20 @@ import { postAuthor, postTags, type PostWithAuthor } from "@/lib/posts";
 import { categoryLabel } from "@/lib/categories";
 import { isVideoUrl } from "@/lib/listings";
 import { timeAgo } from "@/lib/time";
+import { PostEngagementBar } from "@/components/PostEngagementBar";
+import type { PostEngagement } from "@/lib/engagement";
 
 /** A discussion post in the feed (PRD §4): author, body, optional image + tags. */
-export async function PostCard({ post }: { post: PostWithAuthor }) {
+export async function PostCard({
+  post,
+  engagement,
+  canReact = false,
+}: {
+  post: PostWithAuthor;
+  /** Reaction/comment summary; when provided, the engagement bar renders. */
+  engagement?: PostEngagement;
+  canReact?: boolean;
+}) {
   const author = postAuthor(post);
   const tags = postTags(post);
   const tradeName = post.tradeTag ? await categoryLabel(post.tradeTag) : null;
@@ -95,6 +106,15 @@ export async function PostCard({ post }: { post: PostWithAuthor }) {
             </span>
           )}
         </div>
+      )}
+
+      {engagement && (
+        <PostEngagementBar
+          postId={post.id}
+          engagement={engagement}
+          canReact={canReact}
+          commentHref={`/posts/${post.id}#comments`}
+        />
       )}
     </article>
   );

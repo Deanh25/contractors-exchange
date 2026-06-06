@@ -60,6 +60,8 @@ model User {
   offersAsBuyer      Offer[] @relation("OfferBuyerUser") // offers this user made as a buyer
   verificationRequests VerificationRequest[] @relation("VerifReqUser") // this user's verification submissions
   reviewedVerifications VerificationRequest[] @relation("VerifReqReviewer") // requests this admin reviewed
+  reactions          Reaction[] @relation("ReactionUser") // post reactions this user made
+  comments           Comment[] @relation("CommentUser") // post comments this user made
 }
 
 model Company {
@@ -94,6 +96,8 @@ model Company {
   taggedInPosts      PostTag[] @relation("PostTagCompany") // posts that mention this company
   offersAsBuyer      Offer[] @relation("OfferBuyerCompany") // offers this company made as a buyer
   verificationRequests VerificationRequest[] @relation("VerifReqCompany") // this company's verification submissions
+  reactions          Reaction[] @relation("ReactionCompany") // post reactions made as this company
+  comments           Comment[] @relation("CommentCompany") // post comments made as this company
 }
 
 enum MembershipRole {
@@ -375,12 +379,63 @@ model Post {
   authorUser    User?    @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
   authorCompany Company? @relation(fields: [authorCompanyId], references: [id], onDelete: Cascade)
   tags          PostTag[] // users / companies mentioned in this post
+  reactions     Reaction[] // likes / celebrate / etc. on this post
+  comments      Comment[] // discussion thread on this post
 
   @@index([tradeTag])
   @@index([regionTag])
   @@index([authorUserId])
   @@index([authorCompanyId])
   @@index([createdAt])
+}
+
+// Post engagement (PRD §4, LinkedIn-style). Both reactions and comments are by a
+// PARTY (a user, or a company acting via the acting-as switcher), mirroring posts
+// /messages/reviews. One reaction per party per post (the type can change).
+enum ReactionType {
+  like
+  celebrate
+  insightful
+  helpful
+}
+
+model Reaction {
+  id     String @id @default(cuid())
+  postId String
+  // Acting party: the human (always) + the company they reacted as, if any.
+  userId    String
+  companyId String?
+  type      ReactionType
+  createdAt DateTime @default(now())
+
+  post    Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User     @relation("ReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation("ReactionCompany", fields: [companyId], references: [id], onDelete: SetNull)
+
+  // Best-effort one-per-party-per-post (NULLs are distinct in MySQL; the action
+  // de-dupes explicitly).
+  @@unique([postId, userId, companyId])
+  @@index([postId])
+}
+
+model Comment {
+  id       String  @id @default(cuid())
+  postId   String
+  parentId String? // null = top-level; set = a one-level reply
+  // Acting party: the human (always) + the company they commented as, if any.
+  userId    String
+  companyId String?
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+  user    User      @relation("CommentUser", fields: [userId], references: [id], onDelete: Cascade)
+  company Company?  @relation("CommentCompany", fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([postId])
+  @@index([parentId])
 }
 
 // A mention/tag in a post: a tagged PARTY (a user or a company). Tagged parties
@@ -620,6 +675,8 @@ enum NotificationType {
   offer_new // someone made an offer on your listing
   offer_update // an offer you are in was countered / accepted / declined
   verification_update // your verification request was approved or denied
+  post_like // someone reacted to your post
+  post_comment // someone commented on (or replied to) your post
 }
 
 model Notification {
