@@ -2,150 +2,71 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { resolveActor } from "@/lib/identity";
 import { saveMedia } from "@/lib/storage";
 import {
-  findOrCreateThread,
-  listingOwnerParty,
-  threadParties,
-  partiesEqual,
-  controlsParty,
-  type Party,
-} from "@/lib/messaging";
-import { getActingContext, getActingCompanies } from "@/lib/identity";
-import { createNotification } from "@/lib/notifications";
+  startPartyThread,
+  startListingThread,
+  sendMessage,
+  markThreadRead,
+} from "@/lib/services/messages";
 
-/** The set of company ids the user may act for (speak as). */
-async function actingCompanyIds(userId: string): Promise<Set<string>> {
-  const cs = await getActingCompanies(userId);
-  return new Set(cs.map((c) => c.id));
-}
-
-/** The party the user is currently acting as (drives who new messages are from). */
-async function senderParty(userId: string): Promise<Party> {
-  const ctx = await getActingContext(userId);
-  return ctx.type === "company"
-    ? { type: "company", id: ctx.company.id }
-    : { type: "user", id: userId };
-}
-
-/** Start (or open) a thread with a recipient party as the current identity. */
-async function openThread(
-  userId: string,
-  recipient: Party | null,
-  listingId: string | null,
-  fallback: string,
-): Promise<never> {
-  if (!recipient) redirect(fallback);
-  const sender = await senderParty(userId);
-  const acting = await actingCompanyIds(userId);
-  // Can't message yourself or an identity you control.
-  if (partiesEqual(sender, recipient) || controlsParty(recipient, userId, acting)) {
-    redirect(fallback);
-  }
-  const thread = await findOrCreateThread(sender, recipient, listingId);
-  redirect(`/messages/${thread.id}`);
-}
+/**
+ * Web transport shim over the messaging SERVICE (src/lib/services/messages.ts).
+ * Owns only web concerns: resolve the acting identity from cookies, read FormData
+ * (incl. saving any uploaded image to a URL), then map the service's typed result
+ * to redirect/revalidate. All messaging logic lives in the service so a mobile
+ * endpoint can reuse it. See docs/CX-build-checklist.md section E.
+ */
 
 /** "Message seller" on a listing: open (or start) the thread about it. */
 export async function messageAboutListingAction(formData: FormData) {
-  const user = await requireUser("/listings");
+  const actor = await resolveActor("/listings");
   const listingId = String(formData.get("listingId") ?? "");
-  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
-  if (!listing) redirect("/listings");
-  await openThread(
-    user.id,
-    listingOwnerParty(listing),
-    listingId,
-    `/listings/${listingId}`,
-  );
+  const r = await startListingThread(actor, listingId);
+  if (r.status === "ok") redirect(`/messages/${r.threadId}`);
+  if (r.code === "no_listing") redirect("/listings");
+  redirect(`/listings/${listingId}`); // forbidden / no recipient
 }
 
 /** "Contact" on a profile: open (or start) a general thread with that user. */
 export async function messageUserAction(formData: FormData) {
-  const user = await requireUser("/messages");
+  const actor = await resolveActor("/messages");
   const targetUserId = String(formData.get("userId") ?? "");
   if (!targetUserId) redirect("/messages");
-  await openThread(user.id, { type: "user", id: targetUserId }, null, "/messages");
+  const r = await startPartyThread(actor, { type: "user", id: targetUserId });
+  if (r.status === "ok") redirect(`/messages/${r.threadId}`);
+  redirect("/messages");
 }
 
 /** "Contact" on a company page: open (or start) a thread with the company. */
 export async function messageCompanyAction(formData: FormData) {
-  const user = await requireUser("/messages");
+  const actor = await resolveActor("/messages");
   const companyId = String(formData.get("companyId") ?? "");
   if (!companyId) redirect("/messages");
-  await openThread(
-    user.id,
-    { type: "company", id: companyId },
-    null,
-    "/messages",
-  );
+  const r = await startPartyThread(actor, { type: "company", id: companyId });
+  if (r.status === "ok") redirect(`/messages/${r.threadId}`);
+  redirect("/messages");
 }
 
 /** Send a message in a thread (text and/or one image), as the side you control. */
 export async function sendMessageAction(formData: FormData) {
-  const user = await requireUser("/messages");
+  const actor = await resolveActor("/messages");
   const threadId = String(formData.get("threadId") ?? "");
-  const body = String(formData.get("body") ?? "").trim();
 
-  const thread = await prisma.thread.findUnique({ where: { id: threadId } });
-  if (!thread) redirect("/messages");
-
-  // Determine which side the user speaks for (themselves, or a company they may
-  // act for); that becomes the sender identity.
-  const acting = await actingCompanyIds(user.id);
-  const { a, b } = threadParties(thread);
-  const mySide = controlsParty(a, user.id, acting)
-    ? "a"
-    : controlsParty(b, user.id, acting)
-      ? "b"
-      : null;
-  if (!mySide) redirect("/messages");
-  const sender = mySide === "a" ? a : b;
-  const recipient = mySide === "a" ? b : a;
-
+  // Web concern: persist the uploaded File to a URL before handing it to the service.
   const image = formData.get("image");
   const imageUrl =
     image instanceof File && image.size > 0 ? await saveMedia(image) : null;
-  if (!body && !imageUrl) redirect(`/messages/${threadId}`);
 
-  await prisma.message.create({
-    data: {
-      threadId,
-      senderUserId: user.id,
-      senderCompanyId: sender.type === "company" ? sender.id : null,
-      body,
-      imageUrl,
-    },
-  });
-  // Bump the thread (inbox sort) and mark it read for the sender's side.
-  const senderRead =
-    mySide === "a" ? { aLastReadAt: new Date() } : { bLastReadAt: new Date() };
-  await prisma.thread.update({
-    where: { id: threadId },
-    data: { updatedAt: new Date(), ...senderRead },
-  });
-
-  // The display name of the sending identity.
-  let senderName = user.name;
-  if (sender.type === "company") {
-    const co = await prisma.company.findUnique({
-      where: { id: sender.id },
-      select: { name: true },
-    });
-    senderName = co?.name ?? user.name;
-  }
-  await createNotification({
-    recipient,
-    type: "message",
-    actorUserId: user.id,
-    actorCompanyId: sender.type === "company" ? sender.id : null,
-    title: `New message from ${senderName}`,
-    body: body || "Sent a photo",
-    href: `/messages/${threadId}`,
+  const r = await sendMessage(actor, {
     threadId,
+    body: String(formData.get("body") ?? ""),
+    imageUrl,
   });
+
+  if (r.status === "error") redirect("/messages");
+  if (r.status === "empty") redirect(`/messages/${r.threadId}`);
 
   revalidatePath(`/messages/${threadId}`);
   revalidatePath("/messages");
@@ -155,24 +76,9 @@ export async function sendMessageAction(formData: FormData) {
 
 /** Mark a thread read for the viewer's side (called when they open it). */
 export async function markThreadReadAction(threadId: string) {
-  const user = await requireUser("/messages");
-  const thread = await prisma.thread.findUnique({ where: { id: threadId } });
-  if (!thread) return;
-  const acting = await actingCompanyIds(user.id);
-  const { a, b } = threadParties(thread);
-  const mySide = controlsParty(a, user.id, acting)
-    ? "a"
-    : controlsParty(b, user.id, acting)
-      ? "b"
-      : null;
-  if (!mySide) return;
-  await prisma.thread.update({
-    where: { id: threadId },
-    data:
-      mySide === "a"
-        ? { aLastReadAt: new Date() }
-        : { bLastReadAt: new Date() },
-  });
+  const actor = await resolveActor("/messages");
+  const { marked } = await markThreadRead(actor, threadId);
+  if (!marked) return;
   revalidatePath("/messages");
   revalidatePath("/", "layout");
 }
