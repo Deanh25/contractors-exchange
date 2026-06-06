@@ -98,9 +98,16 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     in `src/lib/services/messages.ts`; shim saves uploads to a URL then calls the service.
   - [x] **Light modules** — `follows`, `saved`, `profile`, `notifications`, `reviews`, `verification`
     each extracted to `src/lib/services/*` with thin shims. No behavior change.
-  - [ ] **Remaining: `listing`** (heavy, mostly form-parsing that stays in the shim) — convert next.
-  - [ ] **Feed pair (`post` / `engagement`)** — the other editor owns these; convert AFTER they land
-    their feed-comments work, to avoid collisions.
+  - [x] **Listing** — `createListing` / `updateListing` / `updateListingStatus` / `deleteListing` in
+    `src/lib/services/listings.ts` (pricing assembly + persistence); shim keeps parsing/validation/
+    authorization/media. No behavior change.
+  - [x] **Feed pair (`post` / `engagement`)** — `src/lib/services/posts.ts` (createPost + mentions) and
+    `src/lib/services/engagement.ts` (post/comment reactions + comments). Done after the other editor
+    landed their feed-comments work.
+  - [x] **BACKFILL COMPLETE** — every mutation module now follows the thin-shim-over-service pattern.
+    Server Actions hold only transport (FormData/redirect/revalidate/cookies/media); domain logic is
+    framework-agnostic in `src/lib/services/*` and ready for a mobile API to call. Remaining for the
+    mobile phase only: monorepo conversion, bearer-token auth path, and the actual endpoints + Expo app.
   - [ ] When mobile starts: monorepo conversion, bearer-token auth path, then API endpoints for the
     flows mobile needs (browse, offers, messages, orders, notifications) + the Expo app.
 
