@@ -7,16 +7,28 @@ import { requireUser } from "@/lib/auth";
 import { saveMediaFiles } from "@/lib/storage";
 import { parseCoord } from "@/lib/form";
 import { canManageListing } from "@/lib/listing-access";
-import { getCategoryMargin, computeListingPricing } from "@/lib/pricing";
 import { getLeafSlugSet } from "@/lib/categories";
-import { Prisma } from "@/generated/prisma/client";
+import {
+  createListing,
+  updateListing,
+  updateListingStatus,
+  deleteListing,
+  type ListingTypeFields,
+} from "@/lib/services/listings";
 import type {
-  ListingType,
-  TradeKind,
   ListingStatus,
   ListingCondition,
   ListingCloseReason,
 } from "@/generated/prisma/client";
+import type { ListingChoice } from "@/lib/listings";
+
+/**
+ * Web transport shim over the listing SERVICE (src/lib/services/listings.ts).
+ * Owns the web-only concerns: FormData parsing, input validation, authorization
+ * (owner / canManageListing), and saving uploaded media to URLs - then calls the
+ * service (pricing assembly + persistence) and maps the result to redirect/
+ * revalidate. See docs/CX-build-checklist.md section E.
+ */
 
 const CLOSE_REASONS = new Set([
   "sold_on_cx",
@@ -24,7 +36,6 @@ const CLOSE_REASONS = new Set([
   "no_longer_available",
   "other",
 ]);
-import type { ListingChoice } from "@/lib/listings";
 
 const CONDITIONS = new Set(["new", "like_new", "good", "fair", "salvage"]);
 function parseCondition(v: FormDataEntryValue | null): ListingCondition | null {
@@ -48,22 +59,11 @@ function parseMoney(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-type TypeFields = {
-  type: ListingType;
-  tradeKind: TradeKind | null;
-  price: number | null;
-  startReserve: number | null;
-  closesAt: Date | null;
-  // Set-price inputs (PRD §7B): the seller's private net + whether offers are allowed.
-  sellerNet?: number;
-  acceptsOffers?: boolean;
-};
-
 /** Resolve the type-exclusive fields (PRD §10 constraint), or an error code. */
 function parseTypeFields(
   formData: FormData,
   choice: ListingChoice,
-): TypeFields | { error: string } {
+): ListingTypeFields | { error: string } {
   if (choice === "price") {
     // The seller enters their NET; the public price is net x (1 + category margin %).
     const sellerNet = parseMoney(String(formData.get("sellerNet") ?? ""));
@@ -74,7 +74,7 @@ function parseTypeFields(
     return {
       type: "price",
       tradeKind: null,
-      price: null, // computed from the category margin in the action
+      price: null, // computed from the category margin in the service
       startReserve: null,
       closesAt: null,
       sellerNet,
@@ -122,44 +122,11 @@ function mediaFiles(formData: FormData): File[] {
     .filter((f): f is File => f instanceof File && f.size > 0);
 }
 
-type PricingData = {
-  price: number | null;
-  sellerNet: number | null;
-  marginPct: number | null;
-  acceptsOffers: boolean;
-  listedAt: Date | null;
-};
-
 /** Quantity available - only meaningful for set-price listings (else 1). */
-function readQuantity(formData: FormData, tf: TypeFields): number {
+function readQuantity(formData: FormData, tf: ListingTypeFields): number {
   if (tf.type !== "price") return 1;
   const n = Math.floor(Number(formData.get("quantityAvailable")));
   return Number.isFinite(n) && n >= 1 ? n : 1;
-}
-
-/** Margin pricing for set-price listings; nulls for bid/trade. */
-async function pricingData(
-  tf: TypeFields,
-  category: string,
-): Promise<PricingData> {
-  if (tf.type !== "price" || tf.sellerNet === undefined) {
-    return {
-      price: tf.price,
-      sellerNet: null,
-      marginPct: null,
-      acceptsOffers: false,
-      listedAt: null,
-    };
-  }
-  const marginPct = await getCategoryMargin(category);
-  const p = computeListingPricing(tf.sellerNet, marginPct, new Date());
-  return {
-    price: p.price,
-    sellerNet: p.sellerNet,
-    marginPct: p.marginPct,
-    acceptsOffers: tf.acceptsOffers ?? true,
-    listedAt: p.listedAt,
-  };
 }
 
 // --- Create ------------------------------------------------------------------
@@ -174,55 +141,32 @@ export async function createListingAction(formData: FormData) {
   if (!(await getLeafSlugSet()).has(c.tradeCategory)) fail("trade");
   if (!CHOICES.has(c.choice)) fail("type");
 
-  let ownerUserId: string | null = null;
-  let ownerCompanyId: string | null = null;
+  let ownerParam: { type: "user" | "company"; id: string };
   if (owner === "self") {
-    ownerUserId = user.id;
+    ownerParam = { type: "user", id: user.id };
   } else {
     const membership = await prisma.membership.findUnique({
       where: { userId_companyId: { userId: user.id, companyId: owner } },
     });
     if (!membership || membership.role !== "owner") fail("owner");
-    ownerCompanyId = owner;
+    ownerParam = { type: "company", id: owner };
   }
 
   const tf = parseTypeFields(formData, c.choice);
   if ("error" in tf) return fail(tf.error);
 
+  // Validations passed: persist media, then create.
   const photos = await saveMediaFiles(mediaFiles(formData));
-  const pricing = await pricingData(tf, c.tradeCategory);
+  const { listingId } = await createListing({
+    owner: ownerParam,
+    common: c,
+    typeFields: tf,
+    quantity: readQuantity(formData, tf),
+    photos,
+  });
 
-  const data: Prisma.ListingCreateInput = {
-    title: c.title,
-    tradeCategory: c.tradeCategory,
-    city: c.city || null,
-    state: c.state || null,
-    lat: c.lat,
-    lng: c.lng,
-    description: c.description || null,
-    unit: c.unit || null,
-    freightNote: c.freightNote || null,
-    condition: c.condition,
-    manufacturer: c.manufacturer || null,
-    photos: photos.length > 0 ? photos : undefined,
-    type: tf.type,
-    tradeKind: tf.tradeKind,
-    price: pricing.price,
-    sellerNet: pricing.sellerNet,
-    marginPct: pricing.marginPct,
-    acceptsOffers: pricing.acceptsOffers,
-    listedAt: pricing.listedAt,
-    quantityAvailable: readQuantity(formData, tf),
-    startReserve: tf.startReserve,
-    closesAt: tf.closesAt,
-    ...(ownerCompanyId
-      ? { ownerCompany: { connect: { id: ownerCompanyId } } }
-      : { ownerUser: { connect: { id: ownerUserId! } } }),
-  };
-
-  const listing = await prisma.listing.create({ data });
   revalidatePath("/listings");
-  redirect(`/listings/${listing.id}`);
+  redirect(`/listings/${listingId}`);
 }
 
 // --- Edit / manage -----------------------------------------------------------
@@ -250,36 +194,14 @@ export async function updateListingAction(formData: FormData) {
   // Media = kept existing URLs + newly uploaded files, in order.
   const kept = formData.getAll("existingPhotos").map(String).filter(Boolean);
   const uploaded = await saveMediaFiles(mediaFiles(formData));
-  const media = [...kept, ...uploaded];
-  const pricing = await pricingData(tf, c.tradeCategory);
 
-  await prisma.listing.update({
-    where: { id },
-    data: {
-      title: c.title,
-      tradeCategory: c.tradeCategory,
-      city: c.city || null,
-      state: c.state || null,
-      lat: c.lat,
-      lng: c.lng,
-      description: c.description || null,
-      unit: c.unit || null,
-      freightNote: c.freightNote || null,
-      condition: c.condition,
-      manufacturer: c.manufacturer || null,
-      type: tf.type,
-      tradeKind: tf.tradeKind,
-      price: pricing.price,
-      sellerNet: pricing.sellerNet,
-      marginPct: pricing.marginPct,
-      acceptsOffers: pricing.acceptsOffers,
-      listedAt: pricing.listedAt,
-      quantityAvailable: readQuantity(formData, tf),
-      startReserve: tf.startReserve,
-      closesAt: tf.closesAt,
-      status,
-      photos: media.length > 0 ? media : Prisma.JsonNull,
-    },
+  await updateListing({
+    listingId: id,
+    common: c,
+    typeFields: tf,
+    quantity: readQuantity(formData, tf),
+    status,
+    photos: [...kept, ...uploaded],
   });
 
   revalidatePath(`/listings/${id}`);
@@ -296,22 +218,22 @@ export async function updateListingStatusAction(formData: FormData) {
   if (!(await canManageListing(user.id, listing))) redirect(`/listings/${id}`);
   if (!EDITABLE_STATUS.has(statusRaw)) redirect(`/listings/${id}`);
 
-  // Capture the seller's close reason (selectable, skippable) when closing; clear
-  // it on reactivate. This feeds the leakage signal on the admin dashboard.
-  const data: Prisma.ListingUpdateInput = { status: statusRaw as ListingStatus };
+  // Validate the close reason here (controlled vocab); the service applies it.
+  let closeReason: ListingCloseReason | null = null;
+  let closeReasonNote: string | null = null;
   if (statusRaw === "closed") {
     const cr = String(formData.get("closeReason") ?? "").trim();
-    data.closeReason = CLOSE_REASONS.has(cr)
-      ? (cr as ListingCloseReason)
-      : null;
-    data.closeReasonNote =
-      String(formData.get("closeReasonNote") ?? "").trim() || null;
-  } else if (statusRaw === "active") {
-    data.closeReason = null;
-    data.closeReasonNote = null;
+    closeReason = CLOSE_REASONS.has(cr) ? (cr as ListingCloseReason) : null;
+    closeReasonNote = String(formData.get("closeReasonNote") ?? "").trim() || null;
   }
 
-  await prisma.listing.update({ where: { id }, data });
+  await updateListingStatus({
+    listingId: id,
+    status: statusRaw as ListingStatus,
+    closeReason,
+    closeReasonNote,
+  });
+
   revalidatePath(`/listings/${id}`);
   revalidatePath("/listings");
   redirect(`/listings/${id}`);
@@ -324,7 +246,7 @@ export async function deleteListingAction(formData: FormData) {
   if (!listing) redirect("/listings");
   if (!(await canManageListing(user.id, listing))) redirect(`/listings/${id}`);
 
-  await prisma.listing.delete({ where: { id } });
+  await deleteListing(id);
   revalidatePath("/listings");
   redirect("/me");
 }
