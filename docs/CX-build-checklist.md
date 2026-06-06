@@ -66,6 +66,35 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   corrected revenue model + category system.
 - [ ] **Final end-to-end role-gating pass.**
 
+## E. Platform direction — mobile + architecture (DECIDED this session)
+
+> Context: contractors will use mobile more than web. We are NOT building the mobile app
+> yet, but every feature from now on is built so the mobile app is a "screens + endpoints"
+> job later, not a backend rewrite. See the reasoning in the conversation log / memory.
+
+- **Mobile tech = React Native (Expo).** Not full native (too costly for our team, 2 codebases),
+  not PWA-as-destination (weak iOS push, no store presence). Expo shares TypeScript + types with
+  web and gives ~90% of LinkedIn-class native feel. Full native stays a "someday at scale" luxury.
+- **Repo = monorepo, converted LATER (not now).** Target layout `apps/web` + `apps/mobile` +
+  `packages/core` (shared services, types, validation). Stay single-app today; convert when we
+  start the mobile app. The conversion is mechanical once the service layer exists.
+- **UI is NOT shared** — web React/Tailwind and mobile native screens are separate by design.
+  Only the **logic layer** (services, domain types, validation, the future API) is shared.
+- **House rule going forward (the one discipline):** business logic lives in a **service layer**
+  (`src/lib/services/<domain>.ts`), framework-agnostic and callable. Server Actions become **thin
+  shims**: parse FormData -> resolve identity/acting-as from cookies -> call the service -> map the
+  result to `redirect`/`revalidatePath`. A mobile endpoint will later call the SAME service with
+  JSON + a bearer token. No `FormData`, `redirect`, `revalidatePath`, or `cookies()` inside a service.
+- **Auth:** add a bearer-token resolver alongside the cookie when mobile starts; `getSessionUserId`
+  is the single chokepoint, so this is contained. Cookie stays for web.
+- **Build tasks queued:**
+  - [x] **Service-layer PoC — offers module** — extract `makeOffer` / `respondToOffer` into
+    `src/lib/services/offers.ts`; action becomes a thin shim, no behavior change. *(Reference pattern.)*
+  - [ ] Backfill remaining heavy modules to the service pattern, opportunistically: listing,
+    transaction, message, post, engagement (then the lighter ones).
+  - [ ] When mobile starts: monorepo conversion, bearer-token auth path, then API endpoints for the
+    flows mobile needs (browse, offers, messages, orders, notifications) + the Expo app.
+
 ## D. Open product decisions (need your call)
 
 - [x] **Verification criteria** — DECIDED: verified = valid contractor license + confirmed
