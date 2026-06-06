@@ -337,6 +337,10 @@ export default async function FeedPage({
                       post={item.p}
                       engagement={postEng.get(item.p.id)}
                       canReact={!!viewer}
+                      canComment={!!viewer}
+                      actingLabel={
+                        actingCtx.type === "company" ? actingCtx.company.name : null
+                      }
                     />
                   ),
                 )

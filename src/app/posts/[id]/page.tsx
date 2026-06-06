@@ -5,8 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getActingContext } from "@/lib/identity";
 import { authorInclude } from "@/lib/posts";
 import { PostCard } from "@/components/PostCard";
-import { CommentThread } from "@/components/CommentThread";
-import { getPostEngagement, getPostComments } from "@/lib/engagement";
+import { getPostEngagement } from "@/lib/engagement";
 import type { Party } from "@/lib/messaging";
 
 /**
@@ -37,26 +36,24 @@ export default async function PostPage({
     }
   }
 
-  const [engMap, comments] = await Promise.all([
-    getPostEngagement([id], viewerParty),
-    getPostComments(id),
-  ]);
+  const engMap = await getPostEngagement([id], viewerParty);
 
   return (
     <main className="flex-1">
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
         <Link href="/feed" className="text-sm text-slate-500 hover:text-slate-700">
-          ← Back to feed
+          Back to feed
         </Link>
         <div className="mt-4">
-          <PostCard post={post} engagement={engMap.get(id)} canReact={!!viewer} />
+          <PostCard
+            post={post}
+            engagement={engMap.get(id)}
+            canReact={!!viewer}
+            canComment={!!viewer}
+            actingLabel={actingLabel}
+            commentsOpen
+          />
         </div>
-        <CommentThread
-          postId={id}
-          comments={comments}
-          canComment={!!viewer}
-          actingLabel={actingLabel}
-        />
       </div>
     </main>
   );

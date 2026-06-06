@@ -75,11 +75,28 @@ export type PartyDisplay = {
 };
 export type CommentAuthor = PartyDisplay;
 
+export type CommentReactionSummary = {
+  total: number;
+  byType: Partial<Record<ReactionType, number>>;
+  viewerReaction: ReactionType | null;
+};
+
+export type CommentMention = {
+  name: string;
+  href: string;
+  kind: "user" | "company";
+};
+
 export type CommentNode = {
   id: string;
   body: string;
+  imageUrl: string | null;
   createdAt: Date;
+  depth: number;
   author: CommentAuthor;
+  /** The party this reply auto-tagged (the replied-to author), if any. */
+  mention: CommentMention | null;
+  reactions: CommentReactionSummary;
   replies: CommentNode[];
 };
 
@@ -146,41 +163,99 @@ export async function getPostReactors(
   return { total: rows.length, byType, viewerReaction, reactors };
 }
 
-/** All comments for a post as a one-level tree (top-level + replies). */
-export async function getPostComments(postId: string): Promise<CommentNode[]> {
+/** The party a reply auto-tagged (its replied-to author), if any. */
+function mentionOf(c: {
+  mentionedUser: { id: string; name: string } | null;
+  mentionedCompany: { name: string; slug: string } | null;
+}): CommentMention | null {
+  if (c.mentionedCompany) {
+    return {
+      name: c.mentionedCompany.name,
+      href: `/company/${c.mentionedCompany.slug}`,
+      kind: "company",
+    };
+  }
+  if (c.mentionedUser) {
+    return {
+      name: c.mentionedUser.name,
+      href: `/u/${c.mentionedUser.id}`,
+      kind: "user",
+    };
+  }
+  return null;
+}
+
+/**
+ * The full comment forest for a post, nested to arbitrary depth, with each
+ * comment's reaction summary (and the viewer's own reaction) folded in. One
+ * findMany for the comments + one batched findMany for their reactions; the tree
+ * is built in memory (parents always precede their replies by createdAt, so
+ * depth resolves in a single pass). Lazy-loaded only when a thread is expanded.
+ */
+export async function getCommentTree(
+  postId: string,
+  viewer: Party | null,
+): Promise<CommentNode[]> {
   const rows = await prisma.comment.findMany({
     where: { postId },
     include: {
       user: { select: { id: true, name: true, avatarUrl: true } },
       company: { select: { name: true, slug: true, logoUrl: true } },
+      mentionedUser: { select: { id: true, name: true } },
+      mentionedCompany: { select: { name: true, slug: true } },
     },
     orderBy: { createdAt: "asc" },
   });
-  const tops: CommentNode[] = [];
-  const byId = new Map<string, CommentNode>();
-  for (const c of rows) {
-    if (c.parentId) continue;
-    const node: CommentNode = {
-      id: c.id,
-      body: c.body,
-      createdAt: c.createdAt,
-      author: partyDisplay(c),
-      replies: [],
-    };
-    byId.set(c.id, node);
-    tops.push(node);
+  if (rows.length === 0) return [];
+
+  // Batch every comment's reactions in one query, summarize per comment.
+  const ids = rows.map((r) => r.id);
+  const reactionRows = await prisma.commentReaction.findMany({
+    where: { commentId: { in: ids } },
+    select: { commentId: true, type: true, userId: true, companyId: true },
+  });
+  const reactionsByComment = new Map<string, CommentReactionSummary>();
+  for (const id of ids) {
+    reactionsByComment.set(id, { total: 0, byType: {}, viewerReaction: null });
   }
+  for (const r of reactionRows) {
+    const s = reactionsByComment.get(r.commentId);
+    if (!s) continue;
+    s.total += 1;
+    s.byType[r.type] = (s.byType[r.type] ?? 0) + 1;
+    if (viewer && isViewerReaction(r, viewer)) s.viewerReaction = r.type;
+  }
+
+  const nodeById = new Map<string, CommentNode>();
   for (const c of rows) {
-    if (!c.parentId) continue;
-    const parent = byId.get(c.parentId);
-    if (!parent) continue;
-    parent.replies.push({
+    nodeById.set(c.id, {
       id: c.id,
       body: c.body,
+      imageUrl: c.imageUrl,
       createdAt: c.createdAt,
+      depth: 0,
       author: partyDisplay(c),
+      mention: mentionOf(c),
+      reactions: reactionsByComment.get(c.id) ?? {
+        total: 0,
+        byType: {},
+        viewerReaction: null,
+      },
       replies: [],
     });
   }
-  return tops;
+
+  const roots: CommentNode[] = [];
+  for (const c of rows) {
+    const node = nodeById.get(c.id)!;
+    const parent = c.parentId ? nodeById.get(c.parentId) : null;
+    if (parent) {
+      node.depth = parent.depth + 1;
+      parent.replies.push(node);
+    } else {
+      // Top-level, or an orphan whose parent is gone: surface it rather than drop.
+      roots.push(node);
+    }
+  }
+  return roots;
 }

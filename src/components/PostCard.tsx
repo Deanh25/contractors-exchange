@@ -13,11 +13,19 @@ export async function PostCard({
   post,
   engagement,
   canReact = false,
+  canComment = false,
+  actingLabel = null,
+  commentsOpen = false,
 }: {
   post: PostWithAuthor;
   /** Reaction/comment summary; when provided, the engagement bar renders. */
   engagement?: PostEngagement;
   canReact?: boolean;
+  canComment?: boolean;
+  /** Identity the viewer comments as (a company name), if not themselves. */
+  actingLabel?: string | null;
+  /** Pre-expand the inline thread (used on the post detail page). */
+  commentsOpen?: boolean;
 }) {
   const author = postAuthor(post);
   const tags = postTags(post);
@@ -113,7 +121,9 @@ export async function PostCard({
           postId={post.id}
           engagement={engagement}
           canReact={canReact}
-          commentHref={`/posts/${post.id}#comments`}
+          canComment={canComment}
+          actingLabel={actingLabel}
+          initialOpen={commentsOpen}
         />
       )}
     </article>

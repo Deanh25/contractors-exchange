@@ -62,6 +62,8 @@ model User {
   reviewedVerifications VerificationRequest[] @relation("VerifReqReviewer") // requests this admin reviewed
   reactions          Reaction[] @relation("ReactionUser") // post reactions this user made
   comments           Comment[] @relation("CommentUser") // post comments this user made
+  commentReactions   CommentReaction[] @relation("CommentReactionUser") // comment reactions this user made
+  commentMentions    Comment[] @relation("CommentMentionUser") // comment replies that mention this user
 }
 
 model Company {
@@ -98,6 +100,8 @@ model Company {
   verificationRequests VerificationRequest[] @relation("VerifReqCompany") // this company's verification submissions
   reactions          Reaction[] @relation("ReactionCompany") // post reactions made as this company
   comments           Comment[] @relation("CommentCompany") // post comments made as this company
+  commentReactions   CommentReaction[] @relation("CommentReactionCompany") // comment reactions made as this company
+  commentMentions    Comment[] @relation("CommentMentionCompany") // comment replies that mention this company
 }
 
 enum MembershipRole {
@@ -421,21 +425,52 @@ model Reaction {
 model Comment {
   id       String  @id @default(cuid())
   postId   String
-  parentId String? // null = top-level; set = a one-level reply
+  parentId String? // null = top-level; set = a reply (nests to any depth)
   // Acting party: the human (always) + the company they commented as, if any.
   userId    String
   companyId String?
-  body      String   @db.Text
-  createdAt DateTime @default(now())
+  body      String  @db.Text
+  imageUrl  String? // optional single image attachment
+  // Auto-tag (LinkedIn-style): the party this reply mentions (the replied-to
+  // comment's author). Exactly 0 or 1, so stored inline rather than a join table.
+  mentionedUserId    String?
+  mentionedCompanyId String?
+  createdAt          DateTime @default(now())
 
-  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies Comment[] @relation("CommentReplies")
-  user    User      @relation("CommentUser", fields: [userId], references: [id], onDelete: Cascade)
-  company Company?  @relation("CommentCompany", fields: [companyId], references: [id], onDelete: SetNull)
+  post             Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent           Comment?          @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          Comment[]         @relation("CommentReplies")
+  user             User              @relation("CommentUser", fields: [userId], references: [id], onDelete: Cascade)
+  company          Company?          @relation("CommentCompany", fields: [companyId], references: [id], onDelete: SetNull)
+  mentionedUser    User?             @relation("CommentMentionUser", fields: [mentionedUserId], references: [id], onDelete: SetNull)
+  mentionedCompany Company?          @relation("CommentMentionCompany", fields: [mentionedCompanyId], references: [id], onDelete: SetNull)
+  reactions        CommentReaction[]
 
   @@index([postId])
   @@index([parentId])
+  @@index([mentionedUserId])
+  @@index([mentionedCompanyId])
+}
+
+// Reactions on a COMMENT (separate table from post Reaction, same shape). One
+// per party per comment; the type can change. Reuses the ReactionType enum.
+model CommentReaction {
+  id        String       @id @default(cuid())
+  commentId String
+  // Acting party: the human (always) + the company they reacted as, if any.
+  userId    String
+  companyId String?
+  type      ReactionType
+  createdAt DateTime     @default(now())
+
+  comment Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User     @relation("CommentReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation("CommentReactionCompany", fields: [companyId], references: [id], onDelete: SetNull)
+
+  // Best-effort one-per-party-per-comment (NULLs distinct in MySQL; the action
+  // de-dupes explicitly).
+  @@unique([commentId, userId, companyId])
+  @@index([commentId])
 }
 
 // A mention/tag in a post: a tagged PARTY (a user or a company). Tagged parties

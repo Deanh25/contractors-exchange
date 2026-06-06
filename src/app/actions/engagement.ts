@@ -6,8 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { requireUser, getCurrentUser } from "@/lib/auth";
 import { getActingContext } from "@/lib/identity";
 import { createNotification } from "@/lib/notifications";
+import { saveImage } from "@/lib/storage";
 import { REACTIONS } from "@/lib/reactions";
-import { getPostReactors, type PostReactors } from "@/lib/engagement";
+import {
+  getPostReactors,
+  getCommentTree,
+  type PostReactors,
+  type CommentNode,
+} from "@/lib/engagement";
 import type { Party } from "@/lib/messaging";
 import type { ReactionType } from "@/generated/prisma/client";
 
@@ -120,15 +126,46 @@ export async function commentOnPostAction(formData: FormData) {
   const postId = String(formData.get("postId") ?? "");
   const body = String(formData.get("body") ?? "").trim();
   const parentId = String(formData.get("parentId") ?? "").trim() || null;
-  if (!body) redirect(`/posts/${postId}`);
+  const replyToCommentId =
+    String(formData.get("replyToCommentId") ?? "").trim() || null;
+  // Inline (feed/thread) submits stay put; the post-page form still redirects.
+  const inline = String(formData.get("inline") ?? "") === "1";
+  const image = formData.get("image");
+  const imageUrl =
+    image instanceof File && image.size > 0 ? await saveImage(image) : null;
+
+  // A comment needs text or an image.
+  if (!body && !imageUrl) {
+    if (inline) return;
+    redirect(`/posts/${postId}`);
+  }
 
   const post = await prisma.post.findUnique({
     where: { id: postId },
     select: { authorUserId: true, authorCompanyId: true },
   });
-  if (!post) redirect("/feed");
+  if (!post) {
+    if (inline) return;
+    redirect("/feed");
+  }
 
   const actor = await actingParty(user.id);
+
+  // Auto-tag: resolve the replied-to comment's author server-side (never trust
+  // a client-sent party). Usually the same as the parent commenter.
+  let mention: Party | null = null;
+  if (replyToCommentId) {
+    const target = await prisma.comment.findUnique({
+      where: { id: replyToCommentId },
+      select: { userId: true, companyId: true },
+    });
+    if (target) {
+      mention = target.companyId
+        ? { type: "company", id: target.companyId }
+        : { type: "user", id: target.userId };
+    }
+  }
+
   await prisma.comment.create({
     data: {
       postId,
@@ -136,13 +173,22 @@ export async function commentOnPostAction(formData: FormData) {
       userId: user.id,
       companyId: actor.type === "company" ? actor.id : null,
       body,
+      imageUrl,
+      mentionedUserId: mention?.type === "user" ? mention.id : null,
+      mentionedCompanyId: mention?.type === "company" ? mention.id : null,
     },
   });
 
   const actorName = await partyName(actor, user.name);
-  // Notify the post author (and, on a reply, the parent commenter) - skip self.
   const author = postAuthorParty(post);
-  if (author && !partiesEqual(author, actor)) {
+  // De-dupe recipients across post author, parent commenter, and the mention so
+  // one human/company gets at most one notification for this comment.
+  const notified: Party[] = [];
+  const skip = (p: Party) =>
+    partiesEqual(p, actor) || notified.some((q) => partiesEqual(p, q));
+
+  if (author && !skip(author)) {
+    notified.push(author);
     await createNotification({
       recipient: author,
       type: "post_comment",
@@ -153,6 +199,7 @@ export async function commentOnPostAction(formData: FormData) {
       href: `/posts/${postId}`,
     });
   }
+
   if (parentId) {
     const parent = await prisma.comment.findUnique({
       where: { id: parentId },
@@ -162,7 +209,8 @@ export async function commentOnPostAction(formData: FormData) {
       const parentParty: Party = parent.companyId
         ? { type: "company", id: parent.companyId }
         : { type: "user", id: parent.userId };
-      if (!partiesEqual(parentParty, actor) && !(author && partiesEqual(parentParty, author))) {
+      if (!skip(parentParty)) {
+        notified.push(parentParty);
         await createNotification({
           recipient: parentParty,
           type: "post_comment",
@@ -176,7 +224,89 @@ export async function commentOnPostAction(formData: FormData) {
     }
   }
 
+  if (mention && !skip(mention)) {
+    notified.push(mention);
+    await createNotification({
+      recipient: mention,
+      type: "post_mention",
+      actorUserId: user.id,
+      actorCompanyId: actor.type === "company" ? actor.id : null,
+      title: `${actorName} mentioned you in a comment`,
+      body,
+      href: `/posts/${postId}`,
+    });
+  }
+
   revalidatePath("/feed");
   revalidatePath(`/posts/${postId}`);
-  redirect(`/posts/${postId}`);
+  if (!inline) redirect(`/posts/${postId}`);
+}
+
+// --- React to a comment ------------------------------------------------------
+
+export async function reactToCommentAction(formData: FormData) {
+  const user = await requireUser("/feed");
+  const commentId = String(formData.get("commentId") ?? "");
+  const type = String(formData.get("type") ?? "") as ReactionType;
+  if (!VALID_REACTIONS.has(type)) return;
+
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { postId: true, userId: true, companyId: true },
+  });
+  if (!comment) return;
+
+  const actor = await actingParty(user.id);
+  const where =
+    actor.type === "company"
+      ? { commentId, companyId: actor.id }
+      : { commentId, userId: user.id, companyId: null };
+  const existing = await prisma.commentReaction.findFirst({ where });
+
+  let added = false;
+  if (existing && existing.type === type) {
+    await prisma.commentReaction.delete({ where: { id: existing.id } }); // toggle off
+  } else if (existing) {
+    await prisma.commentReaction.update({
+      where: { id: existing.id },
+      data: { type },
+    });
+    added = true;
+  } else {
+    await prisma.commentReaction.create({
+      data: {
+        commentId,
+        userId: user.id,
+        companyId: actor.type === "company" ? actor.id : null,
+        type,
+      },
+    });
+    added = true;
+  }
+
+  const author: Party = comment.companyId
+    ? { type: "company", id: comment.companyId }
+    : { type: "user", id: comment.userId };
+  if (added && !partiesEqual(author, actor)) {
+    const actorName = await partyName(actor, user.name);
+    const label = REACTIONS.find((r) => r.type === type)?.label ?? "reacted";
+    await createNotification({
+      recipient: author,
+      type: "post_like",
+      actorUserId: user.id,
+      actorCompanyId: actor.type === "company" ? actor.id : null,
+      title: `${actorName} reacted "${label}" to your comment`,
+      href: `/posts/${comment.postId}`,
+    });
+  }
+
+  revalidatePath("/feed");
+  revalidatePath(`/posts/${comment.postId}`);
+}
+
+/** Lazy-load a post's comment forest (only runs when a thread is expanded). */
+export async function loadPostCommentsAction(
+  postId: string,
+): Promise<CommentNode[]> {
+  return getCommentTree(postId, await viewerParty());
 }
