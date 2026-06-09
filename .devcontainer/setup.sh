@@ -38,9 +38,14 @@ for i in $(seq 1 60); do
   sleep 2
 done
 
-echo "Applying migrations (retrying while MariaDB finishes initializing)..."
+# Build the schema directly from schema.prisma (db push) instead of replaying
+# migrations: the dev DB is then correct on any OS. Some historical migrations
+# use lowercase table names that only work on case-insensitive Windows MySQL;
+# db push always uses the schema's exact (PascalCase) casing. The migration files
+# still need a casing cleanup before a Linux/RDS production deploy.
+echo "Syncing the database schema (prisma db push, retrying while MariaDB inits)..."
 for i in $(seq 1 20); do
-  if npx prisma migrate deploy; then
+  if npx prisma db push --skip-generate; then
     break
   fi
   echo "  database not ready yet, retry ${i}/20..."
