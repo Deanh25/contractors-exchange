@@ -4,14 +4,14 @@
 services:
   app:
     image: mcr.microsoft.com/devcontainers/javascript-node:22-bookworm
+    # Canonical Codespaces mount: the repo lands at /workspaces/<repo>.
     volumes:
-      - ..:/workspaces/contractors-exchange:cached
+      - ../..:/workspaces:cached
     command: sleep infinity
     environment:
       DATABASE_URL: "mysql://root:cxdev@db:3306/contractors_exchange"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - cx
 
@@ -23,11 +23,6 @@ services:
       MARIADB_DATABASE: contractors_exchange
     volumes:
       - cx-db-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
     networks:
       - cx
 

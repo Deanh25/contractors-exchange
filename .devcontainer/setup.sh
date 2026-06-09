@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# One-time Codespace/Dev Container setup: write .env, install deps, run
-# migrations, generate the Prisma client, and seed demo + sample data.
+# One-time Codespace/Dev Container setup: write .env, install deps, wait for the
+# database, run migrations, generate the Prisma client, and seed demo + samples.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -28,8 +28,25 @@ fi
 echo "Installing dependencies..."
 npm install
 
-echo "Applying migrations + generating Prisma client..."
-npx prisma migrate deploy
+echo "Waiting for the database to accept connections..."
+for i in $(seq 1 60); do
+  if (exec 3<>/dev/tcp/db/3306) 2>/dev/null; then
+    exec 3>&-
+    echo "  DB port is open."
+    break
+  fi
+  sleep 2
+done
+
+echo "Applying migrations (retrying while MariaDB finishes initializing)..."
+for i in $(seq 1 20); do
+  if npx prisma migrate deploy; then
+    break
+  fi
+  echo "  database not ready yet, retry ${i}/20..."
+  sleep 3
+done
+
 npx prisma generate
 
 echo "Seeding demo data + module samples..."
@@ -41,5 +58,5 @@ echo "==================================================================="
 echo " Setup complete. Start CX with:   npm run dev"
 echo " Open the forwarded port 3000 (the editor will offer a preview)."
 echo " Admin panel: add /admin to that URL (dev-on-path mode is enabled)."
-echo " Sign in with a demo email from prisma/seed.ts (e.g. Dean Hughes)."
+echo " Sign in with kerinhughes50@gmail.com (no password) = superadmin."
 echo "==================================================================="

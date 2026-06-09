@@ -2,7 +2,7 @@
   "name": "Contractors Exchange",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  "workspaceFolder": "/workspaces/contractors-exchange",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "forwardPorts": [3000, 3306],
   "portsAttributes": {
     "3000": { "label": "CX web", "onAutoForward": "openPreview" },
