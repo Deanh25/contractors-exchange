@@ -7,9 +7,15 @@ const nextConfig: NextConfig = {
   // entry covers GitHub Codespaces forwarded ports (see .devcontainer/).
   allowedDevOrigins: ["admin.localhost", "*.app.github.dev"],
   experimental: {
-    // Listing media (images and short videos) upload through Server Actions; the
-    // default body limit is 1MB. Allow larger submits to fit a video or two.
-    serverActions: { bodySizeLimit: "96mb" },
+    serverActions: {
+      // Listing media (images and short videos) upload through Server Actions;
+      // the default body limit is 1MB. Allow larger submits for a video or two.
+      bodySizeLimit: "96mb",
+      // Server Actions have their own CSRF origin check (separate from
+      // allowedDevOrigins). Behind the Codespaces proxy the request Origin is
+      // *.app.github.dev while the internal Host differs, so allow it here.
+      allowedOrigins: ["*.app.github.dev"],
+    },
   },
 };
 
