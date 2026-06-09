@@ -1,0 +1,22 @@
+{
+  "name": "Contractors Exchange",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/contractors-exchange",
+  "forwardPorts": [3000, 3306],
+  "portsAttributes": {
+    "3000": { "label": "CX web", "onAutoForward": "openPreview" },
+    "3306": { "label": "MariaDB", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "Prisma.prisma",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  }
+}

@@ -1,0 +1,38 @@
+# Codespaces / Dev Containers stack for CX: a Node app container + a MariaDB the
+# app talks to over the compose network (host "db"). The app process runs HERE,
+# with real resources, instead of on a memory-starved laptop.
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/javascript-node:22-bookworm
+    volumes:
+      - ..:/workspaces/contractors-exchange:cached
+    command: sleep infinity
+    environment:
+      DATABASE_URL: "mysql://root:cxdev@db:3306/contractors_exchange"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cx
+
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: cxdev
+      MARIADB_DATABASE: contractors_exchange
+    volumes:
+      - cx-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - cx
+
+volumes:
+  cx-db-data:
+
+networks:
+  cx:

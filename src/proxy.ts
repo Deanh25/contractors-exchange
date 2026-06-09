@@ -28,6 +28,13 @@ function isAdminHost(host: string): boolean {
   return host.startsWith("admin.");
 }
 
+// Dev-only escape hatch: a single-host dev environment (e.g. GitHub Codespaces)
+// has no admin.* subdomain, so CX_DEV_ADMIN_ON_PATH=1 serves /admin directly on
+// the public host instead of redirecting to the subdomain. NEVER set in
+// production: it drops the admin-cookie isolation the subdomain provides. Role
+// checks (requireAdmin / requireCapability) still apply either way.
+const DEV_ADMIN_ON_PATH = process.env.CX_DEV_ADMIN_ON_PATH === "1";
+
 /** Paths the admin subdomain may serve (sign-in is needed to authenticate). */
 function adminHostAllows(pathname: string): boolean {
   return (
@@ -51,8 +58,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Public host: the admin section is only reachable on the admin subdomain.
+  // Public host: the admin section is only reachable on the admin subdomain,
+  // except in a single-host dev environment (CX_DEV_ADMIN_ON_PATH) where /admin
+  // is served directly here.
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    if (DEV_ADMIN_ON_PATH) return NextResponse.next();
     const adminHost = "admin." + host.replace(/^www\./, "");
     const isHttps =
       request.nextUrl.protocol === "https:" ||
