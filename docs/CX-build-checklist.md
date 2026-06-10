@@ -48,6 +48,29 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 
 ## C. Remaining build work (not yet started / in progress)
 
+- [ ] **Profile system (LinkedIn-style, users + companies)** *(new — QUEUED, not started; do
+  not begin until the Codespaces sign-in issue is resolved)* — shared profile layout with two
+  variants (`/u/[id]` users, `/company/[slug]` companies; reuse existing routes, do not create
+  `/c/[slug]`). Survey-first (Step 0): reuse the existing `ProfileHeader`, `Avatar`, `FollowButton`,
+  Contact/message actions, `ListingCard`, `PostCard`, `ReviewList`/`StarRating`, `MediaGallery`
+  (lightbox), and `src/lib/storage.ts` uploads. CX is FOLLOW-only (no Connect); do NOT rebuild the
+  working Follow / Message / List buttons. Build in 4 reviewed parts:
+  - Part 1 — profile data + inline image uploads: add `User.bannerUrl` + `Company.bannerUrl`
+    (avatar/logo already exist); inline upload/replace for photo/logo AND banner via existing
+    storage helper; add any missing fields (User: headline/credentials; Company: tagline, website,
+    foundedYear, size, specialties, serviceArea, locations). Sensible defaults, never a broken image.
+  - Part 2 — shared header: banner + overlapping photo (circle users / rounded-square companies),
+    identity block, verified badge, follower counts, action buttons wired in, owner sees "Edit
+    profile"; horizontal tab bar: Home · About · Posts · Photos · Listings · Reviews.
+  - Part 3 — the six tabs (Home overview, About, Posts feed by author, Photos = work/job portfolio
+    gallery w/ lightbox, Listings storefront showing buyer_price only, Reviews avg+count with clean
+    empty state). Listings tab must never expose sellerNet/margin.
+  - Part 4 — ownership/editing: owner (or member with `canActAsCompany`) edits inline; everyone
+    else read-only; gate edits server-side; respect acting-as context. Update seed so tabs render
+    with real content plus one fresh empty-state profile. Commit/push per part.
+  - Architecture rule: domain logic in `src/lib/services/profile.ts` (extend), Server Action stays a
+    thin shim (parse FormData, save media to URL, call service, revalidate). Pause for review after
+    each part. (Full prompt: `docs/CX-profile-system-prompt.md` if saved.)
 - [ ] **Admin notifications** *(new — not started)* — a notification center inside `/admin`
   for admin-relevant events (new verification requests, pricing/leakage flags, disputes,
   new/high-value orders, flagged listings, etc.), with optional delivery to admins by

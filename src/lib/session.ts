@@ -43,6 +43,15 @@ export async function getSessionUserId(): Promise<string | null> {
   return verify(store.get(COOKIE)?.value);
 }
 
+// Codespaces (and any HTTPS dev proxy) serves the app over https://*.app.github.dev.
+// A cookie set without `Secure` on an HTTPS origin behind GitHub's port-forward
+// proxy is not reliably persisted by the browser, so the session never sticks and
+// sign-in appears to "do nothing." Mark the cookie Secure whenever we're on HTTPS:
+// production, or a Codespace. Plain http://localhost dev stays non-secure.
+function cookieIsSecure(): boolean {
+  return process.env.NODE_ENV === "production" || process.env.CODESPACES === "true";
+}
+
 export async function setSession(userId: string): Promise<void> {
   const store = await cookies();
   store.set(COOKIE, serialize(userId), {
@@ -50,7 +59,7 @@ export async function setSession(userId: string): Promise<void> {
     sameSite: "lax",
     path: "/",
     maxAge: MAX_AGE,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieIsSecure(),
   });
 }
 
