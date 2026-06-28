@@ -43,7 +43,7 @@ export async function createCategoryAction(formData: FormData) {
       sortOrder: (siblings._max.sortOrder ?? -1) + 1,
     },
   });
-  await logAdminAction(admin.id, "category.create", "margin", created.id, `${name} (${slug})`);
+  await logAdminAction(admin.id, "category.create", "category", created.id, `${name} (${slug})`);
   revalidatePath("/admin/categories");
 }
 
@@ -54,7 +54,7 @@ export async function renameCategoryAction(formData: FormData) {
   if (!name) redirect("/admin/categories?error=name");
   // Slug stays stable so listings keep resolving; only the display name changes.
   await prisma.category.update({ where: { id }, data: { name } });
-  await logAdminAction(admin.id, "category.rename", "margin", id, name);
+  await logAdminAction(admin.id, "category.rename", "category", id, name);
   revalidatePath("/admin/categories");
 }
 
@@ -96,7 +96,7 @@ export async function moveCategoryAction(formData: FormData) {
     where: { id },
     data: { parentId, sortOrder: (siblings._max.sortOrder ?? -1) + 1 },
   });
-  await logAdminAction(admin.id, "category.move", "margin", id, null);
+  await logAdminAction(admin.id, "category.move", "category", id, null);
   revalidatePath("/admin/categories");
 }
 
@@ -119,7 +119,7 @@ export async function reorderCategoryAction(formData: FormData) {
       prisma.category.update({ where: { id: siblings[j].id }, data: { sortOrder: siblings[i].sortOrder } }),
     ]);
   }
-  await logAdminAction(admin.id, "category.reorder", "margin", id, dir);
+  await logAdminAction(admin.id, "category.reorder", "category", id, dir);
   revalidatePath("/admin/categories");
 }
 
@@ -128,7 +128,7 @@ export async function archiveCategoryAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const value = formData.get("value") === "1";
   await prisma.category.update({ where: { id }, data: { archived: value } });
-  await logAdminAction(admin.id, value ? "category.archive" : "category.unarchive", "margin", id, null);
+  await logAdminAction(admin.id, value ? "category.archive" : "category.unarchive", "category", id, null);
   revalidatePath("/admin/categories");
 }
 
@@ -145,7 +145,7 @@ export async function deleteCategoryAction(formData: FormData) {
   const used = await prisma.listing.count({ where: { tradeCategory: node.slug } });
   if (used > 0) redirect("/admin/categories?error=inuse");
 
-  await logAdminAction(admin.id, "category.delete", "margin", id, node.name);
+  await logAdminAction(admin.id, "category.delete", "category", id, node.name);
   await prisma.category.delete({ where: { id } }).catch(() => null);
   revalidatePath("/admin/categories");
 }

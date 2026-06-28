@@ -1,9 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { requireCapability } from "@/lib/admin";
-import { timeAgo } from "@/lib/time";
-import type { Prisma } from "@/generated/prisma/client";
-
-const TARGET_TYPES = ["listing", "user", "company", "margin"];
+import { requireCapability, ROLE_LABEL } from "@/lib/admin";
+import { getAuditLog, AUDIT_TARGET_TYPES } from "@/lib/admin-audit";
+import { timeAgo, formatDateTime } from "@/lib/time";
 
 export default async function AdminAuditPage({
   searchParams,
@@ -15,17 +12,7 @@ export default async function AdminAuditPage({
   const action = (sp.action ?? "").trim();
   const target = (sp.target ?? "").trim();
 
-  const where: Prisma.AdminActionWhereInput = {
-    ...(action ? { action: { contains: action } } : {}),
-    ...(TARGET_TYPES.includes(target) ? { targetType: target } : {}),
-  };
-
-  const rows = await prisma.adminAction.findMany({
-    where,
-    include: { admin: { select: { name: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+  const rows = await getAuditLog({ action, target });
 
   const inputCls = "rounded-md border border-slate-300 px-3 py-2 text-sm";
 
@@ -33,19 +20,20 @@ export default async function AdminAuditPage({
     <div>
       <h1 className="text-2xl font-bold tracking-tight text-slate-900">Audit log</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Every admin action, who performed it, and when. Read-only.
+        Every backend action by any admin - who did it, what they touched, the
+        details, and exactly when. Read-only.
       </p>
 
       <form method="get" className="mt-4 flex flex-wrap items-center gap-2">
         <input
           name="action"
           defaultValue={action}
-          placeholder="Filter by action (e.g. margin.update)…"
+          placeholder="Filter by action (e.g. user.role, margin.update)…"
           className={`${inputCls} min-w-0 flex-1`}
         />
         <select name="target" defaultValue={target} className={inputCls}>
           <option value="">All targets</option>
-          {TARGET_TYPES.map((t) => (
+          {AUDIT_TARGET_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
@@ -72,19 +60,28 @@ export default async function AdminAuditPage({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-slate-800">
-                  <span className="font-medium">{r.admin.name}</span>
+                  <span className="font-medium">{r.adminName}</span>
+                  <span className="text-slate-400"> ({ROLE_LABEL[r.adminRole]})</span>
                   <span className="text-slate-400">
-                    {" "}
-                    · {r.targetType}
-                    {r.targetId ? ` ${r.targetId}` : ""}
+                    {" · "}
+                    {r.targetType}
+                    {r.targetName ? (
+                      <span className="text-slate-600"> {r.targetName}</span>
+                    ) : r.targetId ? (
+                      <span className="font-mono text-slate-400"> {r.targetId}</span>
+                    ) : (
+                      ""
+                    )}
                   </span>
                 </p>
-                {r.detail && (
-                  <p className="truncate text-xs text-slate-500">{r.detail}</p>
-                )}
+                {r.detail && <p className="text-xs text-slate-500">{r.detail}</p>}
               </div>
-              <span className="shrink-0 text-xs text-slate-400">
-                {timeAgo(r.createdAt)}
+              <span
+                className="shrink-0 text-right text-xs text-slate-400"
+                title={formatDateTime(r.createdAt)}
+              >
+                {formatDateTime(r.createdAt)}
+                <span className="block text-slate-300">{timeAgo(r.createdAt)}</span>
               </span>
             </div>
           ))}

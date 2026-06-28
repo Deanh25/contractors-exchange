@@ -9,6 +9,19 @@ const STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60],
 ];
 
+const DATE_TIME_FMT = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** "Jun 28, 2026, 3:42 PM" - an absolute timestamp (e.g. audit log rows). */
+export function formatDateTime(date: Date): string {
+  return DATE_TIME_FMT.format(date);
+}
+
 /** "3 hours ago", "yesterday", "just now" - for feed timestamps. */
 export function timeAgo(date: Date, now: Date = new Date()): string {
   const seconds = Math.round((date.getTime() - now.getTime()) / 1000);

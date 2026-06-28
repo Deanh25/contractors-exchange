@@ -98,10 +98,18 @@ export async function requireCapability(capability: Capability): Promise<User> {
   return u;
 }
 
+/** The kinds of things a backend action can target (stored on AdminAction). */
+export type AuditTargetType =
+  | "listing"
+  | "user"
+  | "company"
+  | "margin"
+  | "category";
+
 export async function logAdminAction(
   adminId: string,
   action: string,
-  targetType: "listing" | "user" | "company" | "margin",
+  targetType: AuditTargetType,
   targetId?: string | null,
   detail?: string | null,
 ): Promise<void> {
