@@ -1,8 +1,14 @@
 # Contractors Exchange — Build Checklist & Review Log
 
-> Living checklist. **Workflow:** I build a module → it moves to "Needs your review" →
-> **you test it on `admin.localhost:3000` (or `localhost:3000`)** → we check it off here.
-> Nothing is "Done" until you've signed off. Update the `[ ]` to `[x]` when approved.
+> Living checklist. **Standard workflow (required for every feature):**
+> 1. Build the feature.
+> 2. Provide **step-by-step test instructions** (exact path/account, numbered steps, expected
+>    result at each step, role differences, edge cases).
+> 3. You test it on the running site.
+> 4. You **sign off**.
+> 5. **Only then commit** and check it off here (update `[ ]` to `[x]`).
+>
+> Nothing is "Done" - and nothing is committed - until you've tested and signed off.
 
 Last updated: this session.
 
@@ -14,37 +20,37 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 `kerinhughes50@gmail.com` (superadmin), `jordan@riveraelectric.test` (admin),
 `maria@lonestarplumbing.test` (moderator).
 
-- [ ] **Roles, gating & subdomain** — admin link in avatar menu; `/admin` only on the
+- [x] **Roles, gating & subdomain** — admin link in avatar menu; `/admin` only on the
   subdomain; role-filtered nav; non-admins bounced. Test each role sees the right nav.
-- [ ] **Dashboard** — time-windowed KPIs (7d/30d/90d/YTD/All): Revenue (admin+ only),
+- [x] **Dashboard** — time-windowed KPIs (7d/30d/90d/YTD/All): Revenue (admin+ only),
   Marketplace health, **Leakage signal**, Network/trust + deal funnel, a Needs-attention
   strip, and module shortcuts. Moderators see no financials.
-- [ ] **Verification** — search; filter by Pending / Verified / New / All and by
+- [x] **Verification** — search; filter by Pending / Verified / New / All and by
   Companies / Users; **Verify** and **Remove badge**. **Request flow:** accounts
   submit legal name + contractor license + address + **uploaded documents** (on
   `/me` and the company workspace); the admin queue shows pending requests with
   the docs and **Approve / Deny (with note)**; the submitter is notified.
-- [ ] **Listings (moderation)** — search + status filter; close/reopen/mark-sold with
+- [x] **Listings (moderation)** — search + status filter; close/reopen/mark-sold with
   reason; recategorize; superadmin remove. Moderators load **no** financial fields.
-- [ ] **Users** — search; verify/unverify; suspend/unsuspend; superadmin delete (typed confirm).
-- [ ] **Companies** — search; verify/unverify; suspend/unsuspend; superadmin delete.
-- [ ] **Categories** *(new)* — tree of any depth; add/rename/move/reorder/archive/delete;
+- [x] **Users** — search; verify/unverify; suspend/unsuspend; superadmin delete (typed confirm).
+- [x] **Companies** — search; verify/unverify; suspend/unsuspend; superadmin delete.
+- [x] **Categories** *(new)* — tree of any depth; add/rename/move/reorder/archive/delete;
   leaf = assignable. **Fully wired:** new categories flow into the listing picker, marketplace
   + feed filters, margins, labels, and profile/post pickers (the static taxonomy is retired).
-- [ ] **Margins** — collapsible main categories; search; All/Configured/Default filter;
+- [x] **Margins** — collapsible main categories; search; All/Configured/Default filter;
   edit % per trade; reset to default. Affects future listings only.
-- [ ] **Audit log** — every admin action, filter by action/target.
+- [x] **Audit log** — every admin action, filter by action/target.
 
 ## B. Revenue model & marketplace — built, awaiting your review
 
-- [ ] **Flat margin model** — seller enters net; buyer price = net x (1 + category margin %);
+- [x] **Flat margin model** — seller enters net; buyer price = net x (1 + category margin %);
   margin fixed. Pricing calculator on the create page (full breakdown + "what buyer sees").
-- [ ] **Buyer offer / negotiation** — Make an offer; seller sees their net + concession note +
+- [x] **Buyer offer / negotiation** — Make an offer; seller sees their net + concession note +
   midpoint counter; accept/decline/counter threaded in messaging; accept creates the order.
   Buttons: Accept green / Decline red / Counter orange. Buyer never sees net/margin.
-- [ ] **Negotiation in Orders** — in-flight offers show as "Negotiating", link to the thread.
-- [ ] **Stock decrement** — completing a set-price sale reduces quantity; sold at zero.
-- [ ] **Marketplace Insights** — per-listing views/saves/inquiries/offers for the acting party (`/insights`).
+- [x] **Negotiation in Orders** — in-flight offers show as "Negotiating", link to the thread.
+- [x] **Stock decrement** — completing a set-price sale reduces quantity; sold at zero.
+- [x] **Marketplace Insights** — per-listing views/saves/inquiries/offers for the acting party (`/insights`).
 
 ## C. Remaining build work (not yet started / in progress)
 
@@ -71,6 +77,76 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - Architecture rule: domain logic in `src/lib/services/profile.ts` (extend), Server Action stays a
     thin shim (parse FormData, save media to URL, call service, revalidate). Pause for review after
     each part. (Full prompt: `docs/CX-profile-system-prompt.md` if saved.)
+- [x] **Admin user management (create users + assign roles)** *(BUILT + tested + signed off)* - fill the gap
+  where admin roles can currently ONLY be set by editing `prisma/seed.ts`. Build in the existing
+  Users admin page (`/admin/users`):
+  - **Create teammate**: a "New user" form (name + email, optional admin role at creation). Creates
+    the account row so they can sign in via the existing passwordless email flow. Reject duplicate
+    emails with a clear message.
+  - **Assign / change role on existing users**: a per-user role control (none / moderator / admin /
+    superadmin) on each row in the list, so seeded or self-signed-up users can be promoted/demoted.
+  - **Gating**: superadmin only. Wire the already-defined-but-unused `manageAdmins` capability
+    (`requireCapability("manageAdmins")`) in the page AND the Server Action (defense in depth).
+  - **Guardrails**: a superadmin cannot remove their own superadmin role (avoid lockout); never let
+    the last superadmin be demoted; the role control is hidden/disabled for non-superadmins.
+  - **Audit**: every user creation and role change writes to the audit log via `logAdminAction`.
+  - **Architecture**: domain logic in `src/lib/services/admin-users.ts` (new service, per AGENTS.md);
+    `src/app/actions/admin-users.ts` stays a thin shim (resolve actor, parse FormData, call service,
+    revalidate). No `FormData`/`redirect`/`cookies()` in the service.
+- [ ] **Reports module (`/admin/reports`)** *(new - not started)* - exportable, filterable,
+  historical reports that complement the at-a-glance Dashboard. Each report shares: the Dashboard
+  time windows (7d/30d/90d/YTD/All) plus a custom date range; filters for category/trade, region
+  (state), status, and party; and export to BOTH CSV (raw data for spreadsheets) and PDF (a clean,
+  branded, printable document with the report title, date range, applied filters, and a summary).
+  Every report supports both formats. Financial columns are stripped server-side for
+  moderators (reuse the `financials` capability), so non-financial reports stay available to them.
+  Recommended report set (all backed by data we already store):
+  - **Tier 1 (financial/operational, build first):**
+    - Revenue & Margin - completed transactions over the range: GMV, realized CX margin, take rate,
+      by month and by category/trade.
+    - Sales / Orders detail - line-item transaction table (date, listing, buyer, seller, buyer
+      price, margin, status); the export backbone for accounting.
+    - Listings & Inventory - listings by status/category/region, current stock value, new listings
+      over time, plus a Leakage detail drill-down (at-risk + sold-elsewhere listings).
+    - Marketplace funnel / conversion - Listings -> Inquiries -> Deals -> Completed with conversion
+      rates per period.
+  - **Tier 2 (growth, trust, governance):**
+    - User & Company growth - new signups over time by region/trade; verified vs unverified; active
+      vs suspended.
+    - Verification throughput - submitted/approved/denied over time, approval rate, time-to-decision,
+      current backlog.
+    - Reviews & trust - review coverage, average rating, rating distribution.
+    - Admin activity - AdminAction log aggregated by admin + action type (accountability).
+  - **Tier 3 (strategic, optional):**
+    - Category performance - per category: listings, GMV, margin, avg days-to-sale, leakage rate
+      (informs margin tuning).
+  - **Exports**: CSV and PDF for every report. The service returns typed rows + summary; the CSV and
+    PDF generators are transport-layer concerns (a util/route, not the service). PDF approach to
+    settle when we build: server-side render to PDF (e.g. a print-stylesheet route + headless render,
+    or a PDF lib) so the document matches the on-screen report. Decide the library then.
+  - **Gating**: add a `reports` capability (min role admin for financial reports; moderators get the
+    non-financial subset). Wire it in the page AND both export actions (CSV + PDF).
+  - **Architecture**: query/aggregation logic in `src/lib/services/admin-reports.ts` (framework-
+    agnostic, returns typed rows the future mobile/API can reuse); the page + CSV/PDF export actions
+    stay thin shims. No `FormData`/`redirect`/`cookies()` in the service.
+- [ ] **Dashboard KPIs clickable -> drill into modules** *(new - not started)* - make each KPI tile
+  (and the deal-funnel steps and the needs-attention strip) a link that navigates to the related
+  module, deep-linked to a pre-filtered view where possible. Mapping:
+  - Users / Verified users -> `/admin/users` (verified filter for the verified tile)
+  - Companies / Verified companies -> `/admin/companies` (verified filter)
+  - Active listings / Stock value / In-flight margin -> `/admin/listings?status=active`
+  - At-risk listings -> `/admin/listings` filtered to at-risk; Closed: sold elsewhere ->
+    `/admin/listings?status=closed` (sold_elsewhere reason)
+  - "N verification requests" + Verification-related tiles -> `/admin/verification`
+  - Revenue tiles (Realized margin, GMV, Take rate), funnel steps (Deals started, Completion rate,
+    Inquiries/Deals/Completed), and Review coverage -> the **Reports module** (depends on Reports
+    being built; until then, leave these non-clickable or point at the nearest existing view).
+  - Build in two phases: Phase 1 wire the tiles with existing destinations now; Phase 2 point the
+    revenue/funnel/review tiles at the relevant report once the Reports module ships.
+  - Some destinations need a small filter param added to the target page (e.g. Listings "at-risk",
+    Users/Companies "verified-only"); include those filter additions in this task. Keep tiles
+    keyboard-accessible (real links/buttons), and respect role gating (a moderator's tiles must not
+    link to pages they cannot access).
 - [ ] **Admin notifications** *(new — not started)* — a notification center inside `/admin`
   for admin-relevant events (new verification requests, pricing/leakage flags, disputes,
   new/high-value orders, flagged listings, etc.), with optional delivery to admins by
@@ -138,4 +214,24 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 
 - [x] **Verification criteria** — DECIDED: verified = valid contractor license + confirmed
   business identity, via a request → review (with notes) → approve/deny flow + doc upload. Built.
+- [ ] **Separate admin identity from customer identity (pre-go-live)** *(NEEDS DECISION)* - today
+  one `User` account carries both marketplace use and admin access (`adminRole`), so a single login
+  reaches both the public site and `/admin`. (Note: the "shared" feel in Codespaces is partly a dev
+  artifact - the session cookie is host-only, so the production admin subdomain already gets its own
+  cookie + separate sign-in. But it is still the SAME account/identity.) Goal: frontend and backend
+  are genuinely separate access. Options:
+  - **A - session/host separation only** (mostly already built): admin subdomain + own cookie +
+    hardened auth; still the same accounts.
+  - **B - separate "staff" accounts (recommended)**: a staff/admin account TYPE with backend access
+    but no marketplace presence (no public profile, cannot list/buy). Then the frontend **Users**
+    module lists only customers, and a new backend **Team / Admins** module lists staff (this is
+    where the just-built "create user + assign role" feature would move). Customer logins never reach
+    admin; staff logins never shop.
+  - **C - fully separate `AdminUser` table + separate auth** (heaviest, max isolation; touches the
+    audit log + `Actor` model).
+  - Recommended: **B + the subdomain/cookie isolation and admin auth hardening from A.** Implication
+    to settle: the founder account (Dean Hughes) is currently both a contractor profile AND
+    superadmin; under B it splits into a customer identity + a separate staff superadmin account.
+    Pair with hardened admin auth (password or SSO + 2FA) for go-live. The just-built Admin user
+    management feature still applies; under B it relocates to the new Team module.
 - [ ] Anything else you flag while testing.

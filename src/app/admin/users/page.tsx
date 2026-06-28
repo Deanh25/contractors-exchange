@@ -7,21 +7,42 @@ import { timeAgo } from "@/lib/time";
 import {
   setUserSuspendedAction,
   deleteUserAction,
+  createUserAction,
+  setUserRoleAction,
 } from "@/app/actions/admin-users";
 import { setUserVerifiedAction } from "@/app/actions/admin-trust";
-import type { Prisma } from "@/generated/prisma/client";
+import { ADMIN_ROLES } from "@/lib/services/admin-users";
+import type { Prisma, AdminRole } from "@/generated/prisma/client";
+
+// Friendly, drill-down banner copy for the create/role flows.
+const NOTICE: Record<string, { tone: "error" | "ok"; text: string }> = {
+  confirm: { tone: "error", text: "Type DELETE exactly to confirm (you can't delete your own account)." },
+  create_name: { tone: "error", text: "Enter a name for the new user." },
+  create_email: { tone: "error", text: "Enter a valid email address." },
+  create_role: { tone: "error", text: "Pick a valid role for the new user." },
+  create_duplicate: { tone: "error", text: "A user with that email already exists." },
+  role_self: { tone: "error", text: "You can't remove your own superadmin role." },
+  role_last_superadmin: { tone: "error", text: "You can't demote the last superadmin." },
+  role_notfound: { tone: "error", text: "That user no longer exists." },
+  role_role: { tone: "error", text: "Pick a valid role." },
+  ok_created: { tone: "ok", text: "New user created. They can sign in with their email." },
+  ok_role: { tone: "ok", text: "Role updated." },
+};
 
 const BACK = "/admin/users";
 
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; error?: string; ok?: string }>;
 }) {
   const admin = await requireCapability("users");
   const canDelete = can(admin.adminRole, "hardDelete");
+  // Creating users and changing roles is a superadmin power (manageAdmins).
+  const canManageRoles = can(admin.adminRole, "manageAdmins");
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
+  const notice = sp.error ? NOTICE[sp.error] : sp.ok ? NOTICE[`ok_${sp.ok}`] : undefined;
 
   const where: Prisma.UserWhereInput = q
     ? { OR: [{ name: { contains: q } }, { email: { contains: q } }] }
@@ -54,11 +75,17 @@ export default async function AdminUsersPage({
         </button>
       </form>
 
-      {sp.error === "confirm" && (
-        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          Type DELETE exactly to confirm (you can&apos;t delete your own account).
+      {notice && (
+        <p
+          className={`mt-4 rounded-md px-3 py-2 text-sm ${
+            notice.tone === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+          }`}
+        >
+          {notice.text}
         </p>
       )}
+
+      {canManageRoles && <NewUserForm />}
 
       <div className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
         {users.length === 0 ? (
@@ -103,6 +130,9 @@ export default async function AdminUsersPage({
                   label={u.suspended ? "Unsuspend" : "Suspend"}
                   danger={!u.suspended}
                 />
+                {canManageRoles && u.id !== admin.id && (
+                  <RoleControl userId={u.id} current={u.adminRole} />
+                )}
                 {canDelete && u.id !== admin.id && (
                   <details>
                     <summary className="cursor-pointer list-none rounded-md px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
@@ -139,6 +169,99 @@ export default async function AdminUsersPage({
       </div>
     </div>
   );
+}
+
+function NewUserForm() {
+  return (
+    <details className="mt-4 rounded-xl border border-slate-200 bg-white p-1">
+      <summary className="cursor-pointer list-none rounded-lg px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+        + New user
+      </summary>
+      <form
+        action={createUserAction}
+        className="flex flex-wrap items-end gap-3 border-t border-slate-100 p-3"
+      >
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+          Name
+          <input
+            name="name"
+            required
+            placeholder="Jordan Rivera"
+            className="w-48 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+          Email
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="name@company.com"
+            className="w-56 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+          Admin role
+          <select
+            name="adminRole"
+            defaultValue="none"
+            className="w-40 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            {ADMIN_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {roleOptionLabel(r)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="submit"
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          Create user
+        </button>
+      </form>
+    </details>
+  );
+}
+
+function RoleControl({ userId, current }: { userId: string; current: AdminRole }) {
+  return (
+    <details>
+      <summary className="cursor-pointer list-none rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
+        Role
+      </summary>
+      <form
+        action={setUserRoleAction}
+        className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2"
+      >
+        <input type="hidden" name="userId" value={userId} />
+        <select
+          name="adminRole"
+          defaultValue={current}
+          className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+        >
+          {ADMIN_ROLES.map((r) => (
+            <option key={r} value={r}>
+              {roleOptionLabel(r)}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white hover:bg-slate-700"
+        >
+          Save role
+        </button>
+      </form>
+    </details>
+  );
+}
+
+// Readable option text for the role <select> (ROLE_LABEL calls `none` "Not an
+// admin", which reads oddly as a picklist option).
+function roleOptionLabel(role: AdminRole): string {
+  return role === "none" ? "No admin access" : ROLE_LABEL[role];
 }
 
 function Badge({ tone, children }: { tone: string; children: React.ReactNode }) {
