@@ -14,6 +14,17 @@ import { setUserVerifiedAction } from "@/app/actions/admin-trust";
 import { ADMIN_ROLES } from "@/lib/services/admin-users";
 import type { Prisma, AdminRole } from "@/generated/prisma/client";
 
+// "Type of user" filter options. Maps a friendly key to an adminRole predicate:
+// customer = no admin access; staff = any admin role; or a specific role.
+const USER_TYPES: { key: string; label: string; where: Prisma.UserWhereInput }[] = [
+  { key: "", label: "All users", where: {} },
+  { key: "customer", label: "Customers (no admin)", where: { adminRole: "none" } },
+  { key: "staff", label: "Staff (any admin)", where: { adminRole: { not: "none" } } },
+  { key: "moderator", label: "Moderators", where: { adminRole: "moderator" } },
+  { key: "admin", label: "Admins", where: { adminRole: "admin" } },
+  { key: "superadmin", label: "Superadmins", where: { adminRole: "superadmin" } },
+];
+
 // Friendly, drill-down banner copy for the create/role flows.
 const NOTICE: Record<string, { tone: "error" | "ok"; text: string }> = {
   confirm: { tone: "error", text: "Type DELETE exactly to confirm (you can't delete your own account)." },
@@ -34,7 +45,7 @@ const BACK = "/admin/users";
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; error?: string; ok?: string }>;
+  searchParams: Promise<{ q?: string; type?: string; error?: string; ok?: string }>;
 }) {
   const admin = await requireCapability("users");
   const canDelete = can(admin.adminRole, "hardDelete");
@@ -42,11 +53,21 @@ export default async function AdminUsersPage({
   const canManageRoles = can(admin.adminRole, "manageAdmins");
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
+  const type = (sp.type ?? "").trim();
   const notice = sp.error ? NOTICE[sp.error] : sp.ok ? NOTICE[`ok_${sp.ok}`] : undefined;
 
-  const where: Prisma.UserWhereInput = q
-    ? { OR: [{ name: { contains: q } }, { email: { contains: q } }] }
-    : {};
+  const typeFilter = USER_TYPES.find((t) => t.key === type) ?? USER_TYPES[0];
+  const where: Prisma.UserWhereInput = {
+    ...(q ? { OR: [{ name: { contains: q } }, { email: { contains: q } }] } : {}),
+    ...typeFilter.where,
+  };
+
+  // Removable active-filter chips (mirrors the marketplace) so it's always clear
+  // what's currently applied. Each chip links to the list with that param removed.
+  const chips: { key: string; label: string; href: string }[] = [];
+  if (q) chips.push({ key: "q", label: `Search: "${q}"`, href: usersQuery({ q, type }, ["q"]) });
+  if (typeFilter.key)
+    chips.push({ key: "type", label: `Type: ${typeFilter.label}`, href: usersQuery({ q, type }, ["type"]) });
   const users = await prisma.user.findMany({
     where,
     orderBy: { createdAt: "desc" },
@@ -60,20 +81,55 @@ export default async function AdminUsersPage({
         Search people, verify, suspend{canDelete ? ", or delete" : ""}.
       </p>
 
-      <form method="get" className="mt-4 flex gap-2">
+      <form method="get" className="mt-4 flex flex-wrap items-center gap-2">
         <input
           name="q"
           defaultValue={q}
           placeholder="Search by name or email…"
           className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
+        <select
+          name="type"
+          defaultValue={type}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          {USER_TYPES.map((t) => (
+            <option key={t.key} value={t.key}>
+              {t.label}
+            </option>
+          ))}
+        </select>
         <button
           type="submit"
           className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
         >
-          Search
+          Apply
         </button>
       </form>
+
+      {chips.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-400">Applied:</span>
+          {chips.map((c) => (
+            <Link
+              key={c.key}
+              href={c.href}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {c.label}
+              <span className="text-slate-400" aria-hidden>
+                ✕
+              </span>
+            </Link>
+          ))}
+          <Link
+            href="/admin/users"
+            className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
+          >
+            Clear all
+          </Link>
+        </div>
+      )}
 
       {notice && (
         <p
@@ -169,6 +225,17 @@ export default async function AdminUsersPage({
       </div>
     </div>
   );
+}
+
+// Build a /admin/users URL from the active params, optionally dropping some
+// (used by the removable filter chips).
+function usersQuery(params: { q?: string; type?: string }, omit: string[] = []): string {
+  const usp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v && !omit.includes(k)) usp.set(k, v);
+  }
+  const s = usp.toString();
+  return s ? `/admin/users?${s}` : "/admin/users";
 }
 
 function NewUserForm() {
