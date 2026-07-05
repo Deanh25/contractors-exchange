@@ -61,7 +61,7 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   Contact/message actions, `ListingCard`, `PostCard`, `ReviewList`/`StarRating`, `MediaGallery`
   (lightbox), and `src/lib/storage.ts` uploads. CX is FOLLOW-only (no Connect); do NOT rebuild the
   working Follow / Message / List buttons. Build in 4 reviewed parts:
-  - Part 1 — profile data + inline image uploads: add `User.bannerUrl` + `Company.bannerUrl`
+  - Part 1 **(BUILT + tested + signed off)** — profile data + inline image uploads: add `User.bannerUrl` + `Company.bannerUrl`
     (avatar/logo already exist); inline upload/replace for photo/logo AND banner via existing
     storage helper; add any missing fields (User: headline/credentials; Company: tagline, website,
     foundedYear, size, specialties, serviceArea, locations). Sensible defaults, never a broken image.
@@ -147,6 +147,21 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     Users/Companies "verified-only"); include those filter additions in this task. Keep tiles
     keyboard-accessible (real links/buttons), and respect role gating (a moderator's tiles must not
     link to pages they cannot access).
+- [ ] **Option B - separate staff (admin) accounts from customer accounts** *(DECIDED, not started)* -
+  split admin identity from customer identity so frontend and backend are genuinely separate access.
+  Build in ~4 reviewed parts (pause for test + sign-off after each):
+  - Part 1 - account type + data model: add an account type (e.g. `User.accountType` = customer |
+    staff) so an account is either a marketplace customer OR backend staff. Enforce in services
+    (customers always `adminRole` none; staff always hold an admin role, have no public marketplace
+    presence, cannot list/buy). Migration for existing seeded admins + the founder split.
+  - Part 2 - backend Team / Admins module (`/admin/team`): lists staff only; relocate the just-built
+    "create user + assign role" feature here (it creates staff accounts); superadmin-gated.
+  - Part 3 - customers-only Users module: filter `/admin/users` to customers; ensure staff never
+    appear in marketplace/search/directory and cannot reach customer flows.
+  - Part 4 - access separation + hardening: a customer login can never reach /admin and a staff login
+    can never shop; production subdomain/cookie isolation; optional hardened admin auth (password or
+    SSO + 2FA). Update seed to demo the split (founder = a contractor identity + a separate staff
+    superadmin). Architecture: domain logic in services (extend admin-users + identity), thin shims.
 - [ ] **Admin notifications** *(new — not started)* — a notification center inside `/admin`
   for admin-relevant events (new verification requests, pricing/leakage flags, disputes,
   new/high-value orders, flagged listings, etc.), with optional delivery to admins by
@@ -214,7 +229,8 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 
 - [x] **Verification criteria** — DECIDED: verified = valid contractor license + confirmed
   business identity, via a request → review (with notes) → approve/deny flow + doc upload. Built.
-- [ ] **Separate admin identity from customer identity (pre-go-live)** *(NEEDS DECISION)* - today
+- [x] **Separate admin identity from customer identity (pre-go-live)** *(DECIDED: Option B - separate
+  staff accounts; build task queued in section C)* - today
   one `User` account carries both marketplace use and admin access (`adminRole`), so a single login
   reaches both the public site and `/admin`. (Note: the "shared" feel in Codespaces is partly a dev
   artifact - the session cookie is host-only, so the production admin subdomain already gets its own
