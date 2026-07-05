@@ -15,7 +15,15 @@ type ProfileLike = {
   verified?: boolean;
 };
 
-export async function ProfileHeader({ profile }: { profile: ProfileLike }) {
+export async function ProfileHeader({
+  profile,
+  compact = false,
+}: {
+  profile: ProfileLike;
+  // compact = identity only (name/title/location); trades + bio are rendered as
+  // their own labeled sections by the caller (LinkedIn-style public profile).
+  compact?: boolean;
+}) {
   const trades = tradesFromJson(profile.trades);
   const location = metroLabel(profile.city, profile.state);
   const labels = await getCategoryLabelMap();
@@ -36,7 +44,7 @@ export async function ProfileHeader({ profile }: { profile: ProfileLike }) {
         {location && (
           <p className="mt-1 text-sm text-slate-500">📍 {location}</p>
         )}
-        {trades.length > 0 && (
+        {!compact && trades.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {trades.map((t) => (
               <span
@@ -48,7 +56,7 @@ export async function ProfileHeader({ profile }: { profile: ProfileLike }) {
             ))}
           </div>
         )}
-        {profile.bio && (
+        {!compact && profile.bio && (
           <p className="mt-3 whitespace-pre-line text-sm text-slate-700">
             {profile.bio}
           </p>

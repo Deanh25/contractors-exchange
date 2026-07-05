@@ -66,6 +66,10 @@ export default async function CompanyPage({
   const trades = tradesFromJson(company.trades);
   const catLabels = await getCategoryLabelMap();
   const location = metroLabel(company.city, company.state);
+  const asList = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  const specialties = asList(company.specialties);
+  const locations = asList(company.locations);
   const isOwner = company.memberships.some(
     (m) => m.userId === viewer?.id && m.role === "owner",
   );
@@ -93,15 +97,33 @@ export default async function CompanyPage({
   // ---- Reusable content sections (shared by workspace + public modes) -------
 
   const aboutBlock = (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-      <Avatar name={company.name} src={company.logoUrl} size={72} rounded="md" />
+    <div className="space-y-4">
+      {company.bannerUrl && (
+        <div className="h-32 w-full overflow-hidden rounded-xl bg-slate-100 sm:h-40">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={company.bannerUrl} alt="" className="h-full w-full object-cover" />
+        </div>
+      )}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <Avatar name={company.name} src={company.logoUrl} size={72} rounded="md" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             {company.name}
           </h1>
           {company.verified && <VerifiedBadge />}
+          {(isOwner || actingAsThis) && (
+            <Link
+              href={`/company/${company.slug}/edit`}
+              className="ml-auto rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Edit company profile
+            </Link>
+          )}
         </div>
+        {company.tagline && (
+          <p className="mt-1 text-sm font-medium text-slate-600">{company.tagline}</p>
+        )}
         <div className="mt-1">
           <StarRating rating={rating.avg} count={rating.count} />
         </div>
@@ -126,26 +148,84 @@ export default async function CompanyPage({
           </Link>
         </div>
         {location && <p className="mt-1 text-sm text-slate-500">📍 {location}</p>}
-        {company.serviceArea && (
-          <p className="text-sm text-slate-500">Service area: {company.serviceArea}</p>
-        )}
-        {trades.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {trades.map((t) => (
-              <span
-                key={t}
-                className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700"
+        {(company.website || company.foundedYear || company.size) && (
+          <p className="mt-1 text-sm text-slate-500">
+            {company.website && (
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand-600 hover:underline"
               >
-                {catLabels[t] ?? t}
-              </span>
-            ))}
-          </div>
-        )}
-        {company.description && (
-          <p className="mt-3 whitespace-pre-line text-sm text-slate-700">
-            {company.description}
+                {company.website}
+              </a>
+            )}
+            {company.foundedYear ? <span> · Founded {company.foundedYear}</span> : null}
+            {company.size ? <span> · {company.size} people</span> : null}
           </p>
         )}
+
+        {company.description && (
+          <div className="mt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              About
+            </h3>
+            <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+              {company.description}
+            </p>
+          </div>
+        )}
+
+        {trades.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Trades
+            </h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {trades.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                >
+                  {catLabels[t] ?? t}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {specialties.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Specialties
+            </h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {specialties.map((s) => (
+                <span
+                  key={s}
+                  className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(company.serviceArea || locations.length > 0) && (
+          <div className="mt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Service area &amp; locations
+            </h3>
+            {company.serviceArea && (
+              <p className="mt-1 text-sm text-slate-700">{company.serviceArea}</p>
+            )}
+            {locations.length > 0 && (
+              <p className="mt-1 text-sm text-slate-500">{locations.join(" · ")}</p>
+            )}
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );

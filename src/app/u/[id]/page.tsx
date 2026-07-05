@@ -12,6 +12,8 @@ import { isFollowing, getFollowCounts } from "@/lib/follows";
 import { getActingContext } from "@/lib/identity";
 import type { Party } from "@/lib/messaging";
 import { getUserRating, getUserReviews } from "@/lib/reviews";
+import { tradesFromJson } from "@/lib/trades";
+import { getCategoryLabelMap } from "@/lib/categories";
 
 export default async function PublicProfilePage({
   params,
@@ -51,11 +53,23 @@ export default async function PublicProfilePage({
     getUserReviews(user.id),
   ]);
 
+  const trades = tradesFromJson(user.trades);
+  const catLabels = await getCategoryLabelMap();
+
   return (
     <main className="flex-1">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <section className="rounded-xl border border-slate-200 bg-white p-6">
-          <ProfileHeader profile={user} />
+          {user.bannerUrl && (
+            <div className="-mx-6 -mt-6 mb-6 h-32 overflow-hidden rounded-t-xl bg-slate-100 sm:h-40">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={user.bannerUrl} alt="" className="h-full w-full object-cover" />
+            </div>
+          )}
+          <ProfileHeader profile={user} compact />
+          {user.headline && (
+            <p className="mt-2 text-sm font-medium text-slate-600">{user.headline}</p>
+          )}
 
           <div className="mt-3">
             <StarRating rating={rating.avg} count={rating.count} />
@@ -121,6 +135,44 @@ export default async function PublicProfilePage({
               </>
             )}
           </div>
+
+          {user.bio && (
+            <div className="mt-6 border-t border-slate-100 pt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                About
+              </h3>
+              <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{user.bio}</p>
+            </div>
+          )}
+
+          {trades.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Trades
+              </h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {trades.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                  >
+                    {catLabels[t] ?? t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {user.credentials && (
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Licenses &amp; certifications
+              </h3>
+              <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                {user.credentials}
+              </p>
+            </div>
+          )}
         </section>
 
         {user.memberships.length > 0 && (
