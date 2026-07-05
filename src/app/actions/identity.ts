@@ -31,7 +31,10 @@ export async function setActingContextAction(formData: FormData): Promise<void> 
     path === "/me" ||
     path.startsWith("/me/") ||
     path === "/saved" ||
-    path.startsWith("/saved/");
+    path.startsWith("/saved/") ||
+    // Your OWN public profile counts as personal; switching to a company from it
+    // should jump to the company page (viewing someone else's /u/ stays put).
+    path === `/u/${user.id}`;
   const onCompanyWorkspace = path.startsWith("/company/");
 
   let dest = path;

@@ -65,7 +65,7 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     (avatar/logo already exist); inline upload/replace for photo/logo AND banner via existing
     storage helper; add any missing fields (User: headline/credentials; Company: tagline, website,
     foundedYear, size, specialties, serviceArea, locations). Sensible defaults, never a broken image.
-  - Part 2 — shared header: banner + overlapping photo (circle users / rounded-square companies),
+  - Part 2 **(BUILT + tested + signed off)** — shared header: banner + overlapping photo (circle users / rounded-square companies),
     identity block, verified badge, follower counts, action buttons wired in, owner sees "Edit
     profile"; horizontal tab bar: Home · About · Posts · Photos · Listings · Reviews.
   - Part 3 — the six tabs (Home overview, About, Posts feed by author, Photos = work/job portfolio

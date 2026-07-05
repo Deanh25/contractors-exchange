@@ -9,6 +9,8 @@ import { getCategoryLabelMap } from "@/lib/categories";
 import { metroLabel } from "@/lib/locations";
 import { ListingCard } from "@/components/ListingCard";
 import { ownerInclude } from "@/lib/listings";
+import { ProfileCover } from "@/components/ProfileCover";
+import { ProfileTabs, parseProfileTab } from "@/components/ProfileTabs";
 import { FollowButton } from "@/components/FollowButton";
 import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
@@ -96,6 +98,73 @@ export default async function CompanyPage({
 
   // ---- Reusable content sections (shared by workspace + public modes) -------
 
+  // Labeled info sections (About / Trades / Specialties / Service area). Shared
+  // by the workspace overview (inside aboutBlock) and the public About tab.
+  const aboutSections = (
+    <>
+      {company.description && (
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            About
+          </h3>
+          <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+            {company.description}
+          </p>
+        </div>
+      )}
+
+      {trades.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Trades
+          </h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {trades.map((t) => (
+              <span
+                key={t}
+                className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700"
+              >
+                {catLabels[t] ?? t}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {specialties.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Specialties
+          </h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {specialties.map((s) => (
+              <span
+                key={s}
+                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(company.serviceArea || locations.length > 0) && (
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Service area &amp; locations
+          </h3>
+          {company.serviceArea && (
+            <p className="mt-1 text-sm text-slate-700">{company.serviceArea}</p>
+          )}
+          {locations.length > 0 && (
+            <p className="mt-1 text-sm text-slate-500">{locations.join(" · ")}</p>
+          )}
+        </div>
+      )}
+    </>
+  );
+
   const aboutBlock = (
     <div className="space-y-4">
       {company.bannerUrl && (
@@ -165,66 +234,7 @@ export default async function CompanyPage({
           </p>
         )}
 
-        {company.description && (
-          <div className="mt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              About
-            </h3>
-            <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
-              {company.description}
-            </p>
-          </div>
-        )}
-
-        {trades.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Trades
-            </h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {trades.map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-700"
-                >
-                  {catLabels[t] ?? t}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {specialties.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Specialties
-            </h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {specialties.map((s) => (
-                <span
-                  key={s}
-                  className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(company.serviceArea || locations.length > 0) && (
-          <div className="mt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Service area &amp; locations
-            </h3>
-            {company.serviceArea && (
-              <p className="mt-1 text-sm text-slate-700">{company.serviceArea}</p>
-            )}
-            {locations.length > 0 && (
-              <p className="mt-1 text-sm text-slate-500">{locations.join(" · ")}</p>
-            )}
-          </div>
-        )}
+        {aboutSections}
       </div>
       </div>
     </div>
@@ -447,56 +457,110 @@ export default async function CompanyPage({
   }
 
   // ---- Public mode: visitors and controllers not currently acting-as ---------
+  const base = `/company/${company.slug}`;
+  const profileTab = parseProfileTab(sp.tab);
+
+  const publicActions = isOwner ? (
+    <span className="rounded-md bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-800">
+      You own this page. Switch your identity to{" "}
+      <span className="font-semibold">{company.name}</span> (top bar) to manage it.
+    </span>
+  ) : viewer ? (
+    <>
+      <FollowButton
+        targetType="company"
+        targetValue={company.id}
+        following={followingCompany}
+        path={base}
+      />
+      <form action={messageCompanyAction}>
+        <input type="hidden" name="companyId" value={company.id} />
+        <button
+          type="submit"
+          className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+        >
+          Contact
+        </button>
+      </form>
+    </>
+  ) : (
+    <Link
+      href={`/signin?next=${base}`}
+      className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+    >
+      Sign in to contact
+    </Link>
+  );
+
+  const cardCls = "rounded-xl border border-slate-200 bg-white p-5";
+
   return (
     <main className="flex-1">
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <section className="rounded-xl border border-slate-200 bg-white p-6">
-          {aboutBlock}
-          <div className="mt-5 flex flex-wrap gap-2">
-            {isOwner ? (
-              <span className="rounded-md bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-800">
-                You own this page. Switch your identity to{" "}
-                <span className="font-semibold">{company.name}</span> (top bar) to
-                manage it.
-              </span>
-            ) : (
-              <>
-                {viewer && (
-                  <FollowButton
-                    targetType="company"
-                    targetValue={company.id}
-                    following={followingCompany}
-                    path={`/company/${company.slug}`}
-                  />
-                )}
-                {viewer ? (
-                  <form action={messageCompanyAction}>
-                    <input type="hidden" name="companyId" value={company.id} />
-                    <button
-                      type="submit"
-                      className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <ProfileCover
+          name={company.name}
+          avatarUrl={company.logoUrl}
+          bannerUrl={company.bannerUrl}
+          verified={company.verified}
+          shape="rounded"
+          subtitle={company.tagline}
+          meta={
+            <>
+              {location && <span>📍 {location}</span>}
+              {(company.website || company.foundedYear || company.size) && (
+                <span className="mt-0.5 block">
+                  {company.website && (
+                    <a
+                      href={company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-600 hover:underline"
                     >
-                      Contact
-                    </button>
-                  </form>
-                ) : (
-                  <Link
-                    href={`/signin?next=/company/${company.slug}`}
-                    className="rounded-md bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
-                  >
-                    Sign in to contact
-                  </Link>
-                )}
-              </>
-            )}
-          </div>
-        </section>
+                      {company.website}
+                    </a>
+                  )}
+                  {company.foundedYear ? <span> · Founded {company.foundedYear}</span> : null}
+                  {company.size ? <span> · {company.size} people</span> : null}
+                </span>
+              )}
+              <span className="mt-1 block">
+                <StarRating rating={rating.avg} count={rating.count} />
+              </span>
+            </>
+          }
+          followers={followCounts.followers}
+          following={followCounts.following}
+          followersHref={`/network?party=company:${company.id}&tab=followers`}
+          followingHref={`/network?party=company:${company.id}&tab=following`}
+          actions={publicActions}
+        />
 
-        <section className="mt-8">{storefrontBlock}</section>
-        <section className="mt-8">{teamBlock}</section>
-        <section className="mt-8">{reviewsBlock}</section>
+        <ProfileTabs basePath={base} active={profileTab} />
+
+        <div className="mt-6 space-y-6">
+          {(profileTab === "home" || profileTab === "about") && (
+            <section className={cardCls}>{aboutSections}</section>
+          )}
+          {(profileTab === "home" || profileTab === "listings") && (
+            <section className={cardCls}>{storefrontBlock}</section>
+          )}
+          {profileTab === "home" && <section className={cardCls}>{teamBlock}</section>}
+          {(profileTab === "home" || profileTab === "reviews") && (
+            <section className={cardCls}>{reviewsBlock}</section>
+          )}
+          {profileTab === "posts" && <CompanyTabPlaceholder label="Posts" />}
+          {profileTab === "photos" && <CompanyTabPlaceholder label="Photos" />}
+        </div>
       </div>
     </main>
+  );
+}
+
+function CompanyTabPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
+      {label} are coming soon.
+    </div>
   );
 }
 
