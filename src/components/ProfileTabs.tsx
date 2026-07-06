@@ -34,7 +34,7 @@ export function ProfileTabs({
   active: ProfileTabKey;
 }) {
   return (
-    <nav className="mt-4 flex gap-1 overflow-x-auto border-b border-slate-200">
+    <nav className="mt-4 flex flex-wrap gap-1 border-b border-slate-200">
       {PROFILE_TABS.map((t) => {
         const on = t.key === active;
         const href = t.key === "home" ? basePath : `${basePath}?tab=${t.key}`;

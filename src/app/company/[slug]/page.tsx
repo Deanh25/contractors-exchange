@@ -11,6 +11,7 @@ import { ListingCard } from "@/components/ListingCard";
 import { ownerInclude } from "@/lib/listings";
 import { ProfileCover } from "@/components/ProfileCover";
 import { ProfileTabs, parseProfileTab } from "@/components/ProfileTabs";
+import { ProfilePhotos } from "@/components/ProfilePhotos";
 import { FollowButton } from "@/components/FollowButton";
 import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
@@ -72,6 +73,11 @@ export default async function CompanyPage({
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
   const specialties = asList(company.specialties);
   const locations = asList(company.locations);
+  const companyPhotos = await prisma.profilePhoto.findMany({
+    where: { ownerCompanyId: company.id },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, url: true },
+  });
   const isOwner = company.memberships.some(
     (m) => m.userId === viewer?.id && m.role === "owner",
   );
@@ -549,7 +555,13 @@ export default async function CompanyPage({
             <section className={cardCls}>{reviewsBlock}</section>
           )}
           {profileTab === "posts" && <CompanyTabPlaceholder label="Posts" />}
-          {profileTab === "photos" && <CompanyTabPlaceholder label="Photos" />}
+          {profileTab === "photos" && (
+            <ProfilePhotos
+              photos={companyPhotos}
+              canManage={isOwner}
+              companyId={company.id}
+            />
+          )}
         </div>
       </div>
     </main>

@@ -876,6 +876,84 @@ async function main() {
     },
   });
 
+  // --- Sample profile media (banners, logos, LinkedIn-style fields, and a
+  // work/job portfolio with images + a video) for the profile-system demo. All
+  // files live in /public/sample (committed). ---
+  await prisma.user.update({
+    where: { email: "kerinhughes50@gmail.com" },
+    data: {
+      avatarUrl: "/sample/avatar-dean.svg",
+      bannerUrl: "/sample/banner-user.svg",
+      headline: "Paving & grading | 20 yrs commercial site work",
+      credentials: "NC General Contractor #GC-48213\nOSHA 30\nDOT-certified flagging",
+    },
+  });
+  await prisma.company.update({
+    where: { slug: "hughes-paving-grading" },
+    data: {
+      logoUrl: "/sample/logo-hughes.svg",
+      bannerUrl: "/sample/banner-company.svg",
+      tagline: "Site work done right, on schedule",
+      website: "https://hughespaving.example.com",
+      foundedYear: 2009,
+      size: "11-50",
+      specialties: ["Asphalt paving", "Grading & excavation", "Site prep", "Concrete curbing"],
+      locations: ["Charlotte, NC", "Concord, NC"],
+    },
+  });
+  await prisma.company.update({
+    where: { slug: "rivera-electric-co" },
+    data: {
+      logoUrl: "/sample/logo-rivera.svg",
+      bannerUrl: "/sample/banner-company.svg",
+      tagline: "Commercial electrical & low-voltage",
+      website: "https://riveraelectric.example.com",
+      foundedYear: 2012,
+      size: "11-50",
+      specialties: ["Panel upgrades", "EV chargers", "Low-voltage", "Generators"],
+      locations: ["Phoenix, AZ"],
+    },
+  });
+
+  const VID = "/sample/sample-video.mp4";
+  const deanU = await prisma.user.findUnique({
+    where: { email: "kerinhughes50@gmail.com" },
+    select: { id: true },
+  });
+  const hughesC = await prisma.company.findUnique({
+    where: { slug: "hughes-paving-grading" },
+    select: { id: true },
+  });
+  const riveraC = await prisma.company.findUnique({
+    where: { slug: "rivera-electric-co" },
+    select: { id: true },
+  });
+  if (deanU)
+    await prisma.profilePhoto.createMany({
+      data: [
+        { ownerUserId: deanU.id, url: "/sample/job-1.svg", sortOrder: 0 },
+        { ownerUserId: deanU.id, url: "/sample/job-2.svg", sortOrder: 1 },
+        { ownerUserId: deanU.id, url: "/sample/job-3.svg", sortOrder: 2 },
+        { ownerUserId: deanU.id, url: VID, sortOrder: 3 },
+      ],
+    });
+  if (hughesC)
+    await prisma.profilePhoto.createMany({
+      data: [
+        { ownerCompanyId: hughesC.id, url: "/sample/job-4.svg", sortOrder: 0 },
+        { ownerCompanyId: hughesC.id, url: "/sample/job-5.svg", sortOrder: 1 },
+        { ownerCompanyId: hughesC.id, url: "/sample/job-6.svg", sortOrder: 2 },
+        { ownerCompanyId: hughesC.id, url: VID, sortOrder: 3 },
+      ],
+    });
+  if (riveraC)
+    await prisma.profilePhoto.createMany({
+      data: [
+        { ownerCompanyId: riveraC.id, url: "/sample/job-1.svg", sortOrder: 0 },
+        { ownerCompanyId: riveraC.id, url: "/sample/job-3.svg", sortOrder: 1 },
+      ],
+    });
+
   const [u, c, li, p, f] = await Promise.all([
     prisma.user.count(),
     prisma.company.count(),

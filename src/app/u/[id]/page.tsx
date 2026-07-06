@@ -9,6 +9,7 @@ import { ReviewList } from "@/components/ReviewList";
 import { ListingCard } from "@/components/ListingCard";
 import { ProfileCover } from "@/components/ProfileCover";
 import { ProfileTabs, parseProfileTab } from "@/components/ProfileTabs";
+import { ProfilePhotos } from "@/components/ProfilePhotos";
 import { messageUserAction } from "@/app/actions/message";
 import { isFollowing, getFollowCounts } from "@/lib/follows";
 import { getActingContext } from "@/lib/identity";
@@ -63,6 +64,12 @@ export default async function PublicProfilePage({
       orderBy: { createdAt: "desc" },
     }),
   ]);
+
+  const photos = await prisma.profilePhoto.findMany({
+    where: { ownerUserId: user.id },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, url: true },
+  });
 
   const trades = tradesFromJson(user.trades);
   const catLabels = await getCategoryLabelMap();
@@ -215,7 +222,9 @@ export default async function PublicProfilePage({
           {tab === "listings" && listingsSection}
           {tab === "reviews" && reviewsSection}
           {tab === "posts" && <TabPlaceholder label="Posts" />}
-          {tab === "photos" && <TabPlaceholder label="Photos" />}
+          {tab === "photos" && (
+            <ProfilePhotos photos={photos} canManage={isOwn} />
+          )}
         </div>
       </div>
     </main>

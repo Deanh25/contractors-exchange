@@ -67,6 +67,7 @@ model User {
   comments           Comment[] @relation("CommentUser") // post comments this user made
   commentReactions   CommentReaction[] @relation("CommentReactionUser") // comment reactions this user made
   commentMentions    Comment[] @relation("CommentMentionUser") // comment replies that mention this user
+  profilePhotos      ProfilePhoto[] @relation("UserPhotos") // work/job portfolio photos
 }
 
 model Company {
@@ -113,6 +114,26 @@ model Company {
   commentReactions   CommentReaction[] @relation("CommentReactionCompany") // comment reactions made as this company
   commentMentions    Comment[] @relation("CommentMentionCompany") // comment replies that mention this company
   follows            Follow[] @relation("FollowFollowerCompany") // people/companies this company follows
+  profilePhotos      ProfilePhoto[] @relation("CompanyPhotos") // work/job portfolio photos
+}
+
+/**
+ * Work/job portfolio photo (or short video) shown on the LinkedIn-style profile
+ * Photos tab. Owned by exactly one of a user or a company (mirrors Listing).
+ */
+model ProfilePhoto {
+  id             String   @id @default(cuid())
+  ownerUserId    String?
+  ownerCompanyId String?
+  url            String
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  ownerUser    User?    @relation("UserPhotos", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerCompany Company? @relation("CompanyPhotos", fields: [ownerCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId])
+  @@index([ownerCompanyId])
 }
 
 enum MembershipRole {
