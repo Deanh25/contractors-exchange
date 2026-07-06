@@ -68,12 +68,23 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - Part 2 **(BUILT + tested + signed off)** — shared header: banner + overlapping photo (circle users / rounded-square companies),
     identity block, verified badge, follower counts, action buttons wired in, owner sees "Edit
     profile"; horizontal tab bar: Home · About · Posts · Photos · Listings · Reviews.
-  - Part 3 — the six tabs (Home overview, About, Posts feed by author, Photos = work/job portfolio
+  - Part 3 *(Photos tab BUILT + tested: clean card grid + lightbox, portfolio uploader with per-item
+    remove; Posts still a placeholder)* — the six tabs (Home overview, About, Posts feed by author, Photos = work/job portfolio
     gallery w/ lightbox, Listings storefront showing buyer_price only, Reviews avg+count with clean
     empty state). Listings tab must never expose sellerNet/margin.
   - Part 4 — ownership/editing: owner (or member with `canActAsCompany`) edits inline; everyone
     else read-only; gate edits server-side; respect acting-as context. Update seed so tabs render
     with real content plus one fresh empty-state profile. Commit/push per part.
+    - Workspace parity (requested): (a) add a **"View public"** button in the company workspace
+      (acting-as `WorkspaceShell`) that jumps to the public company profile, mirroring the personal
+      `/me` "View public"; (b) add a **Photos** management tab to BOTH workspaces - the personal
+      `/me` (tabs Overview / Companies / Listings / Reviews) and the company workspace (Overview /
+      Storefront / Team / Reviews) - placed **before Listings/Storefront** so it matches the public
+      tab order, where the owner (or acting member) can add/delete portfolio photos + videos. Today
+      that management lives only on the public Photos tab; this brings it into the workspace.
+  - Photos social features (Step 2, requested): likes + comments per photo, reusing the feed's
+    reaction picker + threaded comments. Needs an engagement target for photos (extend Reaction/
+    Comment to a photo, or dedicated PhotoReaction/PhotoComment) - decide when we build it.
   - Architecture rule: domain logic in `src/lib/services/profile.ts` (extend), Server Action stays a
     thin shim (parse FormData, save media to URL, call service, revalidate). Pause for review after
     each part. (Full prompt: `docs/CX-profile-system-prompt.md` if saved.)
