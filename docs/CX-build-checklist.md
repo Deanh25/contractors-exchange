@@ -75,13 +75,17 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - Part 4 — ownership/editing: owner (or member with `canActAsCompany`) edits inline; everyone
     else read-only; gate edits server-side; respect acting-as context. Update seed so tabs render
     with real content plus one fresh empty-state profile. Commit/push per part.
-    - Workspace parity (requested): (a) add a **"View public"** button in the company workspace
-      (acting-as `WorkspaceShell`) that jumps to the public company profile, mirroring the personal
-      `/me` "View public"; (b) add a **Photos** management tab to BOTH workspaces - the personal
-      `/me` (tabs Overview / Companies / Listings / Reviews) and the company workspace (Overview /
-      Storefront / Team / Reviews) - placed **before Listings/Storefront** so it matches the public
-      tab order, where the owner (or acting member) can add/delete portfolio photos + videos. Today
-      that management lives only on the public Photos tab; this brings it into the workspace.
+    - Workspace parity **(BUILT + tested + signed off, commit 5781405)**: (a) **"View public"** button in
+      the company workspace mirroring `/me`; (b) **Photos** management tab added to BOTH workspaces,
+      before Listings/Storefront, owner can add/delete portfolio photos.
+    - View-public review round **(BUILT + tested + signed off, commit 5781405)**: switching into a
+      company always lands on its workspace; fresh sign-in lands on Marketplace acting as self
+      (acting-as reset on sign-in/out); company view-public keeps `?view=public` across all tabs;
+      personal view-public shows the "Previewing your public profile" banner; public/preview Photos
+      tabs are read-only on both modules (management stays in the workspace).
+    - STILL OPEN in Part 4: server-side inline edit gating for the public tabs proper; the Posts tab
+      (still a placeholder on both modules); seed update so tabs render with real content + one fresh
+      empty-state profile.
   - Photos social features (Step 2, requested): likes + comments per photo, reusing the feed's
     reaction picker + threaded comments. Needs an engagement target for photos (extend Reaction/
     Comment to a photo, or dedicated PhotoReaction/PhotoComment) - decide when we build it.
