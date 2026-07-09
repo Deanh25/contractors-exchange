@@ -183,6 +183,17 @@ export default async function PublicProfilePage({
   return (
     <main className="flex-1">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        {isOwn && (
+          <div className="mb-4 flex items-center justify-between rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">
+            <span>Previewing your public profile</span>
+            <Link
+              href="/me"
+              className="rounded bg-white/15 px-3 py-1 font-medium hover:bg-white/25"
+            >
+              Back to workspace
+            </Link>
+          </div>
+        )}
         <ProfileCover
           name={user.name}
           avatarUrl={user.avatarUrl}
@@ -223,7 +234,9 @@ export default async function PublicProfilePage({
           {tab === "reviews" && reviewsSection}
           {tab === "posts" && <TabPlaceholder label="Posts" />}
           {tab === "photos" && (
-            <ProfilePhotos photos={photos} canManage={isOwn} />
+            // Public profile is read-only; photo management lives in the /me
+            // workspace Photos tab.
+            <ProfilePhotos photos={photos} canManage={false} />
           )}
         </div>
       </div>

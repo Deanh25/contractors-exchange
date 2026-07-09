@@ -8,16 +8,18 @@ import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { VerificationRequestCard } from "@/components/VerificationRequestCard";
+import { ProfilePhotos } from "@/components/ProfilePhotos";
 import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getUserRating, getUserReviews } from "@/lib/reviews";
 import { getSavedCount } from "@/lib/saved";
 import { getFollowCounts } from "@/lib/follows";
 
-type Tab = "overview" | "companies" | "listings" | "reviews";
+type Tab = "overview" | "companies" | "photos" | "listings" | "reviews";
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "companies", label: "Companies" },
+  { key: "photos", label: "Photos" },
   { key: "listings", label: "Listings" },
   { key: "reviews", label: "Reviews" },
 ];
@@ -82,6 +84,12 @@ export default async function MyProfilePage({
       getFollowCounts({ type: "user", id: user.id }),
     ]);
 
+  const photos = await prisma.profilePhoto.findMany({
+    where: { ownerUserId: user.id },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, url: true },
+  });
+
   const incomplete =
     !user.title && !user.bio && tradesFromJson(user.trades).length === 0;
 
@@ -137,11 +145,13 @@ export default async function MyProfilePage({
               count={
                 t.key === "companies"
                   ? memberships.length
-                  : t.key === "listings"
-                    ? listings.length
-                    : t.key === "reviews"
-                      ? reviews.length
-                      : undefined
+                  : t.key === "photos"
+                    ? photos.length
+                    : t.key === "listings"
+                      ? listings.length
+                      : t.key === "reviews"
+                        ? reviews.length
+                        : undefined
               }
             />
           ))}
@@ -241,6 +251,12 @@ export default async function MyProfilePage({
               </ul>
             )}
           </section>
+        )}
+
+        {tab === "photos" && (
+          <div className="mt-6">
+            <ProfilePhotos photos={photos} canManage />
+          </div>
         )}
 
         {tab === "listings" && (

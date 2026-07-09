@@ -29,15 +29,25 @@ export function parseProfileTab(v: string | undefined): ProfileTabKey {
 export function ProfileTabs({
   basePath,
   active,
+  query,
 }: {
   basePath: string;
   active: ProfileTabKey;
+  /**
+   * Extra query params to carry on every tab link (e.g. `{ view: "public" }` so
+   * an owner previewing their public profile stays in preview when switching tabs
+   * instead of dropping back into the acting-as workspace).
+   */
+  query?: Record<string, string>;
 }) {
   return (
     <nav className="mt-4 flex flex-wrap gap-1 border-b border-slate-200">
       {PROFILE_TABS.map((t) => {
         const on = t.key === active;
-        const href = t.key === "home" ? basePath : `${basePath}?tab=${t.key}`;
+        const params = new URLSearchParams(query);
+        if (t.key !== "home") params.set("tab", t.key);
+        const qs = params.toString();
+        const href = qs ? `${basePath}?${qs}` : basePath;
         return (
           <Link
             key={t.key}

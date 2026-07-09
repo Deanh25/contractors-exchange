@@ -16,25 +16,17 @@ function safePath(value: FormDataEntryValue | null, fallback = "/"): string {
  * Switch the current acting identity: "self" to act as the user, or a company
  * id the user may act for. Re-validated server-side before the cookie is set.
  *
- * Landing: switching to an identity while on a workspace page that belongs to
- * the OTHER identity would otherwise leave a stale view, so we move to the new
- * identity's home. Personal pages (/me, /saved) are pinned to the user; the
- * company workspace lives at /company/[slug]. On neutral/shared pages (feed,
- * inbox, orders, ...) we stay put and the page just re-scopes.
+ * Landing: switching TO a company always jumps to that company's workspace
+ * (/company/[slug]) so the switch is always visible - relying on the current
+ * path could silently leave you on your personal page. Switching back to SELF
+ * leaves a company workspace for /me, but stays put on neutral/shared pages
+ * (feed, inbox, orders, ...) which just re-scope to you.
  */
 export async function setActingContextAction(formData: FormData): Promise<void> {
   const user = await requireUser();
   const value = String(formData.get("value") ?? "self");
   const path = safePath(formData.get("path"), "/");
 
-  const onPersonalWorkspace =
-    path === "/me" ||
-    path.startsWith("/me/") ||
-    path === "/saved" ||
-    path.startsWith("/saved/") ||
-    // Your OWN public profile counts as personal; switching to a company from it
-    // should jump to the company page (viewing someone else's /u/ stays put).
-    path === `/u/${user.id}`;
   const onCompanyWorkspace = path.startsWith("/company/");
 
   let dest = path;
@@ -44,15 +36,15 @@ export async function setActingContextAction(formData: FormData): Promise<void> 
     if (onCompanyWorkspace) dest = "/me";
   } else if (await canActAs(user.id, value)) {
     await writeActingCookie(value);
-    // Entering a company while on a personal or company workspace page ->
-    // that company's workspace home.
-    if (onPersonalWorkspace || onCompanyWorkspace) {
-      const co = await prisma.company.findUnique({
-        where: { id: value },
-        select: { slug: true },
-      });
-      dest = co ? `/company/${co.slug}` : path;
-    }
+    // Switching INTO a company always lands on that company's workspace. The
+    // destination must not depend on the client-provided `path` (which can be
+    // stale/empty and would silently leave you on your personal page); the whole
+    // point of the switch is to see the company you just selected.
+    const co = await prisma.company.findUnique({
+      where: { id: value },
+      select: { slug: true },
+    });
+    dest = co ? `/company/${co.slug}` : path;
   }
 
   revalidatePath("/", "layout");

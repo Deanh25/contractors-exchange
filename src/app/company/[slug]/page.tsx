@@ -29,14 +29,14 @@ import {
   removeMemberAction,
 } from "@/app/actions/team";
 
-type Tab = "overview" | "storefront" | "team" | "reviews";
+type Tab = "overview" | "photos" | "storefront" | "team" | "reviews";
 
 export default async function CompanyPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ error?: string; tab?: string }>;
+  searchParams: Promise<{ error?: string; tab?: string; view?: string }>;
 }) {
   const { slug } = await params;
   const sp = await searchParams;
@@ -97,10 +97,14 @@ export default async function CompanyPage({
   ]);
 
   const tab: Tab = (
-    ["overview", "storefront", "team", "reviews"] as const
+    ["overview", "photos", "storefront", "team", "reviews"] as const
   ).includes(sp.tab as Tab)
     ? (sp.tab as Tab)
     : "overview";
+
+  // Owners/acting members can preview the public profile without switching
+  // identity, via ?view=public (LinkedIn-style "View as member").
+  const forcePublic = sp.view === "public";
 
   // ---- Reusable content sections (shared by workspace + public modes) -------
 
@@ -416,7 +420,8 @@ export default async function CompanyPage({
   );
 
   // ---- Workspace mode: acting AS this company (left rail = company tools) ----
-  if (actingAsThis && viewer) {
+  // ?view=public drops out of the workspace to preview the public profile.
+  if (actingAsThis && viewer && !forcePublic) {
     return (
       <main className="flex-1">
         <WorkspaceShell user={viewer} active={tab}>
@@ -427,12 +432,20 @@ export default async function CompanyPage({
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Company profile
                   </span>
-                  <Link
-                    href={`/company/${company.slug}?tab=storefront`}
-                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Storefront
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/company/${company.slug}?view=public`}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      View public
+                    </Link>
+                    <Link
+                      href={`/company/${company.slug}?tab=storefront`}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Storefront
+                    </Link>
+                  </div>
                 </div>
                 {aboutBlock}
               </section>
@@ -453,6 +466,9 @@ export default async function CompanyPage({
 
               <section>{storefrontBlock}</section>
             </div>
+          )}
+          {tab === "photos" && (
+            <ProfilePhotos photos={companyPhotos} canManage companyId={company.id} />
           )}
           {tab === "storefront" && <section>{storefrontBlock}</section>}
           {tab === "team" && <section>{teamBlock}</section>}
@@ -503,6 +519,17 @@ export default async function CompanyPage({
   return (
     <main className="flex-1">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        {forcePublic && (
+          <div className="mb-4 flex items-center justify-between rounded-lg bg-slate-900 px-4 py-2 text-sm text-white">
+            <span>Previewing your public profile</span>
+            <Link
+              href={base}
+              className="rounded bg-white/15 px-3 py-1 font-medium hover:bg-white/25"
+            >
+              Back to workspace
+            </Link>
+          </div>
+        )}
         <ProfileCover
           name={company.name}
           avatarUrl={company.logoUrl}
@@ -541,7 +568,11 @@ export default async function CompanyPage({
           actions={publicActions}
         />
 
-        <ProfileTabs basePath={base} active={profileTab} />
+        <ProfileTabs
+          basePath={base}
+          active={profileTab}
+          query={forcePublic ? { view: "public" } : undefined}
+        />
 
         <div className="mt-6 space-y-6">
           {(profileTab === "home" || profileTab === "about") && (
@@ -558,7 +589,9 @@ export default async function CompanyPage({
           {profileTab === "photos" && (
             <ProfilePhotos
               photos={companyPhotos}
-              canManage={isOwner}
+              // Public/preview mode is read-only; photo management lives in the
+              // company workspace Photos tab.
+              canManage={false}
               companyId={company.id}
             />
           )}
