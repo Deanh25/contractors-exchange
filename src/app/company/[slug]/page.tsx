@@ -12,6 +12,7 @@ import { ownerInclude } from "@/lib/listings";
 import { ProfileCover } from "@/components/ProfileCover";
 import { ProfileTabs, parseProfileTab } from "@/components/ProfileTabs";
 import { ProfilePhotos } from "@/components/ProfilePhotos";
+import { ProfilePosts } from "@/components/ProfilePosts";
 import { FollowButton } from "@/components/FollowButton";
 import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
@@ -585,7 +586,14 @@ export default async function CompanyPage({
           {(profileTab === "home" || profileTab === "reviews") && (
             <section className={cardCls}>{reviewsBlock}</section>
           )}
-          {profileTab === "posts" && <CompanyTabPlaceholder label="Posts" />}
+          {profileTab === "posts" && (
+            <ProfilePosts
+              author={{ companyId: company.id }}
+              viewerParty={viewerParty}
+              canReact={!!viewer}
+              canComment={!!viewer}
+            />
+          )}
           {profileTab === "photos" && (
             <ProfilePhotos
               photos={companyPhotos}
@@ -598,14 +606,6 @@ export default async function CompanyPage({
         </div>
       </div>
     </main>
-  );
-}
-
-function CompanyTabPlaceholder({ label }: { label: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
-      {label} are coming soon.
-    </div>
   );
 }
 

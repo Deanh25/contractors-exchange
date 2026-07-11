@@ -10,6 +10,7 @@ import { ListingCard } from "@/components/ListingCard";
 import { ProfileCover } from "@/components/ProfileCover";
 import { ProfileTabs, parseProfileTab } from "@/components/ProfileTabs";
 import { ProfilePhotos } from "@/components/ProfilePhotos";
+import { ProfilePosts } from "@/components/ProfilePosts";
 import { messageUserAction } from "@/app/actions/message";
 import { isFollowing, getFollowCounts } from "@/lib/follows";
 import { getActingContext } from "@/lib/identity";
@@ -232,7 +233,14 @@ export default async function PublicProfilePage({
           {tab === "about" && aboutSection}
           {tab === "listings" && listingsSection}
           {tab === "reviews" && reviewsSection}
-          {tab === "posts" && <TabPlaceholder label="Posts" />}
+          {tab === "posts" && (
+            <ProfilePosts
+              author={{ userId: user.id }}
+              viewerParty={viewerParty}
+              canReact={!!viewer}
+              canComment={!!viewer}
+            />
+          )}
           {tab === "photos" && (
             // Public profile is read-only; photo management lives in the /me
             // workspace Photos tab.
@@ -252,13 +260,5 @@ function Section({ label, children }: { label: string; children: React.ReactNode
       </h3>
       {children}
     </section>
-  );
-}
-
-function TabPlaceholder({ label }: { label: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
-      {label} are coming soon.
-    </div>
   );
 }
