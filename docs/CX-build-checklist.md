@@ -68,8 +68,8 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - Part 2 **(BUILT + tested + signed off)** — shared header: banner + overlapping photo (circle users / rounded-square companies),
     identity block, verified badge, follower counts, action buttons wired in, owner sees "Edit
     profile"; horizontal tab bar: Home · About · Posts · Photos · Listings · Reviews.
-  - Part 3 *(Photos tab BUILT + tested: clean card grid + lightbox, portfolio uploader with per-item
-    remove; Posts still a placeholder)* — the six tabs (Home overview, About, Posts feed by author, Photos = work/job portfolio
+  - Part 3 *(BUILT + tested: Photos tab = card grid + lightbox + portfolio uploader; Posts tab =
+    author's posts reusing feed PostCard + reactions/comments, on both /u and /company)* — the six tabs (Home overview, About, Posts feed by author, Photos = work/job portfolio
     gallery w/ lightbox, Listings storefront showing buyer_price only, Reviews avg+count with clean
     empty state). Listings tab must never expose sellerNet/margin.
   - Part 4 — ownership/editing: owner (or member with `canActAsCompany`) edits inline; everyone
@@ -89,6 +89,13 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - Photos social features (Step 2, requested): likes + comments per photo, reusing the feed's
     reaction picker + threaded comments. Needs an engagement target for photos (extend Reaction/
     Comment to a photo, or dedicated PhotoReaction/PhotoComment) - decide when we build it.
+  - Posts enhancements (requested 07/11/2026):
+    - (a) Add a **Posts** tab to BOTH workspaces (personal `/me` + company workspace) where the
+      owner sees + manages all their posts (edit/delete), LinkedIn-style - not just the read-only
+      public "View public" Posts. A "Write a post" button redirects to the Feed composer.
+    - (b) When composing a post (as user OR company), **default the Region + Trade** to the author's
+      profile selection (their trades/location) so they aren't re-picking every time; improves the
+      feed algorithm + reduces friction. Still editable per post.
   - Architecture rule: domain logic in `src/lib/services/profile.ts` (extend), Server Action stays a
     thin shim (parse FormData, save media to URL, call service, revalidate). Pause for review after
     each part. (Full prompt: `docs/CX-profile-system-prompt.md` if saved.)
