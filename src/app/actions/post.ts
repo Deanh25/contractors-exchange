@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { saveMedia } from "@/lib/storage";
-import { createPost } from "@/lib/services/posts";
+import { createPost, updatePost, deletePost } from "@/lib/services/posts";
 
 /**
  * Web transport shim over the feed-post SERVICE (src/lib/services/posts.ts). Owns
@@ -52,4 +52,40 @@ export async function createPostAction(formData: FormData) {
 
   revalidatePath("/feed");
   redirect("/feed");
+}
+
+function safeBack(value: FormDataEntryValue | null, fallback: string): string {
+  const v = typeof value === "string" ? value : "";
+  return v.startsWith("/") && !v.startsWith("//") ? v : fallback;
+}
+
+export async function updatePostAction(formData: FormData) {
+  const user = await requireUser();
+  const postId = String(formData.get("postId") ?? "");
+  const back = safeBack(formData.get("back"), "/me?tab=posts");
+
+  const result = await updatePost({
+    userId: user.id,
+    postId,
+    body: String(formData.get("body") ?? ""),
+    tradeRaw: String(formData.get("tradeTag") ?? "").trim(),
+    regionRaw: String(formData.get("regionTag") ?? "").trim(),
+  });
+  if (result.status === "empty") redirect(`/posts/${postId}/edit?error=empty`);
+
+  revalidatePath("/feed");
+  revalidatePath(back.split("?")[0]);
+  redirect(back);
+}
+
+export async function deletePostAction(formData: FormData) {
+  const user = await requireUser();
+  const postId = String(formData.get("postId") ?? "");
+  const back = safeBack(formData.get("back"), "/me?tab=posts");
+
+  await deletePost({ userId: user.id, postId });
+
+  revalidatePath("/feed");
+  revalidatePath(back.split("?")[0]);
+  redirect(back);
 }

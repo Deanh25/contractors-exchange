@@ -13,6 +13,7 @@ import { ProfileCover } from "@/components/ProfileCover";
 import { ProfileTabs, parseProfileTab } from "@/components/ProfileTabs";
 import { ProfilePhotos } from "@/components/ProfilePhotos";
 import { ProfilePosts } from "@/components/ProfilePosts";
+import { WorkspacePosts } from "@/components/WorkspacePosts";
 import { FollowButton } from "@/components/FollowButton";
 import { StarRating } from "@/components/StarRating";
 import { ReviewList } from "@/components/ReviewList";
@@ -30,7 +31,7 @@ import {
   removeMemberAction,
 } from "@/app/actions/team";
 
-type Tab = "overview" | "photos" | "storefront" | "team" | "reviews";
+type Tab = "overview" | "posts" | "photos" | "storefront" | "team" | "reviews";
 
 export default async function CompanyPage({
   params,
@@ -98,7 +99,7 @@ export default async function CompanyPage({
   ]);
 
   const tab: Tab = (
-    ["overview", "photos", "storefront", "team", "reviews"] as const
+    ["overview", "posts", "photos", "storefront", "team", "reviews"] as const
   ).includes(sp.tab as Tab)
     ? (sp.tab as Tab)
     : "overview";
@@ -467,6 +468,12 @@ export default async function CompanyPage({
 
               <section>{storefrontBlock}</section>
             </div>
+          )}
+          {tab === "posts" && (
+            <WorkspacePosts
+              author={{ companyId: company.id }}
+              backPath={`/company/${company.slug}?tab=posts`}
+            />
           )}
           {tab === "photos" && (
             <ProfilePhotos photos={companyPhotos} canManage companyId={company.id} />

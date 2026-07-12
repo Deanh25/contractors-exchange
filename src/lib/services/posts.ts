@@ -124,3 +124,75 @@ export async function createPost(
 
   return { postId: post.id };
 }
+
+/** May this user edit/delete the post? (authored it, or acts for its company.) */
+async function canManagePost(
+  userId: string,
+  post: { authorUserId: string | null; authorCompanyId: string | null },
+): Promise<boolean> {
+  if (post.authorUserId) return post.authorUserId === userId;
+  if (post.authorCompanyId) {
+    const m = await prisma.membership.findUnique({
+      where: { userId_companyId: { userId, companyId: post.authorCompanyId } },
+      select: { role: true, canActAsCompany: true },
+    });
+    return !!m && (m.role === "owner" || m.canActAsCompany);
+  }
+  return false;
+}
+
+export type UpdatePostParams = {
+  userId: string;
+  postId: string;
+  body: string;
+  tradeRaw: string;
+  regionRaw: string;
+};
+export type PostMutationResult = {
+  status: "ok" | "forbidden" | "not_found" | "empty";
+};
+
+/** Edit a post's body/trade/region (author or a company they act for only). */
+export async function updatePost(
+  params: UpdatePostParams,
+): Promise<PostMutationResult> {
+  const body = params.body.trim();
+  if (!body) return { status: "empty" };
+
+  const post = await prisma.post.findUnique({
+    where: { id: params.postId },
+    select: { authorUserId: true, authorCompanyId: true },
+  });
+  if (!post) return { status: "not_found" };
+  if (!(await canManagePost(params.userId, post))) return { status: "forbidden" };
+
+  const tradeTag =
+    params.tradeRaw && (await getLeafSlugSet()).has(params.tradeRaw)
+      ? params.tradeRaw
+      : null;
+  const regionTag = params.regionRaw
+    ? params.regionRaw.toUpperCase().slice(0, 2)
+    : null;
+
+  await prisma.post.update({
+    where: { id: params.postId },
+    data: { body, tradeTag, regionTag },
+  });
+  return { status: "ok" };
+}
+
+/** Delete a post (author or a company they act for only). */
+export async function deletePost(params: {
+  userId: string;
+  postId: string;
+}): Promise<PostMutationResult> {
+  const post = await prisma.post.findUnique({
+    where: { id: params.postId },
+    select: { authorUserId: true, authorCompanyId: true },
+  });
+  if (!post) return { status: "not_found" };
+  if (!(await canManagePost(params.userId, post))) return { status: "forbidden" };
+
+  await prisma.post.delete({ where: { id: params.postId } });
+  return { status: "ok" };
+}

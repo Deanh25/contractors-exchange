@@ -23,6 +23,7 @@ type ItemKey =
   | "profile"
   | "settings"
   | "overview"
+  | "posts"
   | "photos"
   | "storefront"
   | "team"
@@ -68,6 +69,7 @@ export async function WorkspaceShell({
     ]);
     items = [
       { key: "overview", label: "Overview", href: `/company/${company.slug}` },
+      { key: "posts", label: "Posts", href: `/company/${company.slug}?tab=posts` },
       { key: "photos", label: "Photos", href: `/company/${company.slug}?tab=photos` },
       { key: "storefront", label: "Storefront", href: `/company/${company.slug}?tab=storefront` },
       { key: "messages", label: "Inbox", href: "/messages" },
