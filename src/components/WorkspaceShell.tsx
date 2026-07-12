@@ -31,12 +31,12 @@ type ItemKey =
 type NavItem = { key: ItemKey; label: string; href: string };
 
 const PERSONAL_ITEMS: NavItem[] = [
+  { key: "profile", label: "Profile", href: "/me" },
   { key: "messages", label: "Inbox", href: "/messages" },
   { key: "orders", label: "Orders", href: "/orders" },
   { key: "insights", label: "Insights", href: "/insights" },
   { key: "saved", label: "Saved", href: "/saved" },
   { key: "notifications", label: "Notifications", href: "/notifications" },
-  { key: "profile", label: "Profile", href: "/me" },
   { key: "settings", label: "Settings", href: "/me/edit" },
 ];
 

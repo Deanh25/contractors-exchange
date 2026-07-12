@@ -7,19 +7,12 @@ import { Avatar } from "@/components/Avatar";
 import { signOutAction } from "@/app/actions/auth";
 import { setActingContextAction } from "@/app/actions/identity";
 
-const LINKS = [
-  { label: "View profile", href: "/me" },
-  { label: "Orders", href: "/orders" },
-  { label: "Saved", href: "/saved" },
-  { label: "Notifications", href: "/notifications" },
-  { label: "Settings", href: "/me/edit" },
-];
-
 type Identity = {
   id: string; // "self" or a company id
   name: string;
   avatarUrl: string | null;
   kind: "user" | "company";
+  slug?: string; // company slug, used to build company account links
 };
 
 /**
@@ -41,6 +34,26 @@ export function AvatarMenu({
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname() ?? "/";
   const canSwitch = options.length > 1;
+
+  // The "Your account" links follow the acting identity: acting as a company
+  // links to that company's pages; personal-only items (Saved, Notifications)
+  // drop off since they belong to you as a person. Orders/Insights re-scope by
+  // the acting context, so they keep the same href.
+  const accountLinks =
+    current.kind === "company" && current.slug
+      ? [
+          { label: "View profile", href: `/company/${current.slug}` },
+          { label: "Orders", href: "/orders" },
+          { label: "Insights", href: "/insights" },
+          { label: "Settings", href: `/company/${current.slug}/edit` },
+        ]
+      : [
+          { label: "View profile", href: "/me" },
+          { label: "Orders", href: "/orders" },
+          { label: "Saved", href: "/saved" },
+          { label: "Notifications", href: "/notifications" },
+          { label: "Settings", href: "/me/edit" },
+        ];
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
@@ -138,7 +151,7 @@ export function AvatarMenu({
               Your account
             </p>
           )}
-          {LINKS.map((l) => (
+          {accountLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}

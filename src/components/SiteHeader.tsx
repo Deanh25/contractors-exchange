@@ -107,6 +107,7 @@ export async function SiteHeader() {
           name: c.name,
           avatarUrl: c.logoUrl,
           kind: "company" as const,
+          slug: c.slug,
         })),
       ]
     : [];
@@ -117,6 +118,7 @@ export async function SiteHeader() {
           name: actingCtx.company.name,
           avatarUrl: actingCtx.company.logoUrl,
           kind: "company" as const,
+          slug: actingCtx.company.slug,
         }
       : user
         ? {
