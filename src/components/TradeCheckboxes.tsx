@@ -6,7 +6,14 @@ import { getLeafOptions } from "@/lib/categories";
  * chosen leaf-category slugs as repeated `trades` fields - same contract the
  * profile, company, and onboarding actions read via formData.getAll("trades").
  */
-export async function TradeCheckboxes({ selected = [] }: { selected?: string[] }) {
+export async function TradeCheckboxes({
+  selected = [],
+  primary,
+}: {
+  selected?: string[];
+  /** Enables the "main trade" star; submits as a hidden `primaryTrade` field. */
+  primary?: string | null;
+}) {
   const options = await getLeafOptions();
   return (
     <SearchSelect
@@ -15,6 +22,8 @@ export async function TradeCheckboxes({ selected = [] }: { selected?: string[] }
       options={options}
       defaultValue={selected}
       placeholder="Search trades (e.g. electrical, paving)…"
+      primaryName="primaryTrade"
+      defaultPrimary={primary ?? undefined}
     />
   );
 }

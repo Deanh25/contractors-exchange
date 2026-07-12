@@ -30,6 +30,7 @@ model User {
   state     String?
   lat       Float?
   lng       Float?
+  primaryTrade String? // the user's MAIN trade (a slug within trades); defaults posts + algorithm
   avatarUrl String?
   bannerUrl String? // profile cover image (LinkedIn-style header)
   headline  String? // short tagline shown under the name
@@ -75,6 +76,7 @@ model Company {
   name        String
   slug        String   @unique
   trades      Json? // JSON array of trade slugs (see note on User.trades)
+  primaryTrade String? // the company's MAIN trade (a slug within trades)
   serviceArea String? // free-text service area description
   city        String?
   state       String?

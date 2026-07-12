@@ -9,6 +9,10 @@ export type Option = { value: string; label: string; group?: string };
  * trades). Single- or multi-select, with optional category groups. Selected
  * values submit as hidden inputs named `name`, so server actions read them
  * exactly like a native <select>/checkbox group - no client/server contract change.
+ *
+ * Optional PRIMARY layer (multi-select only): pass `primaryName` to let the user
+ * star ONE selected item as the main one; it submits as a hidden input named
+ * `primaryName`. The primary always stays a member of the selection.
  */
 export function SearchSelect({
   name,
@@ -17,6 +21,8 @@ export function SearchSelect({
   defaultValue = [],
   placeholder = "Search…",
   emptyText = "No matches",
+  primaryName,
+  defaultPrimary,
 }: {
   name: string;
   options: Option[];
@@ -24,11 +30,28 @@ export function SearchSelect({
   defaultValue?: string[];
   placeholder?: string;
   emptyText?: string;
+  /** When set (multi-select), enables a star to mark one item as primary. */
+  primaryName?: string;
+  defaultPrimary?: string;
 }) {
   const [selected, setSelected] = useState<string[]>(defaultValue);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const usePrimary = multiple && !!primaryName;
+  const [primary, setPrimary] = useState<string>(
+    defaultPrimary && defaultValue.includes(defaultPrimary)
+      ? defaultPrimary
+      : defaultValue[0] ?? "",
+  );
+  // Derive a valid primary each render (the stored choice, else the first
+  // selected) - no effect, so it can never desync from the current selection.
+  const effectivePrimary = usePrimary
+    ? selected.includes(primary)
+      ? primary
+      : selected[0] ?? ""
+    : "";
 
   const byValue = useMemo(
     () => new Map(options.map((o) => [o.value, o])),
@@ -79,25 +102,56 @@ export function SearchSelect({
       {selected.map((v) => (
         <input key={v} type="hidden" name={name} value={v} />
       ))}
+      {usePrimary && <input type="hidden" name={primaryName} value={effectivePrimary} />}
 
       {multiple && selected.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
-          {selected.map((v) => (
-            <span
-              key={v}
-              className="inline-flex items-center gap-1 rounded-full border border-brand-500 bg-brand-50 px-2.5 py-0.5 text-sm font-medium text-brand-800"
-            >
-              {byValue.get(v)?.label ?? v}
-              <button
-                type="button"
-                onClick={() => setSelected((prev) => prev.filter((x) => x !== v))}
-                aria-label={`Remove ${byValue.get(v)?.label ?? v}`}
-                className="text-brand-600 hover:text-brand-800"
+          {selected.map((v) => {
+            const label = byValue.get(v)?.label ?? v;
+            const isPrimary = usePrimary && v === effectivePrimary;
+            return (
+              <span
+                key={v}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-sm font-medium ${
+                  isPrimary
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : "border-brand-500 bg-brand-50 text-brand-800"
+                }`}
               >
-                ×
-              </button>
-            </span>
-          ))}
+                {usePrimary && (
+                  <button
+                    type="button"
+                    onClick={() => setPrimary(v)}
+                    title={isPrimary ? "Main trade" : "Set as main trade"}
+                    aria-label={
+                      isPrimary ? "Main trade" : `Set ${label} as main trade`
+                    }
+                    className={
+                      isPrimary
+                        ? "text-amber-500"
+                        : "text-slate-400 hover:text-amber-500"
+                    }
+                  >
+                    {isPrimary ? "★" : "☆"}
+                  </button>
+                )}
+                {label}
+                {isPrimary && (
+                  <span className="rounded bg-amber-200 px-1 text-[9px] font-semibold uppercase tracking-wide text-amber-800">
+                    Main
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelected((prev) => prev.filter((x) => x !== v))}
+                  aria-label={`Remove ${label}`}
+                  className="hover:opacity-70"
+                >
+                  ×
+                </button>
+              </span>
+            );
+          })}
         </div>
       )}
 

@@ -10,6 +10,7 @@ import { getLeafGroups, getCategoryLabelMap } from "@/lib/categories";
 import { getPostEngagement } from "@/lib/engagement";
 import { usStates, stateName } from "@/lib/cities";
 import { authorInclude } from "@/lib/posts";
+import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getSavedMap, getViewerCollections } from "@/lib/saved";
 import { getActingCompanies, getActingContext } from "@/lib/identity";
@@ -125,9 +126,14 @@ export default async function FeedPage({
 
   // Companies the viewer may post as (owner OR canActAsCompany), defaulting the
   // composer to the current acting-as context.
+  // Companies the viewer may post as, each with its avatar + default trade/region
+  // so the composer can reflect the selected identity (avatar + tags) live.
   const composerCompanies = actingCompanies.map((c) => ({
     id: c.id,
     name: c.name,
+    logoUrl: c.logoUrl,
+    trade: c.primaryTrade ?? tradesFromJson(c.trades)[0] ?? "",
+    region: c.state ?? "",
   }));
   const composerDefault =
     actingCtx.type === "company" ? actingCtx.company.id : "self";
@@ -196,7 +202,9 @@ export default async function FeedPage({
             {viewer ? (
               <PostComposer
                 userName={viewer.name}
-                avatarUrl={viewer.avatarUrl}
+                userAvatarUrl={viewer.avatarUrl}
+                userTrade={viewer.primaryTrade ?? tradesFromJson(viewer.trades)[0] ?? ""}
+                userRegion={viewer.state ?? ""}
                 companies={composerCompanies}
                 defaultOwner={composerDefault}
               />

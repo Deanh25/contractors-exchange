@@ -64,6 +64,7 @@ export async function updateProfileAction(formData: FormData) {
     lat: parseCoord(formData.get("lat")),
     lng: parseCoord(formData.get("lng")),
     trades: formData.getAll("trades").map(String),
+    primaryTrade: String(formData.get("primaryTrade") ?? "") || null,
     avatarUrl,
     bannerUrl,
   });
@@ -102,6 +103,7 @@ export async function updateCompanyProfileAction(formData: FormData) {
     lat: parseCoord(formData.get("lat")),
     lng: parseCoord(formData.get("lng")),
     trades: formData.getAll("trades").map(String),
+    primaryTrade: String(formData.get("primaryTrade") ?? "") || null,
     specialties: parseList(formData.get("specialties")),
     locations: parseList(formData.get("locations")),
     logoUrl,

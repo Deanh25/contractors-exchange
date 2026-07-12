@@ -1,99 +1,66 @@
-import { createPostAction } from "@/app/actions/post";
-import { Avatar } from "@/components/Avatar";
-import { MediaInput } from "@/components/MediaInput";
-import { PostTagPicker } from "@/components/PostTagPicker";
 import { getLeafGroups } from "@/lib/categories";
 import { usStates } from "@/lib/cities";
-
-const selectCls =
-  "rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-700";
+import { PostComposerForm, type ComposerAuthor } from "@/components/PostComposerForm";
 
 /**
- * Compact discussion-post composer for the top of the feed (PRD §4). Posts can be
- * authored as the individual or a company they own, optionally tagged by trade
- * and region so they reach the right followers.
+ * Server wrapper for the feed post composer: fetches the trade taxonomy + states
+ * and assembles the "authors" the viewer may post as (self + companies), each
+ * with its avatar + default trade/region. The interactive form is the client
+ * component PostComposerForm, which reflects the selected identity live.
  */
 export async function PostComposer({
   userName,
-  avatarUrl,
+  userAvatarUrl,
+  userTrade,
+  userRegion,
   companies,
   defaultOwner = "self",
 }: {
   userName: string;
-  avatarUrl: string | null;
-  companies: { id: string; name: string }[];
+  userAvatarUrl: string | null;
+  userTrade: string;
+  userRegion: string;
+  companies: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    trade: string;
+    region: string;
+  }[];
   /** Pre-selects the "As ..." author from the acting-as context. */
   defaultOwner?: string;
 }) {
-  const owner = companies.some((c) => c.id === defaultOwner)
+  const [leafGroups, states] = [await getLeafGroups(), usStates()];
+
+  const authors: ComposerAuthor[] = [
+    {
+      key: "self",
+      name: userName,
+      avatarUrl: userAvatarUrl,
+      rounded: "full",
+      trade: userTrade,
+      region: userRegion,
+    },
+    ...companies.map((c) => ({
+      key: c.id,
+      name: c.name,
+      avatarUrl: c.logoUrl,
+      rounded: "md" as const,
+      trade: c.trade,
+      region: c.region,
+    })),
+  ];
+
+  const defaultOwnerKey = authors.some((a) => a.key === defaultOwner)
     ? defaultOwner
     : "self";
-  const leafGroups = await getLeafGroups();
+
   return (
-    <form
-      action={createPostAction}
-      className="rounded-xl border border-slate-200 bg-white p-4"
-    >
-      <div className="flex gap-3">
-        <Avatar name={userName} src={avatarUrl} size={40} />
-        <div className="min-w-0 flex-1">
-          <textarea
-            name="body"
-            required
-            rows={2}
-            placeholder="Share an update, ask the trades a question…"
-            className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
-          />
-
-          <div className="mt-2">
-            <PostTagPicker />
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {companies.length > 0 && (
-              <select name="owner" defaultValue={owner} className={selectCls}>
-                <option value="self">As {userName}</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    As {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            <select name="tradeTag" defaultValue="" className={selectCls}>
-              <option value="">Trade (optional)</option>
-              {leafGroups.map((group) => (
-                <optgroup key={group.category} label={group.category}>
-                  {group.leaves.map((l) => (
-                    <option key={l.slug} value={l.slug}>
-                      {l.label}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-
-            <select name="regionTag" defaultValue="" className={selectCls}>
-              <option value="">Region (optional)</option>
-              {usStates().map((s) => (
-                <option key={s.code} value={s.code}>
-                  {s.code} - {s.name}
-                </option>
-              ))}
-            </select>
-
-            <MediaInput name="image" label="📷 Photo / video" />
-
-            <button
-              type="submit"
-              className="ml-auto rounded-md bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-600"
-            >
-              Post
-            </button>
-          </div>
-        </div>
-      </div>
-    </form>
+    <PostComposerForm
+      authors={authors}
+      defaultOwnerKey={defaultOwnerKey}
+      leafGroups={leafGroups}
+      states={states}
+    />
   );
 }

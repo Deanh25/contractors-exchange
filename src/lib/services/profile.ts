@@ -24,6 +24,7 @@ export type UpdateProfileInput = {
   lat: number | null;
   lng: number | null;
   trades: string[];
+  primaryTrade?: string | null;
   avatarUrl?: string | null;
   bannerUrl?: string | null;
 };
@@ -41,6 +42,7 @@ export async function updateProfile(
   if (!name) return { status: "error", code: "name" };
 
   const trades = await keepLeafSlugs(input.trades);
+  const primaryTrade = pickPrimaryTrade(input.primaryTrade, trades);
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -54,6 +56,7 @@ export async function updateProfile(
       lat: input.lat,
       lng: input.lng,
       trades,
+      primaryTrade,
       ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
       ...(input.bannerUrl !== undefined ? { bannerUrl: input.bannerUrl } : {}),
     },
@@ -74,6 +77,7 @@ export type UpdateCompanyProfileInput = {
   lat: number | null;
   lng: number | null;
   trades: string[];
+  primaryTrade?: string | null;
   specialties: string[];
   locations: string[];
   logoUrl?: string | null;
@@ -83,6 +87,15 @@ export type UpdateCompanyProfileInput = {
 export type UpdateCompanyProfileResult =
   | { status: "ok" }
   | { status: "error"; code: "name" };
+
+/** The main trade must be one of the selected trades; else fall back to the first (or null). */
+function pickPrimaryTrade(
+  primary: string | null | undefined,
+  trades: string[],
+): string | null {
+  if (primary && trades.includes(primary)) return primary;
+  return trades[0] ?? null;
+}
 
 /** Trimmed, de-duplicated, non-empty strings (empty array stored as [], like trades). */
 function cleanList(values: string[]): string[] {
@@ -103,10 +116,12 @@ export async function updateCompanyProfile(
   if (!name) return { status: "error", code: "name" };
 
   const trades = await keepLeafSlugs(input.trades);
+  const primaryTrade = pickPrimaryTrade(input.primaryTrade, trades);
   await prisma.company.update({
     where: { id: companyId },
     data: {
       name,
+      primaryTrade,
       tagline: input.tagline.trim() || null,
       description: input.description.trim() || null,
       website: input.website.trim() || null,

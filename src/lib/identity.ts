@@ -19,6 +19,9 @@ export type ActingCompany = {
   name: string;
   slug: string;
   logoUrl: string | null;
+  trades: unknown;
+  primaryTrade: string | null;
+  state: string | null;
   role: "owner" | "member";
   canActAsCompany: boolean;
 };
@@ -45,6 +48,9 @@ export async function getActingCompanies(
     name: m.company.name,
     slug: m.company.slug,
     logoUrl: m.company.logoUrl,
+    trades: m.company.trades,
+    primaryTrade: m.company.primaryTrade,
+    state: m.company.state,
     role: m.role,
     canActAsCompany: m.canActAsCompany,
   }));
@@ -101,6 +107,9 @@ export async function getActingContext(
       name: m.company.name,
       slug: m.company.slug,
       logoUrl: m.company.logoUrl,
+      trades: m.company.trades,
+      primaryTrade: m.company.primaryTrade,
+      state: m.company.state,
       role: m.role,
       canActAsCompany: m.canActAsCompany,
     },

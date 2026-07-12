@@ -85,7 +85,10 @@ export default async function EditProfilePage({
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Your trades
             </label>
-            <TradeCheckboxes selected={tradesFromJson(user.trades)} />
+            <TradeCheckboxes
+              selected={tradesFromJson(user.trades)}
+              primary={user.primaryTrade}
+            />
           </div>
 
           <LocationPicker

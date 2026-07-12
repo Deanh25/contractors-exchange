@@ -130,7 +130,10 @@ export default async function EditCompanyPage({
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Trades</label>
-            <TradeCheckboxes selected={tradesFromJson(company.trades)} />
+            <TradeCheckboxes
+              selected={tradesFromJson(company.trades)}
+              primary={company.primaryTrade}
+            />
           </div>
 
           <div>
