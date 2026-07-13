@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { updatePostAction } from "@/app/actions/post";
 import { getLeafGroups } from "@/lib/categories";
 import { usStates } from "@/lib/cities";
+import { PostMediaInput } from "@/components/PostMediaInput";
 
 const selectCls =
   "rounded-md border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700";
@@ -27,6 +28,7 @@ export default async function EditPostPage({
       body: true,
       tradeTag: true,
       regionTag: true,
+      imageUrl: true,
       authorUserId: true,
       authorCompanyId: true,
       authorCompany: { select: { slug: true } },
@@ -61,7 +63,7 @@ export default async function EditPostPage({
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Edit post</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Update the text, trade, or region. To change the photo/video, delete and re-post.
+          Update the text, photo/video, trade, or region.
         </p>
 
         {error === "empty" && (
@@ -73,6 +75,13 @@ export default async function EditPostPage({
         <form action={updatePostAction} className="mt-6 space-y-4">
           <input type="hidden" name="postId" value={post.id} />
           <input type="hidden" name="back" value={back} />
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Photo / video <span className="text-slate-400">(optional)</span>
+            </label>
+            <PostMediaInput current={post.imageUrl} />
+          </div>
 
           <textarea
             name="body"

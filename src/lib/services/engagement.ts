@@ -279,3 +279,40 @@ export async function reactToComment(
   }
   return { status: "ok", postId: comment.postId };
 }
+
+// --- Delete a comment --------------------------------------------------------
+
+export type DeleteCommentInput = { commentId: string };
+export type DeleteCommentResult = { status: "ok" | "forbidden" | "not_found" };
+
+/**
+ * Delete a comment (and its replies, via cascade). Allowed for the comment's
+ * author OR the owner of the post it's on (LinkedIn-style moderation). Company
+ * authorship/ownership is checked against the actor's actingCompanyIds.
+ */
+export async function deleteComment(
+  actor: Actor,
+  input: DeleteCommentInput,
+): Promise<DeleteCommentResult> {
+  const comment = await prisma.comment.findUnique({
+    where: { id: input.commentId },
+    select: {
+      userId: true,
+      companyId: true,
+      post: { select: { authorUserId: true, authorCompanyId: true } },
+    },
+  });
+  if (!comment) return { status: "not_found" };
+
+  const authoredByActor = comment.companyId
+    ? actor.actingCompanyIds.has(comment.companyId)
+    : comment.userId === actor.userId;
+  const ownsPost = comment.post.authorCompanyId
+    ? actor.actingCompanyIds.has(comment.post.authorCompanyId)
+    : comment.post.authorUserId === actor.userId;
+
+  if (!authoredByActor && !ownsPost) return { status: "forbidden" };
+
+  await prisma.comment.delete({ where: { id: input.commentId } });
+  return { status: "ok" };
+}

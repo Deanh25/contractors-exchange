@@ -15,6 +15,7 @@ import {
   reactToPost,
   commentOnPost,
   reactToComment,
+  deleteComment,
 } from "@/lib/services/engagement";
 import type { Party } from "@/lib/messaging";
 
@@ -104,4 +105,13 @@ export async function loadPostCommentsAction(
   postId: string,
 ): Promise<CommentNode[]> {
   return getCommentTree(postId, await viewerParty());
+}
+
+/** Delete a comment inline (author or post owner); the thread reloads client-side. */
+export async function deleteCommentAction(formData: FormData) {
+  const actor = await resolveActor("/feed");
+  await deleteComment(actor, {
+    commentId: String(formData.get("commentId") ?? ""),
+  });
+  revalidatePath("/feed");
 }

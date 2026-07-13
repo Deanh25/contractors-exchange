@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { timeAgo } from "@/lib/time";
@@ -8,6 +8,7 @@ import { REACTIONS } from "@/lib/reactions";
 import { ReactionIcon } from "@/components/reactions/ReactionIcon";
 import { CommentLikeButton } from "./CommentLikeButton";
 import { CommentComposer } from "./CommentComposer";
+import { deleteCommentAction } from "@/app/actions/engagement";
 import type { CommentNode as Node } from "@/lib/engagement";
 
 // Indent replies up to this depth; deeper ones render flat (the @mention keeps
@@ -28,7 +29,18 @@ export function CommentNode({
   onChanged: () => void;
 }) {
   const [replying, setReplying] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [, startDelete] = useTransition();
   const present = REACTIONS.filter((r) => node.reactions.byType[r.type]);
+
+  function onDelete() {
+    const fd = new FormData();
+    fd.set("commentId", node.id);
+    startDelete(async () => {
+      await deleteCommentAction(fd);
+      onChanged();
+    });
+  }
 
   return (
     <div>
@@ -95,6 +107,7 @@ export function CommentNode({
               commentId={node.id}
               reactions={node.reactions}
               canReact={canComment}
+              onChanged={onChanged}
             />
             {canComment && (
               <button
@@ -105,6 +118,34 @@ export function CommentNode({
                 Reply
               </button>
             )}
+            {node.canDelete &&
+              (confirmingDelete ? (
+                <span className="flex items-center gap-1.5">
+                  <span>Delete?</span>
+                  <button
+                    type="button"
+                    onClick={onDelete}
+                    className="font-semibold text-red-600 hover:text-red-700"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    className="hover:text-slate-600"
+                  >
+                    No
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(true)}
+                  className="font-semibold hover:text-red-600"
+                >
+                  Delete
+                </button>
+              ))}
           </div>
 
           {replying && canComment && (

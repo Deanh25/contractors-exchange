@@ -147,6 +147,8 @@ export type UpdatePostParams = {
   body: string;
   tradeRaw: string;
   regionRaw: string;
+  /** Media: undefined = keep as-is, null = remove, string = replace (saved URL). */
+  imageUrl?: string | null;
 };
 export type PostMutationResult = {
   status: "ok" | "forbidden" | "not_found" | "empty";
@@ -176,7 +178,12 @@ export async function updatePost(
 
   await prisma.post.update({
     where: { id: params.postId },
-    data: { body, tradeTag, regionTag },
+    data: {
+      body,
+      tradeTag,
+      regionTag,
+      ...(params.imageUrl !== undefined ? { imageUrl: params.imageUrl } : {}),
+    },
   });
   return { status: "ok" };
 }

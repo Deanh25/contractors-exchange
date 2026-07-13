@@ -97,6 +97,8 @@ export type CommentNode = {
   /** The party this reply auto-tagged (the replied-to author), if any. */
   mention: CommentMention | null;
   reactions: CommentReactionSummary;
+  /** May the viewer delete this comment? (authored it, or owns the post.) */
+  canDelete: boolean;
   replies: CommentNode[];
 };
 
@@ -208,6 +210,17 @@ export async function getCommentTree(
   });
   if (rows.length === 0) return [];
 
+  // Post owner may moderate the whole thread; authors may delete their own.
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { authorUserId: true, authorCompanyId: true },
+  });
+  const viewerIsPostOwner =
+    !!viewer &&
+    !!post &&
+    ((viewer.type === "user" && post.authorUserId === viewer.id) ||
+      (viewer.type === "company" && post.authorCompanyId === viewer.id));
+
   // Batch every comment's reactions in one query, summarize per comment.
   const ids = rows.map((r) => r.id);
   const reactionRows = await prisma.commentReaction.findMany({
@@ -241,6 +254,11 @@ export async function getCommentTree(
         byType: {},
         viewerReaction: null,
       },
+      canDelete:
+        viewerIsPostOwner ||
+        (!!viewer &&
+          ((viewer.type === "user" && c.userId === viewer.id) ||
+            (viewer.type === "company" && c.companyId === viewer.id))),
       replies: [],
     });
   }

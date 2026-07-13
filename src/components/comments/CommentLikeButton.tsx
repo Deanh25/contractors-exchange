@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { reactToCommentAction } from "@/app/actions/engagement";
 import { REACTIONS, REACTION_META } from "@/lib/reactions";
 import { ReactionIcon } from "@/components/reactions/ReactionIcon";
@@ -15,12 +15,17 @@ export function CommentLikeButton({
   commentId,
   reactions,
   canReact,
+  onChanged,
 }: {
   commentId: string;
   reactions: CommentReactionSummary;
   canReact: boolean;
+  /** Reload the thread after reacting - comment reactions render from the
+   *  client-side tree, so a server revalidate alone would not refresh them. */
+  onChanged?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [, startReact] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,6 +64,17 @@ export function CommentLikeButton({
   const current = reactions.viewerReaction;
   const meta = current ? REACTION_META[current] : null;
 
+  function react(type: string) {
+    setOpen(false);
+    const fd = new FormData();
+    fd.set("commentId", commentId);
+    fd.set("type", type);
+    startReact(async () => {
+      await reactToCommentAction(fd);
+      onChanged?.();
+    });
+  }
+
   if (!canReact) {
     return <span className="font-semibold text-slate-300">Like</span>;
   }
@@ -90,30 +106,27 @@ export function CommentLikeButton({
         }`}
       >
         {REACTIONS.map((r) => (
-          <form action={reactToCommentAction} key={r.type}>
-            <input type="hidden" name="commentId" value={commentId} />
-            <input type="hidden" name="type" value={r.type} />
-            <button
-              type="submit"
-              title={current === r.type ? `Remove ${r.label}` : r.label}
-              aria-label={
-                current === r.type
-                  ? `Remove reaction: ${r.label}`
-                  : `React: ${r.label}`
-              }
-              onClick={() => setOpen(false)}
-              className="reaction-pill grid h-9 w-9 place-items-center rounded-full"
-              style={
-                current === r.type
-                  ? { backgroundColor: `${r.color}1f`, boxShadow: `inset 0 0 0 1.5px ${r.color}` }
-                  : undefined
-              }
-            >
-              <span className="reaction-pill-icon" style={{ color: r.color }}>
-                <ReactionIcon icon={r.icon} size={20} strokeWidth={2} />
-              </span>
-            </button>
-          </form>
+          <button
+            key={r.type}
+            type="button"
+            title={current === r.type ? `Remove ${r.label}` : r.label}
+            aria-label={
+              current === r.type
+                ? `Remove reaction: ${r.label}`
+                : `React: ${r.label}`
+            }
+            onClick={() => react(r.type)}
+            className="reaction-pill grid h-9 w-9 place-items-center rounded-full"
+            style={
+              current === r.type
+                ? { backgroundColor: `${r.color}1f`, boxShadow: `inset 0 0 0 1.5px ${r.color}` }
+                : undefined
+            }
+          >
+            <span className="reaction-pill-icon" style={{ color: r.color }}>
+              <ReactionIcon icon={r.icon} size={20} strokeWidth={2} />
+            </span>
+          </button>
         ))}
       </div>
     </div>

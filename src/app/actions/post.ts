@@ -64,12 +64,24 @@ export async function updatePostAction(formData: FormData) {
   const postId = String(formData.get("postId") ?? "");
   const back = safeBack(formData.get("back"), "/me?tab=posts");
 
+  // Media: a new upload replaces; else `imageRemove=1` clears; else keep as-is.
+  const image = formData.get("image");
+  const uploaded =
+    image instanceof File && image.size > 0 ? await saveMedia(image) : undefined;
+  const imageUrl =
+    uploaded !== undefined
+      ? uploaded
+      : formData.get("imageRemove") === "1"
+        ? null
+        : undefined;
+
   const result = await updatePost({
     userId: user.id,
     postId,
     body: String(formData.get("body") ?? ""),
     tradeRaw: String(formData.get("tradeTag") ?? "").trim(),
     regionRaw: String(formData.get("regionTag") ?? "").trim(),
+    imageUrl,
   });
   if (result.status === "empty") redirect(`/posts/${postId}/edit?error=empty`);
 
