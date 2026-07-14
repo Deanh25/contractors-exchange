@@ -10,6 +10,8 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { VerificationRequestCard } from "@/components/VerificationRequestCard";
 import { ProfilePhotos } from "@/components/ProfilePhotos";
 import { WorkspacePosts } from "@/components/WorkspacePosts";
+import { getActingContext } from "@/lib/identity";
+import type { Party } from "@/lib/messaging";
 import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getUserRating, getUserReviews } from "@/lib/reviews";
@@ -91,6 +93,13 @@ export default async function MyProfilePage({
     orderBy: { sortOrder: "asc" },
     select: { id: true, url: true },
   });
+
+  // The identity engagement acts as (react/comment) on the Posts tab.
+  const actingCtx = await getActingContext(user.id);
+  const viewerParty: Party =
+    actingCtx.type === "company"
+      ? { type: "company", id: actingCtx.company.id }
+      : { type: "user", id: user.id };
 
   const incomplete =
     !user.title && !user.bio && tradesFromJson(user.trades).length === 0;
@@ -256,7 +265,11 @@ export default async function MyProfilePage({
         )}
 
         {tab === "posts" && (
-          <WorkspacePosts author={{ userId: user.id }} backPath="/me?tab=posts" />
+          <WorkspacePosts
+            author={{ userId: user.id }}
+            backPath="/me?tab=posts"
+            viewerParty={viewerParty}
+          />
         )}
 
         {tab === "photos" && (

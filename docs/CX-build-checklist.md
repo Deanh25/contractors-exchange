@@ -115,6 +115,13 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - **Architecture**: domain logic in `src/lib/services/admin-users.ts` (new service, per AGENTS.md);
     `src/app/actions/admin-users.ts` stays a thin shim (resolve actor, parse FormData, call service,
     revalidate). No `FormData`/`redirect`/`cookies()` in the service.
+- [ ] **Marketplace product + equipment categories** *(new - not started; research/approve taxonomy
+  BEFORE building)* - add construction-industry PRODUCT/MATERIAL and EQUIPMENT category taxonomies
+  (distinct from the trade taxonomy) used when (1) a user/company LISTS an item in the marketplace and
+  (2) FILTERS marketplace search. Source from a recognized industry standard, adapted to
+  marketplace-friendly top levels. Deliverable step 1: present the proposed product + equipment
+  category lists and their source for sign-off; then wire into the listing form + marketplace filters
+  (likely extending the existing DB Category tree with a product/equipment classification).
 - [ ] **Reports module (`/admin/reports`)** *(new - not started)* - exportable, filterable,
   historical reports that complement the at-a-glance Dashboard. Each report shares: the Dashboard
   time windows (7d/30d/90d/YTD/All) plus a custom date range; filters for category/trade, region

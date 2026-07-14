@@ -473,6 +473,7 @@ export default async function CompanyPage({
             <WorkspacePosts
               author={{ companyId: company.id }}
               backPath={`/company/${company.slug}?tab=posts`}
+              viewerParty={viewerParty}
             />
           )}
           {tab === "photos" && (

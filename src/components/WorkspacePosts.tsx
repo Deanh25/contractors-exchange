@@ -2,19 +2,24 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PostCard } from "@/components/PostCard";
 import { authorInclude } from "@/lib/posts";
+import { getPostEngagement } from "@/lib/engagement";
 import { deletePostAction } from "@/app/actions/post";
+import type { Party } from "@/lib/messaging";
 
 /**
  * Workspace "Posts" management: lists the owner's own posts (user or company)
  * with Edit + Delete controls and a "Write a post" button to the Feed composer.
- * Read-only display via PostCard (no engagement bar); management-only surface.
+ * Renders the full engagement bar + comment threads (same as the Feed) so the
+ * owner can read and moderate the conversation on their posts from here too.
  */
 export async function WorkspacePosts({
   author,
   backPath,
+  viewerParty,
 }: {
   author: { userId: string } | { companyId: string };
   backPath: string;
+  viewerParty: Party | null;
 }) {
   const where =
     "userId" in author
@@ -27,6 +32,11 @@ export async function WorkspacePosts({
     orderBy: { createdAt: "desc" },
     take: 50,
   });
+
+  const engagement = await getPostEngagement(
+    posts.map((p) => p.id),
+    viewerParty,
+  );
 
   return (
     <section className="mt-6">
@@ -53,7 +63,12 @@ export async function WorkspacePosts({
         <div className="space-y-5">
           {posts.map((p) => (
             <div key={p.id}>
-              <PostCard post={p} />
+              <PostCard
+                post={p}
+                engagement={engagement.get(p.id)}
+                canReact={!!viewerParty}
+                canComment={!!viewerParty}
+              />
               <div className="mt-1 flex items-center gap-3 pl-1 text-sm">
                 <Link
                   href={`/posts/${p.id}/edit?back=${encodeURIComponent(backPath)}`}
