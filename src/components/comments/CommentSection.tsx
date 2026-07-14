@@ -16,19 +16,22 @@ export function CommentSection({
   postId,
   canComment,
   actingLabel,
+  allowModeration = true,
 }: {
   postId: string;
   canComment: boolean;
   actingLabel?: string | null;
+  /** Show the post owner's moderation delete. Off on read-only public profiles. */
+  allowModeration?: boolean;
 }) {
   const [tree, setTree] = useState<Node[] | null>(null);
   const [, start] = useTransition();
 
   const reload = useCallback(() => {
     start(async () => {
-      setTree(await loadPostCommentsAction(postId));
+      setTree(await loadPostCommentsAction(postId, allowModeration));
     });
-  }, [postId]);
+  }, [postId, allowModeration]);
 
   useEffect(() => {
     reload();

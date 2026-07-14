@@ -22,6 +22,7 @@ export function PostEngagementBar({
   canComment,
   actingLabel,
   initialOpen = false,
+  allowModeration = true,
 }: {
   postId: string;
   engagement: PostEngagement;
@@ -29,6 +30,8 @@ export function PostEngagementBar({
   canComment: boolean;
   actingLabel?: string | null;
   initialOpen?: boolean;
+  /** Show the post owner's moderation delete. Off on read-only public profiles. */
+  allowModeration?: boolean;
 }) {
   const [open, setOpen] = useState(initialOpen);
 
@@ -82,6 +85,7 @@ export function PostEngagementBar({
           postId={postId}
           canComment={canComment}
           actingLabel={actingLabel}
+          allowModeration={allowModeration}
         />
       )}
     </div>

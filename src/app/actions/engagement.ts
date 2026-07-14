@@ -100,11 +100,16 @@ export async function reactToCommentAction(formData: FormData) {
   revalidatePath(`/posts/${result.postId}`);
 }
 
-/** Lazy-load a post's comment forest (only runs when a thread is expanded). */
+/**
+ * Lazy-load a post's comment forest (only runs when a thread is expanded).
+ * `allowModeration=false` (public profiles) hides the post owner's delete on other
+ * people's comments; it never grants anything, and deleteComment re-authorizes.
+ */
 export async function loadPostCommentsAction(
   postId: string,
+  allowModeration = true,
 ): Promise<CommentNode[]> {
-  return getCommentTree(postId, await viewerParty());
+  return getCommentTree(postId, await viewerParty(), { allowModeration });
 }
 
 /** Delete a comment inline (author or post owner); the thread reloads client-side. */

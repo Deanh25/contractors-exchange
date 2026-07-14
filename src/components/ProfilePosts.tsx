@@ -9,6 +9,10 @@ import type { Party } from "@/lib/messaging";
  * reusing the feed's PostCard + engagement so reactions/comments work exactly
  * like the main feed. Self-contained: given the author and the viewer's acting
  * party, it queries + renders.
+ *
+ * Read-only surface: no post Edit/Delete menu, and the profile owner's comment
+ * MODERATION delete is hidden here (it lives in the workspace Posts tab and the
+ * feed). Visitors can still delete a comment they wrote themselves.
  */
 export async function ProfilePosts({
   author,
@@ -55,6 +59,7 @@ export async function ProfilePosts({
           engagement={engagement.get(p.id)}
           canReact={canReact}
           canComment={canComment}
+          allowModeration={false}
         />
       ))}
     </div>

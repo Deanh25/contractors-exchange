@@ -197,7 +197,18 @@ function mentionOf(c: {
 export async function getCommentTree(
   postId: string,
   viewer: Party | null,
+  opts: {
+    /**
+     * Surface the post owner's moderation delete (their power to delete OTHER
+     * people's comments). Off on public profiles, which are a read-only
+     * presentation surface: moderation belongs in the workspace Posts tab and the
+     * feed. Comment authors can always still delete their own comment. This is a
+     * DISPLAY gate only; deleteComment re-authorizes on the server regardless.
+     */
+    allowModeration?: boolean;
+  } = {},
 ): Promise<CommentNode[]> {
+  const allowModeration = opts.allowModeration ?? true;
   const rows = await prisma.comment.findMany({
     where: { postId },
     include: {
@@ -255,7 +266,7 @@ export async function getCommentTree(
         viewerReaction: null,
       },
       canDelete:
-        viewerIsPostOwner ||
+        (allowModeration && viewerIsPostOwner) ||
         (!!viewer &&
           ((viewer.type === "user" && c.userId === viewer.id) ||
             (viewer.type === "company" && c.companyId === viewer.id))),

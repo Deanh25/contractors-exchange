@@ -20,6 +20,7 @@ export async function PostCard({
   canManage = false,
   backPath = "/feed",
   deleteBackPath,
+  allowModeration = true,
 }: {
   post: PostWithAuthor;
   /** Reaction/comment summary; when provided, the engagement bar renders. */
@@ -37,6 +38,9 @@ export async function PostCard({
   /** Where Delete lands; defaults to `backPath`. Must differ on the post's own
    *  detail page, since the post won't exist to return to. */
   deleteBackPath?: string;
+  /** Show the post owner's moderation delete on comments. Off on public profiles,
+   *  which are read-only: moderation lives in the workspace Posts tab + feed. */
+  allowModeration?: boolean;
 }) {
   const author = postAuthor(post);
   const tags = postTags(post);
@@ -142,6 +146,7 @@ export async function PostCard({
           canComment={canComment}
           actingLabel={actingLabel}
           initialOpen={commentsOpen}
+          allowModeration={allowModeration}
         />
       )}
     </article>
