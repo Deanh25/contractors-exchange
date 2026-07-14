@@ -3,14 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { PostCard } from "@/components/PostCard";
 import { authorInclude } from "@/lib/posts";
 import { getPostEngagement } from "@/lib/engagement";
-import { deletePostAction } from "@/app/actions/post";
 import type { Party } from "@/lib/messaging";
 
 /**
  * Workspace "Posts" management: lists the owner's own posts (user or company)
- * with Edit + Delete controls and a "Write a post" button to the Feed composer.
- * Renders the full engagement bar + comment threads (same as the Feed) so the
- * owner can read and moderate the conversation on their posts from here too.
+ * with a "Write a post" button to the Feed composer. Renders the full engagement
+ * bar + comment threads (same as the Feed) so the owner can read and moderate the
+ * conversation on their posts from here too. Edit/Delete live in PostCard's owner
+ * menu, so the control is identical here and in the feed. Every post listed is by
+ * definition the workspace owner's, so the menu always shows.
  */
 export async function WorkspacePosts({
   author,
@@ -62,41 +63,15 @@ export async function WorkspacePosts({
       ) : (
         <div className="space-y-5">
           {posts.map((p) => (
-            <div key={p.id}>
-              <PostCard
-                post={p}
-                engagement={engagement.get(p.id)}
-                canReact={!!viewerParty}
-                canComment={!!viewerParty}
-              />
-              <div className="mt-1 flex items-center gap-3 pl-1 text-sm">
-                <Link
-                  href={`/posts/${p.id}/edit?back=${encodeURIComponent(backPath)}`}
-                  className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
-                >
-                  Edit
-                </Link>
-                <details>
-                  <summary className="cursor-pointer list-none font-medium text-red-600 hover:underline">
-                    Delete
-                  </summary>
-                  <form
-                    action={deletePostAction}
-                    className="mt-1 inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2"
-                  >
-                    <input type="hidden" name="postId" value={p.id} />
-                    <input type="hidden" name="back" value={backPath} />
-                    <span className="text-xs text-red-700">Delete this post?</span>
-                    <button
-                      type="submit"
-                      className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700"
-                    >
-                      Yes, delete
-                    </button>
-                  </form>
-                </details>
-              </div>
-            </div>
+            <PostCard
+              key={p.id}
+              post={p}
+              engagement={engagement.get(p.id)}
+              canReact={!!viewerParty}
+              canComment={!!viewerParty}
+              canManage
+              backPath={backPath}
+            />
           ))}
         </div>
       )}

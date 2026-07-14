@@ -9,7 +9,7 @@ import { toggleFollowAction } from "@/app/actions/follow";
 import { getLeafGroups, getCategoryLabelMap } from "@/lib/categories";
 import { getPostEngagement } from "@/lib/engagement";
 import { usStates, stateName } from "@/lib/cities";
-import { authorInclude } from "@/lib/posts";
+import { authorInclude, canManagePost } from "@/lib/posts";
 import { tradesFromJson } from "@/lib/trades";
 import { ownerInclude } from "@/lib/listings";
 import { getSavedMap, getViewerCollections } from "@/lib/saved";
@@ -144,6 +144,10 @@ export default async function FeedPage({
     }`;
 
   const base = { scope, trade, q, show };
+  // Posts the viewer may edit/delete: their own, plus any company they act for.
+  // Edit/Delete return to the feed with the current filters still applied.
+  const manageableCompanyIds = new Set(actingCompanies.map((c) => c.id));
+  const feedBackPath = feedQuery(base);
   const segCls = (active: boolean) =>
     `rounded-md px-3 py-1 text-sm font-medium transition ${
       active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
@@ -349,6 +353,12 @@ export default async function FeedPage({
                       actingLabel={
                         actingCtx.type === "company" ? actingCtx.company.name : null
                       }
+                      canManage={canManagePost(
+                        item.p,
+                        viewer?.id,
+                        manageableCompanyIds,
+                      )}
+                      backPath={feedBackPath}
                     />
                   ),
                 )

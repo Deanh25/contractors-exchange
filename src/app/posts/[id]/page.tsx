@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { getActingContext } from "@/lib/identity";
-import { authorInclude } from "@/lib/posts";
+import { getActingContext, getActingCompanies } from "@/lib/identity";
+import { authorInclude, canManagePost } from "@/lib/posts";
 import { PostCard } from "@/components/PostCard";
 import { getPostEngagement } from "@/lib/engagement";
 import type { Party } from "@/lib/messaging";
@@ -38,6 +38,10 @@ export default async function PostPage({
 
   const engMap = await getPostEngagement([id], viewerParty);
 
+  const manageableCompanyIds = new Set(
+    viewer ? (await getActingCompanies(viewer.id)).map((c) => c.id) : [],
+  );
+
   return (
     <main className="flex-1">
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
@@ -52,6 +56,10 @@ export default async function PostPage({
             canComment={!!viewer}
             actingLabel={actingLabel}
             commentsOpen
+            canManage={canManagePost(post, viewer?.id, manageableCompanyIds)}
+            backPath={`/posts/${id}`}
+            // The post is gone after deleting, so land back on the feed.
+            deleteBackPath="/feed"
           />
         </div>
       </div>

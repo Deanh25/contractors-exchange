@@ -72,6 +72,28 @@ export function postAuthor(post: PostWithAuthor): PostAuthor | null {
   return null;
 }
 
+/**
+ * Does this viewer own the post (may edit/delete it)? Mirrors the service rule in
+ * `canManagePost` (src/lib/services/posts.ts): you manage a post you authored, or
+ * one authored by a company you may act for (owner OR canActAsCompany). This only
+ * decides whether to SHOW the controls; the service re-checks on every mutation.
+ *
+ * `manageableCompanyIds` = the companies the viewer may act for, i.e. the ids from
+ * `getActingCompanies()`. Note this is not the CURRENT acting identity: a company
+ * owner can manage their company's posts while acting as themselves, matching the
+ * service.
+ */
+export function canManagePost(
+  post: PostWithAuthor,
+  viewerUserId: string | null | undefined,
+  manageableCompanyIds: ReadonlySet<string>,
+): boolean {
+  if (!viewerUserId) return false;
+  if (post.authorUserId) return post.authorUserId === viewerUserId;
+  if (post.authorCompanyId) return manageableCompanyIds.has(post.authorCompanyId);
+  return false;
+}
+
 /** The standard author (+ tags) include for post queries. */
 export const authorInclude = {
   authorUser: true,
