@@ -465,6 +465,63 @@ async function main() {
     }
   }
 
+  // A deliberately BUSY thread so you can test the comment sort dropdown
+  // ("Most relevant" vs "Most recent") and the "Load more comments" pager.
+  // Authored by Jordan + tagged electrical/AZ so it lands in Jordan's feed.
+  console.log("Seeding a busy comment thread (load-more + sort testing)...");
+  const busy = await prisma.post.create({
+    data: {
+      authorUser: { connect: { id: jordan.id } },
+      body: "What brand of cordless tools is actually holding up on the jobsite these days? Curious what everyone has standardized on.",
+      tradeTag: "electrical",
+      regionTag: "AZ",
+      createdAt: hoursAgo(1),
+    },
+  });
+  for (const [k, u] of [maria, sam, alicia, chris].entries()) {
+    await prisma.reaction.create({
+      data: { postId: busy.id, userId: u.id, type: rtypes[k % rtypes.length] },
+    });
+  }
+  // Eight top-level comments, staggered oldest -> newest, from different people.
+  const busyComments: { by: { id: string }; body: string; at: number }[] = [
+    { by: maria, body: "We run all Milwaukee. The M18 line has been bulletproof for us.", at: 0.9 },
+    { by: sam, body: "DeWalt for me, mostly for the battery ecosystem across the crew.", at: 0.8 },
+    { by: alicia, body: "Makita is still my pick for anything that runs all day.", at: 0.7 },
+    { by: chris, body: "The Milwaukee Packout system alone is worth switching for, honestly.", at: 0.55 },
+    { by: tyler, body: "Anyone tried the newer Ridgid stuff? The lifetime warranty is tempting.", at: 0.4 },
+    { by: brandon, body: "Bosch on the concrete side, nothing else comes close for hammer drills.", at: 0.3 },
+    { by: whitney, body: "Whatever it is, buy two batteries per tool. Learned that the hard way.", at: 0.2 },
+    { by: marcus, body: "Just standardized the whole shop on one brand. Way less charger chaos.", at: 0.1 },
+  ];
+  const createdBusy = [];
+  for (const c of busyComments) {
+    createdBusy.push(
+      await prisma.comment.create({
+        data: { postId: busy.id, userId: c.by.id, body: c.body, createdAt: hoursAgo(c.at) },
+      }),
+    );
+  }
+  // Pile reactions on an OLDER comment (index 0) and a mid one (index 4) so
+  // "Most relevant" clearly differs from "Most recent".
+  const reactTo = async (commentId: string, users: { id: string }[]) => {
+    for (const [k, u] of users.entries()) {
+      await prisma.commentReaction.create({
+        data: { commentId, userId: u.id, type: rtypes[k % rtypes.length] },
+      });
+    }
+  };
+  await reactTo(createdBusy[0].id, [sam, alicia, chris, tyler, brandon]); // 5 reactions
+  await reactTo(createdBusy[4].id, [maria, whitney, marcus]); // 3 reactions
+  await reactTo(createdBusy[3].id, [dean]); // 1 reaction
+  // A couple of replies so the thread also has depth.
+  await prisma.comment.create({
+    data: { postId: busy.id, parentId: createdBusy[0].id, userId: sam.id, body: "Same here, the M18 Fuel impact is a workhorse.", createdAt: hoursAgo(0.85) },
+  });
+  await prisma.comment.create({
+    data: { postId: busy.id, parentId: createdBusy[4].id, userId: dean.id, companyId: hughes.id, body: "We tried Ridgid, warranty claims were painless. Worth a look.", createdAt: hoursAgo(0.35) },
+  });
+
   console.log("Creating follows...");
   const follows = [
     // Dean's feed: his trades + state + a company and a person.

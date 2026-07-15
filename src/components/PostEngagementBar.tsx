@@ -47,7 +47,8 @@ export function PostEngagementBar({
           {engagement.commentCount > 0 && (
             <button
               type="button"
-              onClick={() => setOpen(true)}
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
               className="hover:underline"
             >
               {engagement.commentCount}{" "}
