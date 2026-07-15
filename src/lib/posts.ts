@@ -74,23 +74,22 @@ export function postAuthor(post: PostWithAuthor): PostAuthor | null {
 
 /**
  * Does this viewer own the post (may edit/delete it)? Mirrors the service rule in
- * `canManagePost` (src/lib/services/posts.ts): you manage a post you authored, or
- * one authored by a company you may act for (owner OR canActAsCompany). This only
- * decides whether to SHOW the controls; the service re-checks on every mutation.
- *
- * `manageableCompanyIds` = the companies the viewer may act for, i.e. the ids from
- * `getActingCompanies()`. Note this is not the CURRENT acting identity: a company
- * owner can manage their company's posts while acting as themselves, matching the
- * service.
+ * `canManagePost` (src/lib/services/posts.ts): IDENTITY-STRICT, you manage what you
+ * posted as. The viewer's ACTING party must be the post's author, so managing a
+ * company's post means switching to the company first (LinkedIn's page-admin model).
+ * This only decides whether to SHOW the controls; the service re-checks on mutation.
  */
 export function canManagePost(
-  post: PostWithAuthor,
-  viewerUserId: string | null | undefined,
-  manageableCompanyIds: ReadonlySet<string>,
+  post: { authorUserId: string | null; authorCompanyId: string | null },
+  viewer: { type: "user" | "company"; id: string } | null | undefined,
 ): boolean {
-  if (!viewerUserId) return false;
-  if (post.authorUserId) return post.authorUserId === viewerUserId;
-  if (post.authorCompanyId) return manageableCompanyIds.has(post.authorCompanyId);
+  if (!viewer) return false;
+  if (post.authorCompanyId) {
+    return viewer.type === "company" && post.authorCompanyId === viewer.id;
+  }
+  if (post.authorUserId) {
+    return viewer.type === "user" && post.authorUserId === viewer.id;
+  }
   return false;
 }
 

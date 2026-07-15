@@ -125,24 +125,29 @@ export async function createPost(
   return { postId: post.id };
 }
 
-/** May this user edit/delete the post? (authored it, or acts for its company.) */
-async function canManagePost(
-  userId: string,
+/**
+ * May this party edit/delete the post? IDENTITY-STRICT: you manage what you posted
+ * as, so the acting party must BE the author. A company owner acting as themselves
+ * cannot touch the company's posts until they switch (LinkedIn's page-admin model);
+ * this keeps one rule for posts and comments, and keeps attribution honest once a
+ * company has several members who may act for it.
+ */
+function canManagePost(
+  party: Party,
   post: { authorUserId: string | null; authorCompanyId: string | null },
-): Promise<boolean> {
-  if (post.authorUserId) return post.authorUserId === userId;
+): boolean {
   if (post.authorCompanyId) {
-    const m = await prisma.membership.findUnique({
-      where: { userId_companyId: { userId, companyId: post.authorCompanyId } },
-      select: { role: true, canActAsCompany: true },
-    });
-    return !!m && (m.role === "owner" || m.canActAsCompany);
+    return party.type === "company" && post.authorCompanyId === party.id;
+  }
+  if (post.authorUserId) {
+    return party.type === "user" && post.authorUserId === party.id;
   }
   return false;
 }
 
 export type UpdatePostParams = {
-  userId: string;
+  /** The identity the user is acting as; must be the post's author. */
+  party: Party;
   postId: string;
   body: string;
   tradeRaw: string;
@@ -154,7 +159,7 @@ export type PostMutationResult = {
   status: "ok" | "forbidden" | "not_found" | "empty";
 };
 
-/** Edit a post's body/trade/region (author or a company they act for only). */
+/** Edit a post's body/trade/region (the author identity only). */
 export async function updatePost(
   params: UpdatePostParams,
 ): Promise<PostMutationResult> {
@@ -166,7 +171,7 @@ export async function updatePost(
     select: { authorUserId: true, authorCompanyId: true },
   });
   if (!post) return { status: "not_found" };
-  if (!(await canManagePost(params.userId, post))) return { status: "forbidden" };
+  if (!canManagePost(params.party, post)) return { status: "forbidden" };
 
   const tradeTag =
     params.tradeRaw && (await getLeafSlugSet()).has(params.tradeRaw)
@@ -188,9 +193,9 @@ export async function updatePost(
   return { status: "ok" };
 }
 
-/** Delete a post (author or a company they act for only). */
+/** Delete a post (the author identity only). */
 export async function deletePost(params: {
-  userId: string;
+  party: Party;
   postId: string;
 }): Promise<PostMutationResult> {
   const post = await prisma.post.findUnique({
@@ -198,7 +203,7 @@ export async function deletePost(params: {
     select: { authorUserId: true, authorCompanyId: true },
   });
   if (!post) return { status: "not_found" };
-  if (!(await canManagePost(params.userId, post))) return { status: "forbidden" };
+  if (!canManagePost(params.party, post)) return { status: "forbidden" };
 
   await prisma.post.delete({ where: { id: params.postId } });
   return { status: "ok" };

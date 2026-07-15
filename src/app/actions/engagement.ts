@@ -16,6 +16,7 @@ import {
   commentOnPost,
   reactToComment,
   deleteComment,
+  editComment,
 } from "@/lib/services/engagement";
 import type { Party } from "@/lib/messaging";
 
@@ -117,6 +118,16 @@ export async function deleteCommentAction(formData: FormData) {
   const actor = await resolveActor("/feed");
   await deleteComment(actor, {
     commentId: String(formData.get("commentId") ?? ""),
+  });
+  revalidatePath("/feed");
+}
+
+/** Edit your own comment inline; the thread reloads client-side. */
+export async function editCommentAction(formData: FormData) {
+  const actor = await resolveActor("/feed");
+  await editComment(actor, {
+    commentId: String(formData.get("commentId") ?? ""),
+    body: String(formData.get("body") ?? ""),
   });
   revalidatePath("/feed");
 }

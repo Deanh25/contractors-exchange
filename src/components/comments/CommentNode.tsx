@@ -8,7 +8,7 @@ import { REACTIONS } from "@/lib/reactions";
 import { ReactionIcon } from "@/components/reactions/ReactionIcon";
 import { CommentLikeButton } from "./CommentLikeButton";
 import { CommentComposer } from "./CommentComposer";
-import { deleteCommentAction } from "@/app/actions/engagement";
+import { deleteCommentAction, editCommentAction } from "@/app/actions/engagement";
 import type { CommentNode as Node } from "@/lib/engagement";
 
 // Indent replies up to this depth; deeper ones render flat (the @mention keeps
@@ -30,14 +30,28 @@ export function CommentNode({
 }) {
   const [replying, setReplying] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [, startDelete] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(node.body);
+  const [pending, startWrite] = useTransition();
   const present = REACTIONS.filter((r) => node.reactions.byType[r.type]);
 
   function onDelete() {
     const fd = new FormData();
     fd.set("commentId", node.id);
-    startDelete(async () => {
+    startWrite(async () => {
       await deleteCommentAction(fd);
+      onChanged();
+    });
+  }
+
+  function onSaveEdit() {
+    if (!draft.trim()) return;
+    const fd = new FormData();
+    fd.set("commentId", node.id);
+    fd.set("body", draft);
+    startWrite(async () => {
+      await editCommentAction(fd);
+      setEditing(false);
       onChanged();
     });
   }
@@ -61,18 +75,50 @@ export function CommentNode({
             >
               {node.author.name}
             </Link>
-            <p className="whitespace-pre-line break-words text-sm text-slate-700">
-              {node.mention && (
-                <Link
-                  href={node.mention.href}
-                  className="font-medium text-brand-700 hover:underline"
-                >
-                  @{node.mention.name}
-                </Link>
-              )}
-              {node.mention && " "}
-              {node.body}
-            </p>
+            {editing ? (
+              <div className="mt-1 w-72 max-w-full">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  rows={2}
+                  autoFocus
+                  className="w-full resize-none rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+                <div className="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onSaveEdit}
+                    disabled={pending || !draft.trim()}
+                    className="rounded-md bg-brand-500 px-3 py-1 text-xs font-semibold text-white hover:bg-brand-600 disabled:opacity-50"
+                  >
+                    {pending ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft(node.body);
+                      setEditing(false);
+                    }}
+                    className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="whitespace-pre-line break-words text-sm text-slate-700">
+                {node.mention && (
+                  <Link
+                    href={node.mention.href}
+                    className="font-medium text-brand-700 hover:underline"
+                  >
+                    @{node.mention.name}
+                  </Link>
+                )}
+                {node.mention && " "}
+                {node.body}
+              </p>
+            )}
 
             {node.reactions.total > 0 && (
               <div className="absolute -bottom-2 right-1 flex items-center gap-0.5 rounded-full border border-slate-200 bg-white px-1.5 py-0.5 shadow-sm">
@@ -116,6 +162,19 @@ export function CommentNode({
                 className="font-semibold hover:text-slate-600"
               >
                 Reply
+              </button>
+            )}
+            {node.canEdit && !editing && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(node.body);
+                  setConfirmingDelete(false);
+                  setEditing(true);
+                }}
+                className="font-semibold hover:text-slate-600"
+              >
+                Edit
               </button>
             )}
             {node.canDelete &&

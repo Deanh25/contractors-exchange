@@ -146,7 +146,6 @@ export default async function FeedPage({
   const base = { scope, trade, q, show };
   // Posts the viewer may edit/delete: their own, plus any company they act for.
   // Edit/Delete return to the feed with the current filters still applied.
-  const manageableCompanyIds = new Set(actingCompanies.map((c) => c.id));
   const feedBackPath = feedQuery(base);
   const segCls = (active: boolean) =>
     `rounded-md px-3 py-1 text-sm font-medium transition ${
@@ -353,11 +352,7 @@ export default async function FeedPage({
                       actingLabel={
                         actingCtx.type === "company" ? actingCtx.company.name : null
                       }
-                      canManage={canManagePost(
-                        item.p,
-                        viewer?.id,
-                        manageableCompanyIds,
-                      )}
+                      canManage={canManagePost(item.p, viewerParty)}
                       backPath={feedBackPath}
                     />
                   ),

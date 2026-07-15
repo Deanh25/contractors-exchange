@@ -269,6 +269,7 @@ export default async function MyProfilePage({
             author={{ userId: user.id }}
             backPath="/me?tab=posts"
             viewerParty={viewerParty}
+            ownerName={user.name}
           />
         )}
 

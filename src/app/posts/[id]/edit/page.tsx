@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { getActingContext } from "@/lib/identity";
+import { canManagePost } from "@/lib/posts";
 import { updatePostAction } from "@/app/actions/post";
 import { getLeafGroups } from "@/lib/categories";
 import { usStates } from "@/lib/cities";
@@ -36,18 +38,15 @@ export default async function EditPostPage({
   });
   if (!post) notFound();
 
-  // Authorize: the author, or a member who may act for the author company.
-  let canManage = false;
-  if (post.authorUserId) {
-    canManage = post.authorUserId === user.id;
-  } else if (post.authorCompanyId) {
-    const m = await prisma.membership.findUnique({
-      where: { userId_companyId: { userId: user.id, companyId: post.authorCompanyId } },
-      select: { role: true, canActAsCompany: true },
-    });
-    canManage = !!m && (m.role === "owner" || m.canActAsCompany);
-  }
-  if (!canManage) redirect("/feed");
+  // Authorize, identity-strict: the acting identity must BE the post's author.
+  // Editing a company's post means switching to the company first, so the same
+  // rule holds here, in the feed's owner menu and in the service.
+  const ctx = await getActingContext(user.id);
+  const acting: { type: "user" | "company"; id: string } =
+    ctx.type === "company"
+      ? { type: "company", id: ctx.company.id }
+      : { type: "user", id: user.id };
+  if (!canManagePost(post, acting)) redirect("/feed");
 
   const back =
     backRaw && backRaw.startsWith("/") && !backRaw.startsWith("//")

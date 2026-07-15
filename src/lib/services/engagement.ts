@@ -25,6 +25,23 @@ function postAuthorParty(post: {
   return null;
 }
 
+/**
+ * The identity a comment was posted AS. A company comment also records the human
+ * who typed it, so the company always wins: it is the name the comment displays
+ * under. Authorship is IDENTITY-STRICT everywhere - you manage what you posted as,
+ * so to edit or moderate as your company you must be acting as it. Never widen this
+ * to actor.actingCompanyIds: that would let personal-you rewrite words shown under
+ * the company's name (and vice versa).
+ */
+function commentAuthorParty(c: {
+  userId: string;
+  companyId: string | null;
+}): Party {
+  return c.companyId
+    ? { type: "company", id: c.companyId }
+    : { type: "user", id: c.userId };
+}
+
 async function partyName(party: Party, fallback: string): Promise<string> {
   if (party.type === "company") {
     const co = await prisma.company.findUnique({
@@ -287,8 +304,9 @@ export type DeleteCommentResult = { status: "ok" | "forbidden" | "not_found" };
 
 /**
  * Delete a comment (and its replies, via cascade). Allowed for the comment's
- * author OR the owner of the post it's on (LinkedIn-style moderation). Company
- * authorship/ownership is checked against the actor's actingCompanyIds.
+ * author OR the owner of the post it's on (LinkedIn-style moderation). Both are
+ * identity-strict: they compare against the identity the actor is ACTING AS, so
+ * managing your company's comments means switching to the company first.
  */
 export async function deleteComment(
   actor: Actor,
@@ -304,15 +322,49 @@ export async function deleteComment(
   });
   if (!comment) return { status: "not_found" };
 
-  const authoredByActor = comment.companyId
-    ? actor.actingCompanyIds.has(comment.companyId)
-    : comment.userId === actor.userId;
-  const ownsPost = comment.post.authorCompanyId
-    ? actor.actingCompanyIds.has(comment.post.authorCompanyId)
-    : comment.post.authorUserId === actor.userId;
+  // Authors delete their own; the post's owner may moderate the whole thread.
+  const postAuthor = postAuthorParty(comment.post);
+  const authoredByActor = partiesEqual(commentAuthorParty(comment), actor.party);
+  const ownsPost = !!postAuthor && partiesEqual(postAuthor, actor.party);
 
   if (!authoredByActor && !ownsPost) return { status: "forbidden" };
 
   await prisma.comment.delete({ where: { id: input.commentId } });
+  return { status: "ok" };
+}
+
+// --- Edit a comment ----------------------------------------------------------
+
+export type EditCommentInput = { commentId: string; body: string };
+export type EditCommentResult = {
+  status: "ok" | "forbidden" | "not_found" | "empty";
+};
+
+/**
+ * Edit a comment's text. AUTHOR ONLY - a post owner may moderate (delete) the
+ * thread but must never be able to rewrite someone else's words.
+ */
+export async function editComment(
+  actor: Actor,
+  input: EditCommentInput,
+): Promise<EditCommentResult> {
+  const body = input.body.trim();
+  if (!body) return { status: "empty" };
+
+  const comment = await prisma.comment.findUnique({
+    where: { id: input.commentId },
+    select: { userId: true, companyId: true },
+  });
+  if (!comment) return { status: "not_found" };
+
+  // Authors only. A post owner may moderate (delete) but never rewrite the words.
+  if (!partiesEqual(commentAuthorParty(comment), actor.party)) {
+    return { status: "forbidden" };
+  }
+
+  await prisma.comment.update({
+    where: { id: input.commentId },
+    data: { body },
+  });
   return { status: "ok" };
 }

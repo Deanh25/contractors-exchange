@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { resolveActor } from "@/lib/identity";
 import { saveMedia } from "@/lib/storage";
 import { createPost, updatePost, deletePost } from "@/lib/services/posts";
 
@@ -60,7 +61,7 @@ function safeBack(value: FormDataEntryValue | null, fallback: string): string {
 }
 
 export async function updatePostAction(formData: FormData) {
-  const user = await requireUser();
+  const actor = await resolveActor();
   const postId = String(formData.get("postId") ?? "");
   const back = safeBack(formData.get("back"), "/me?tab=posts");
 
@@ -76,7 +77,7 @@ export async function updatePostAction(formData: FormData) {
         : undefined;
 
   const result = await updatePost({
-    userId: user.id,
+    party: actor.party,
     postId,
     body: String(formData.get("body") ?? ""),
     tradeRaw: String(formData.get("tradeTag") ?? "").trim(),
@@ -91,11 +92,11 @@ export async function updatePostAction(formData: FormData) {
 }
 
 export async function deletePostAction(formData: FormData) {
-  const user = await requireUser();
+  const actor = await resolveActor();
   const postId = String(formData.get("postId") ?? "");
   const back = safeBack(formData.get("back"), "/me?tab=posts");
 
-  await deletePost({ userId: user.id, postId });
+  await deletePost({ party: actor.party, postId });
 
   revalidatePath("/feed");
   revalidatePath(back.split("?")[0]);

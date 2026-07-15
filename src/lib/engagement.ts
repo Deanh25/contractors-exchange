@@ -99,6 +99,8 @@ export type CommentNode = {
   reactions: CommentReactionSummary;
   /** May the viewer delete this comment? (authored it, or owns the post.) */
   canDelete: boolean;
+  /** May the viewer EDIT it? Authors only - owners moderate, they don't rewrite. */
+  canEdit: boolean;
   replies: CommentNode[];
 };
 
@@ -252,6 +254,16 @@ export async function getCommentTree(
 
   const nodeById = new Map<string, CommentNode>();
   for (const c of rows) {
+    // Did the viewer's ACTING identity write this comment? Identity-strict: a
+    // company comment also records the human who typed it, so a user viewer must
+    // also see companyId === null, else personal-you would appear to own (and be
+    // able to rewrite) words displayed under your company's name.
+    const authoredByViewer =
+      !!viewer &&
+      (viewer.type === "company"
+        ? c.companyId === viewer.id
+        : c.userId === viewer.id && c.companyId === null);
+
     nodeById.set(c.id, {
       id: c.id,
       body: c.body,
@@ -265,11 +277,9 @@ export async function getCommentTree(
         byType: {},
         viewerReaction: null,
       },
-      canDelete:
-        (allowModeration && viewerIsPostOwner) ||
-        (!!viewer &&
-          ((viewer.type === "user" && c.userId === viewer.id) ||
-            (viewer.type === "company" && c.companyId === viewer.id))),
+      // Post owners may moderate (delete) but never rewrite someone else's words.
+      canDelete: (allowModeration && viewerIsPostOwner) || authoredByViewer,
+      canEdit: authoredByViewer,
       replies: [],
     });
   }
