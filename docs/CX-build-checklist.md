@@ -135,9 +135,12 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     (nullable, indexed); persisted in `src/lib/services/listings.ts`; slugs validated against the
     taxonomy in the action shim; `ItemClassification` picker on the new + edit forms; classification
     badge on the listing detail page; demo listings tagged in the seed.
-  - [ ] **Browse side (in progress)** - redesign `src/app/listings/page.tsx` (per the approved mock):
-    Products/Materials + Equipment filter groups as expandable 2-level multi-select trees, a card
-    "kind" tag, instant-apply filters, and a reserved chips row. Add `category`/`itemKind` query params.
+  - [x] **Browse side** - redesigned `src/app/listings/page.tsx` (per the approved mock): navy rail with
+    Products/Materials + Equipment filter groups as expandable 2-level multi-select trees (`cat`/`sub`
+    params), all facets now multi-select (type/trade/condition/manufacturer), instant-apply filters (no
+    Apply button - `FilterForm` intercepts submit and does a scroll-preserving router.replace; native
+    GET fallback with JS off), a reserved active-filter chips row, and a card "kind" tag. Location keeps
+    the linked State+City picker PLUS the distance-radius (haversine) search. *(Awaiting your test.)*
 - [ ] **Reports module (`/admin/reports`)** *(new - not started)* - exportable, filterable,
   historical reports that complement the at-a-glance Dashboard. Each report shares: the Dashboard
   time windows (7d/30d/90d/YTD/All) plus a custom date range; filters for category/trade, region

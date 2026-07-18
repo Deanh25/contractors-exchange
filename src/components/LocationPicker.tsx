@@ -30,6 +30,7 @@ export function LocationPicker({
   defaultState,
   defaultLat,
   defaultLng,
+  submitOnChange = false,
 }: {
   mode?: "input" | "filter";
   heading?: string;
@@ -38,6 +39,9 @@ export function LocationPicker({
   defaultState?: string | null;
   defaultLat?: number | null;
   defaultLng?: number | null;
+  /** In an instant-apply filter form, re-run the query when the committed
+   *  state/city changes (the enclosing <form> is submitted). */
+  submitOnChange?: boolean;
 }) {
   const [state, setState] = useState(defaultState ?? "");
   const [selectedCity, setSelectedCity] = useState<Selected | null>(
@@ -54,7 +58,21 @@ export function LocationPicker({
   const [results, setResults] = useState<CityResult[]>([]);
   const [open, setOpen] = useState(false);
   const cityRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Instant-apply: re-submit the enclosing form when a committed state/city
+  // changes (skipping the initial mount). Runs after render so the hidden
+  // inputs already hold the new values.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (submitOnChange) rootRef.current?.closest("form")?.requestSubmit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, selectedCity]);
 
   useEffect(() => {
     const q = cityQuery.trim();
@@ -107,7 +125,10 @@ export function LocationPicker({
     open && cityQuery.trim().length >= 2 && results.length > 0;
 
   return (
-    <div>
+    <div
+      ref={rootRef}
+      onChange={submitOnChange ? (e) => e.stopPropagation() : undefined}
+    >
       {heading && (
         <label className="mb-1 block text-sm font-medium text-slate-700">
           {heading}

@@ -9,6 +9,10 @@ import {
   type ListingWithOwner,
 } from "@/lib/listings";
 import { categoryLabel } from "@/lib/categories";
+import {
+  categoryLabel as taxCategoryLabel,
+  subcategoryLabel,
+} from "@/lib/taxonomy";
 import { metroLabel } from "@/lib/locations";
 import { formatMiles } from "@/lib/geo";
 import { SaveButton } from "@/components/SaveButton";
@@ -49,6 +53,18 @@ export async function MarketplaceCard({
   const owner = listingOwner(listing);
   const location = metroLabel(listing.city, listing.state);
   const tradeName = await categoryLabel(listing.tradeCategory);
+  // Product/Equipment classification tag (src/lib/taxonomy.ts): "Equipment · Skid
+  // steers" / "Product · Bagged concrete". Prefers the sub-category label; falls
+  // back to the category. Absent for untagged listings (services, older items).
+  const kind = listing.itemKind ?? undefined;
+  const kindLabel =
+    kind === "product" ? "Product" : kind === "equipment" ? "Equipment" : null;
+  const classLabel =
+    kindLabel && listing.categorySlug
+      ? (listing.subcategorySlug &&
+          subcategoryLabel(listing.categorySlug, listing.subcategorySlug, kind)) ||
+        taxCategoryLabel(listing.categorySlug, kind)
+      : null;
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 hover:shadow-sm">
@@ -98,6 +114,11 @@ export async function MarketplaceCard({
         </Link>
 
         <div className="mt-1.5 flex min-h-[1.25rem] flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+          {classLabel && (
+            <span className="rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 font-semibold text-brand-800">
+              {kindLabel} · {classLabel}
+            </span>
+          )}
           <span className="rounded-full border border-slate-200 px-2 py-0.5 font-medium text-slate-600">
             {tradeName}
           </span>

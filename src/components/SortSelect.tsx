@@ -13,12 +13,14 @@ export function SortSelect({
 }: {
   sort: string;
   options: { value: string; label: string }[];
-  params: Record<string, string | undefined>;
+  params: Record<string, string | string[] | undefined>;
 }) {
   return (
     <form method="get" className="flex items-center gap-1.5">
-      {Object.entries(params).map(([k, v]) =>
-        v ? <input key={k} type="hidden" name={k} value={v} /> : null,
+      {Object.entries(params).flatMap(([k, v]) =>
+        (Array.isArray(v) ? v : v ? [v] : []).map((val, i) => (
+          <input key={`${k}-${i}`} type="hidden" name={k} value={val} />
+        )),
       )}
       <label htmlFor="sort" className="text-xs font-medium text-slate-500">
         Sort
