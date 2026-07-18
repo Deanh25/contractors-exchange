@@ -146,6 +146,12 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     inner scrollbar, uniform with the rest). Distance filter gained a **Nationwide (any distance)** option
     past 250 mi: it drops the radius ring but keeps the chosen city as the center for Nearest sort + "~N
     mi". *(Awaiting your test.)*
+  - [ ] **Paginate the browse grid** *(TODO, noted 07/18/2026)* - `src/app/listings/page.tsx` currently
+    hard-caps at `rows.slice(0, 60)` with NO page controls, so listings past 60 are silently invisible
+    (Materials Market paginates ~24/page with numbered pages). Add a page size + pager (a `page` query
+    param, prev/next + numbered pages) OR a "Load more" like the feed. Must play nice with the
+    instant-apply filters (changing a filter resets to page 1) and the distance/Nearest sort. Decide page
+    size (24-48) when we build it.
 - [x] **Top-bar "New" button** *(requested 07/17/2026)* - the header `+ List` link became a general **New**
   dropdown (`src/components/NewMenu.tsx`): New Listing (`/listings/new`) + New Post (`/feed`), so future
   create flows slot in here instead of adding more header buttons.
