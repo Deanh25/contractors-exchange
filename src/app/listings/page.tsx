@@ -9,6 +9,7 @@ import {
   RailGroup,
   CheckRow,
   TaxonomyFilter,
+  TradeFilter,
 } from "@/components/marketplace/MarketplaceFilterUI";
 import { getLeafGroups, getCategoryLabelMap } from "@/lib/categories";
 import {
@@ -102,10 +103,15 @@ export default async function ListingsPage({
   const state = one(sp.state).toUpperCase();
   const lat = Number(one(sp.lat));
   const lng = Number(one(sp.lng));
-  const radius = Number(one(sp.radius));
+  const radiusRaw = one(sp.radius);
+  const nationwide = radiusRaw === "nationwide";
+  const radius = Number(radiusRaw);
   const hasCenter =
     Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+  // A numeric radius filters to a distance ring; "nationwide" keeps every listing
+  // but still uses the chosen city as the center for the Nearest sort + "~N mi".
   const radiusActive = !!city && hasCenter && Number.isFinite(radius) && radius > 0;
+  const geoCenter = !!city && hasCenter && (radiusActive || nationwide);
 
   // Multi-select facets (checkbox groups), each validated against its vocabulary.
   const types = arr(sp.type).filter((t) => TYPE_VALUES.has(t as ListingChoice));
@@ -153,32 +159,39 @@ export default async function ListingsPage({
           lng: { gte: bb.minLng, lte: bb.maxLng },
         };
       })()
-    : {
-        ...baseWhere,
-        ...(city ? { city: { contains: city } } : {}),
-        ...(state ? { state } : {}),
-      };
+    : nationwide
+      ? // Nationwide: ignore the location text filter entirely, show everything.
+        baseWhere
+      : {
+          ...baseWhere,
+          ...(city ? { city: { contains: city } } : {}),
+          ...(state ? { state } : {}),
+        };
 
   const [raw, viewer] = await Promise.all([
     prisma.listing.findMany({
       where,
       include: ownerInclude,
       orderBy: { createdAt: "desc" },
-      take: radiusActive ? 300 : 200,
+      take: geoCenter ? 300 : 200,
     }),
     getCurrentUser(),
   ]);
 
   type Row = { listing: (typeof raw)[number]; distanceMi?: number };
-  const rows: Row[] = radiusActive
+  const rows: Row[] = geoCenter
     ? raw.flatMap((l) => {
-        if (l.lat === null || l.lng === null) return [];
-        const d = haversineMiles(lat, lng, l.lat, l.lng);
-        return d <= radius ? [{ listing: l, distanceMi: d }] : [];
+        const d =
+          l.lat !== null && l.lng !== null
+            ? haversineMiles(lat, lng, l.lat, l.lng)
+            : undefined;
+        // A numeric radius drops anything outside the ring; nationwide keeps all.
+        if (radiusActive && (d === undefined || d > radius)) return [];
+        return [{ listing: l, distanceMi: d }];
       })
     : raw.map((l) => ({ listing: l }));
 
-  const effectiveSort = sort || (radiusActive ? "nearest" : "newest");
+  const effectiveSort = sort || (geoCenter ? "nearest" : "newest");
   const byNewest = (a: Row, b: Row) =>
     b.listing.createdAt.getTime() - a.listing.createdAt.getTime();
   const byPrice = (a: Row, b: Row, dir: 1 | -1) => {
@@ -189,7 +202,7 @@ export default async function ListingsPage({
     if (pb === null) return -1;
     return (pa - pb) * dir;
   };
-  if (effectiveSort === "nearest" && radiusActive) {
+  if (effectiveSort === "nearest" && geoCenter) {
     rows.sort((a, b) => (a.distanceMi ?? Infinity) - (b.distanceMi ?? Infinity));
   } else if (effectiveSort === "price_asc") {
     rows.sort((a, b) => byPrice(a, b, 1));
@@ -228,7 +241,7 @@ export default async function ListingsPage({
   const lngStr = hasCenter ? String(lng) : "";
   const radiusStr = one(sp.radius);
   const centerLabel = city && state ? `${city}, ${state}` : city || state;
-  const radiusNoCenter = !!radiusStr && !city;
+  const radiusNoCenter = !!radiusStr && !nationwide && !city;
 
   // ---- Active-filter chips + URLs (reserved row so the grid never jumps) -------
   function currentUSP(): URLSearchParams {
@@ -289,6 +302,8 @@ export default async function ListingsPage({
     });
   if (radiusActive)
     chips.push({ key: "radius", label: `Within ${radius} mi`, href: hrefRemoving("radius") });
+  else if (nationwide && hasCenter)
+    chips.push({ key: "radius", label: "Nationwide", href: hrefRemoving("radius") });
   for (const c of conditions)
     chips.push({ key: `cond-${c}`, label: conditionLabel(c) ?? c, href: hrefRemoving("condition", c) });
   for (const m of manufacturers)
@@ -302,8 +317,8 @@ export default async function ListingsPage({
 
   const activeCount =
     types.length + conditions.length + manufacturers.length + trades.length +
-    cats.length + subs.length + (city || state ? 1 : 0) + (radiusActive ? 1 : 0) +
-    (hasPriceFilter ? 1 : 0);
+    cats.length + subs.length + (city || state ? 1 : 0) +
+    (radiusActive || (nationwide && hasCenter) ? 1 : 0) + (hasPriceFilter ? 1 : 0);
   const hasAnything = activeCount > 0 || !!q || !!sort;
 
   // Carry the other forms' params as hidden inputs (search box + sort own their key).
@@ -394,6 +409,7 @@ export default async function ListingsPage({
                         Within {r} mi
                       </option>
                     ))}
+                    <option value="nationwide">Nationwide (any distance)</option>
                   </select>
                   {radiusNoCenter && (
                     <p className="mt-2 text-xs text-amber-600">
@@ -452,24 +468,7 @@ export default async function ListingsPage({
               )}
 
               <RailGroup label="Trade" open={trades.length > 0}>
-                <div className="max-h-72 overflow-y-auto">
-                  {leafGroups.map((g) => (
-                    <div key={g.category} className="mb-2">
-                      <p className="px-0.5 py-1 text-xs font-semibold uppercase tracking-wide text-white/40">
-                        {g.category}
-                      </p>
-                      {g.leaves.map((l) => (
-                        <CheckRow
-                          key={l.slug}
-                          name="trade"
-                          value={l.slug}
-                          label={l.label}
-                          checked={trades.includes(l.slug)}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
+                <TradeFilter groups={leafGroups} selected={trades} />
               </RailGroup>
 
               <RailGroup label="Products / Materials" open={productsOpen}>

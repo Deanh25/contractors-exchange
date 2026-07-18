@@ -8,6 +8,7 @@ import {
 import { getActingCompanies, getActingContext } from "@/lib/identity";
 import { timeAgo } from "@/lib/time";
 import { AvatarMenu } from "@/components/AvatarMenu";
+import { NewMenu } from "@/components/NewMenu";
 import { NotificationBell, type BellItem } from "@/components/NotificationBell";
 
 const ICONS: Record<string, string> = {
@@ -178,12 +179,7 @@ export async function SiteHeader() {
                   badge={unread}
                 />
               </div>
-              <Link
-                href="/listings/new"
-                className="ml-1 hidden rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:block"
-              >
-                + List
-              </Link>
+              <NewMenu />
               {switcherCurrent && (
                 <div className="ml-1">
                   <AvatarMenu

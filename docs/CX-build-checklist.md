@@ -140,7 +140,15 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     params), all facets now multi-select (type/trade/condition/manufacturer), instant-apply filters (no
     Apply button - `FilterForm` intercepts submit and does a scroll-preserving router.replace; native
     GET fallback with JS off), a reserved active-filter chips row, and a card "kind" tag. Location keeps
-    the linked State+City picker PLUS the distance-radius (haversine) search. *(Awaiting your test.)*
+    the linked State+City picker PLUS the distance-radius (haversine) search. Card thumb uses the branded
+    CX / "Image coming soon" placeholder; rail order matches the mock.
+  - [x] **07/17 tweaks** - Trade filter is now an expandable category tree like the taxonomy groups (no
+    inner scrollbar, uniform with the rest). Distance filter gained a **Nationwide (any distance)** option
+    past 250 mi: it drops the radius ring but keeps the chosen city as the center for Nearest sort + "~N
+    mi". *(Awaiting your test.)*
+- [x] **Top-bar "New" button** *(requested 07/17/2026)* - the header `+ List` link became a general **New**
+  dropdown (`src/components/NewMenu.tsx`): New Listing (`/listings/new`) + New Post (`/feed`), so future
+  create flows slot in here instead of adding more header buttons.
 - [ ] **Reports module (`/admin/reports`)** *(new - not started)* - exportable, filterable,
   historical reports that complement the at-a-glance Dashboard. Each report shares: the Dashboard
   time windows (7d/30d/90d/YTD/All) plus a custom date range; filters for category/trade, region

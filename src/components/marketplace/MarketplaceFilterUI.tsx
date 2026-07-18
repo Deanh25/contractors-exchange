@@ -73,6 +73,64 @@ export function CheckRow({
   );
 }
 
+/** A right chevron that rotates open, sized for a category node. */
+function catChevron(scope: string) {
+  return (
+    <svg
+      className={`ml-auto h-3.5 w-3.5 text-white/40 transition-transform duration-200 ${scope}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="9 6 15 12 9 18" />
+    </svg>
+  );
+}
+
+/**
+ * The Trade filter, rendered as the same expandable category tree as the taxonomy
+ * groups (each trade category collapses/expands its leaves) so every group in the
+ * rail looks and behaves uniformly, with no inner scrollbar.
+ */
+export function TradeFilter({
+  groups,
+  selected,
+}: {
+  groups: { category: string; leaves: { slug: string; label: string }[] }[];
+  selected: string[];
+}) {
+  return (
+    <div className="flex flex-col">
+      {groups.map((g) => {
+        const anyOn = g.leaves.some((l) => selected.includes(l.slug));
+        return (
+          <details key={g.category} open={anyOn} className="group/cat">
+            <summary className="-mx-2 flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-slate-200 select-none hover:bg-white/5 group-open/cat:text-white">
+              {g.category}
+              {catChevron("group-open/cat:rotate-90")}
+            </summary>
+            <div className="mb-2 ml-2.5 border-l border-white/10 pl-3.5">
+              {g.leaves.map((l) => (
+                <CheckRow
+                  key={l.slug}
+                  name="trade"
+                  value={l.slug}
+                  label={l.label}
+                  checked={selected.includes(l.slug)}
+                />
+              ))}
+            </div>
+          </details>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * A 2-level taxonomy tree (Products/Materials or Equipment). Each category is an
  * expandable node with an "All <category>" checkbox (submits `cat`) plus a
