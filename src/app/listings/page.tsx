@@ -453,17 +453,15 @@ export default async function ListingsPage({
 
               {manufacturers_all.length > 0 && (
                 <RailGroup label="Manufacturer" open={manufacturers.length > 0}>
-                  <div className="max-h-72 overflow-y-auto">
-                    {manufacturers_all.map((m) => (
-                      <CheckRow
-                        key={m}
-                        name="manufacturer"
-                        value={m}
-                        label={m}
-                        checked={manufacturers.includes(m)}
-                      />
-                    ))}
-                  </div>
+                  {manufacturers_all.map((m) => (
+                    <CheckRow
+                      key={m}
+                      name="manufacturer"
+                      value={m}
+                      label={m}
+                      checked={manufacturers.includes(m)}
+                    />
+                  ))}
                 </RailGroup>
               )}
 
