@@ -181,6 +181,15 @@ enum TradeKind {
   service
 }
 
+// Marketplace classification dimension (distinct from Trade). A listing is EITHER a
+// product/material OR a piece of equipment, never both (see Listing.itemKind). The
+// category/sub-category slugs come from the framework-agnostic tree in
+// src/lib/taxonomy.ts. Null itemKind = an untagged listing or a service.
+enum ItemKind {
+  product
+  equipment
+}
+
 // Condition for physical goods (PRD marketplace filters).
 enum ListingCondition {
   new
@@ -226,6 +235,14 @@ model Listing {
   manufacturer  String? // brand / make (filterable), free text
   photos        Json? // JSON array of public URL strings (see src/lib/storage.ts)
 
+  // Product/Equipment classification (src/lib/taxonomy.ts), independent of Trade and
+  // MUTUALLY EXCLUSIVE: a listing sets itemKind=product OR equipment (or null for a
+  // service/untagged). categorySlug is a top category in that kind; subcategorySlug is
+  // an optional child of it. Slugs are validated against the taxonomy in the shim.
+  itemKind        ItemKind?
+  categorySlug    String?
+  subcategorySlug String?
+
   type ListingType
 
   // Type-exclusive fields (null unless the matching type is selected):
@@ -270,6 +287,8 @@ model Listing {
   @@index([ownerUserId])
   @@index([ownerCompanyId])
   @@index([createdAt])
+  @@index([itemKind])
+  @@index([categorySlug])
 }
 
 // A listing detail-page view event (PRD: Marketplace Insights, seller analytics).

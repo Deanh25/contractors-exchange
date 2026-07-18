@@ -1,0 +1,128 @@
+Category #,Category,Category slug,Standard,Sub-category,Sub-category slug
+1,Earthmoving & Excavation,earthmoving-excavation,,Excavators (mini & standard),excavators
+1,Earthmoving & Excavation,earthmoving-excavation,,Backhoe loaders,backhoe-loaders
+1,Earthmoving & Excavation,earthmoving-excavation,,Dozers,dozers
+1,Earthmoving & Excavation,earthmoving-excavation,,Skid steers & compact track loaders,skid-steers-ctl
+1,Earthmoving & Excavation,earthmoving-excavation,,Wheel loaders,wheel-loaders
+1,Earthmoving & Excavation,earthmoving-excavation,,Motor graders,motor-graders
+1,Earthmoving & Excavation,earthmoving-excavation,,Trenchers,trenchers
+1,Earthmoving & Excavation,earthmoving-excavation,,Scrapers,scrapers
+1,Earthmoving & Excavation,earthmoving-excavation,,"Attachments (buckets, breakers, augers, grapples)",earthmoving-attachments
+2,Compaction & Paving,compaction-paving,,Plate compactors,plate-compactors
+2,Compaction & Paving,compaction-paving,,Rammers (jumping jacks),rammers
+2,Compaction & Paving,compaction-paving,,Walk-behind rollers,walk-behind-rollers
+2,Compaction & Paving,compaction-paving,,Ride-on rollers,ride-on-rollers
+2,Compaction & Paving,compaction-paving,,Asphalt pavers,asphalt-pavers
+2,Compaction & Paving,compaction-paving,,Milling machines,milling-machines
+2,Compaction & Paving,compaction-paving,,Asphalt distributors,asphalt-distributors
+2,Compaction & Paving,compaction-paving,,Concrete & asphalt saws,concrete-asphalt-saws
+2,Compaction & Paving,compaction-paving,,Sealcoating & line striping equipment,sealcoating-striping
+3,Aerial Lifts & Access,aerial-lifts-access,ANSI A92,Scissor lifts (electric & rough terrain),scissor-lifts
+3,Aerial Lifts & Access,aerial-lifts-access,ANSI A92,Articulating boom lifts,articulating-boom-lifts
+3,Aerial Lifts & Access,aerial-lifts-access,ANSI A92,Telescopic boom lifts,telescopic-boom-lifts
+3,Aerial Lifts & Access,aerial-lifts-access,ANSI A92,Towable boom lifts,towable-boom-lifts
+3,Aerial Lifts & Access,aerial-lifts-access,ANSI A92,Personnel & vertical mast lifts,mast-lifts
+3,Aerial Lifts & Access,aerial-lifts-access,ANSI A92,Telehandlers,telehandlers
+3,Aerial Lifts & Access,aerial-lifts-access,ANSI A92,Material lifts & hoists,material-lifts-hoists
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,Mobile & truck cranes,mobile-truck-cranes
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,Rough-terrain cranes,rough-terrain-cranes
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,Tower cranes,tower-cranes
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,Carry-deck cranes,carry-deck-cranes
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,Boom trucks,boom-trucks
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,Hoists & winches,hoists-winches
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,Gantry cranes,gantry-cranes
+4,"Cranes, Hoists & Rigging",cranes-hoists-rigging,OSHA 1926 subpart CC,"Rigging, slings & spreader bars",rigging-slings
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Concrete mixers,concrete-mixers
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Concrete pumps & placing booms,concrete-pumps
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Power trowels,power-trowels
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Screeds,screeds
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Concrete vibrators,concrete-vibrators
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Core drills,core-drills
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Concrete grinders & polishers,grinders-polishers
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Scarifiers & shot blasters,scarifiers-shot-blasters
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Masonry saws,masonry-saws
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Mortar mixers,mortar-mixers
+5,Concrete & Masonry Equipment,concrete-masonry-equipment,,Concrete buggies,concrete-buggies
+6,"Power, Air & Welding",power-air-welding,,Portable air compressors,portable-air-compressors
+6,"Power, Air & Welding",power-air-welding,,Towable air compressors,towable-air-compressors
+6,"Power, Air & Welding",power-air-welding,,Portable generators,portable-generators
+6,"Power, Air & Welding",power-air-welding,,Towable & standby generators,towable-standby-generators
+6,"Power, Air & Welding",power-air-welding,,Light towers,light-towers
+6,"Power, Air & Welding",power-air-welding,,Engine-driven welders,engine-driven-welders
+6,"Power, Air & Welding",power-air-welding,,Welding machines,welding-machines
+6,"Power, Air & Welding",power-air-welding,,Power distribution & spider boxes,power-distribution
+6,"Power, Air & Welding",power-air-welding,,Cable & cords,cable-cords
+6,"Power, Air & Welding",power-air-welding,,Battery energy storage,battery-energy-storage
+7,Material Handling & Forklifts,material-handling-forklifts,,Warehouse forklifts,warehouse-forklifts
+7,Material Handling & Forklifts,material-handling-forklifts,,Rough-terrain forklifts,rough-terrain-forklifts
+7,Material Handling & Forklifts,material-handling-forklifts,,Pallet jacks,pallet-jacks
+7,Material Handling & Forklifts,material-handling-forklifts,,Conveyors,conveyors
+7,Material Handling & Forklifts,material-handling-forklifts,,"Dollies, carts & wheelbarrows",dollies-carts-wheelbarrows
+7,Material Handling & Forklifts,material-handling-forklifts,,Drum & cylinder handling,drum-cylinder-handling
+7,Material Handling & Forklifts,material-handling-forklifts,,Cable pullers,cable-pullers
+8,Trucks & Trailers,trucks-trailers,,Dump trucks,dump-trucks
+8,Trucks & Trailers,trucks-trailers,,Flatbed & stake trucks,flatbed-stake-trucks
+8,Trucks & Trailers,trucks-trailers,,Service & mechanic trucks,service-mechanic-trucks
+8,Trucks & Trailers,trucks-trailers,,Water trucks,water-trucks
+8,Trucks & Trailers,trucks-trailers,,Bucket & boom trucks,bucket-boom-trucks
+8,Trucks & Trailers,trucks-trailers,,Vacuum & sweeper trucks,vacuum-sweeper-trucks
+8,Trucks & Trailers,trucks-trailers,,Utility trailers,utility-trailers
+8,Trucks & Trailers,trucks-trailers,,Equipment & lowboy trailers,equipment-lowboy-trailers
+8,Trucks & Trailers,trucks-trailers,,Dump trailers,dump-trailers
+9,"Pumps, Water & Dewatering",pumps-water-dewatering,,Trash pumps,trash-pumps
+9,"Pumps, Water & Dewatering",pumps-water-dewatering,,Submersible pumps,submersible-pumps
+9,"Pumps, Water & Dewatering",pumps-water-dewatering,,Diaphragm pumps,diaphragm-pumps
+9,"Pumps, Water & Dewatering",pumps-water-dewatering,,Wellpoint & dewatering systems,wellpoint-dewatering
+9,"Pumps, Water & Dewatering",pumps-water-dewatering,,Hoses & fittings,hoses-fittings
+9,"Pumps, Water & Dewatering",pumps-water-dewatering,,Water tanks,water-tanks
+9,"Pumps, Water & Dewatering",pumps-water-dewatering,,Pressure washers,pressure-washers
+10,Climate Control & Air Quality,climate-control-air-quality,,Indirect & direct-fired heaters,heaters
+10,Climate Control & Air Quality,climate-control-air-quality,,Portable AC & spot coolers,portable-ac-spot-coolers
+10,Climate Control & Air Quality,climate-control-air-quality,,Dehumidifiers,dehumidifiers
+10,Climate Control & Air Quality,climate-control-air-quality,,Air movers & blowers,air-movers-blowers
+10,Climate Control & Air Quality,climate-control-air-quality,,Air scrubbers & negative air machines,air-scrubbers
+10,Climate Control & Air Quality,climate-control-air-quality,,Ventilation fans,ventilation-fans
+10,Climate Control & Air Quality,climate-control-air-quality,,Containment & abatement equipment,containment-abatement
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Demolition hammers & breakers,demolition-hammers-breakers
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Rotary & core drills,rotary-core-drills
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,"Concrete, wall & wire saws",concrete-wall-wire-saws
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Chain saws,chain-saws
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Drain cleaning & jetting,drain-cleaning-jetting
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Pipe threading & fusion,pipe-threading-fusion
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,HVAC service & recovery tools,hvac-service-recovery
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Insulation blowers,insulation-blowers
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Floor prep & surface removal,floor-prep-surface-removal
+11,Demolition & Specialty Trade Equipment,demolition-specialty,,Sanders & dust extraction,sanders-dust-extraction
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Total stations & GPS rovers,total-stations-gps
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Laser & rotary levels,laser-rotary-levels
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Machine control,machine-control
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Utility & cable locators,utility-cable-locators
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Sewer & pipe inspection cameras,pipe-inspection-cameras
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Concrete scanners (GPR),concrete-scanners-gpr
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Thermal imaging,thermal-imaging
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Moisture meters,moisture-meters
+12,"Surveying, Detection & Inspection",surveying-detection-inspection,,Gas detection & confined-space monitors,gas-detection-monitors
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Stump grinders,stump-grinders
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Chippers,chippers
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Chainsaws & pole saws,chainsaws-pole-saws
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Mowers & brush cutters,mowers-brush-cutters
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Tillers & augers,tillers-augers
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Sod cutters,sod-cutters
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Aerators & seeders,aerators-seeders
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Blowers,landscape-blowers
+13,Landscaping & Grounds Equipment,landscaping-grounds,,Log splitters,log-splitters
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Frame & system scaffolding,frame-system-scaffolding
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Mobile scaffold towers,mobile-scaffold-towers
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Shoring & jacks,shoring-jacks
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Trench boxes & shoring,trench-boxes
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Job boxes & storage containers,job-boxes-containers
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Portable offices & trailers,portable-offices-trailers
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Portable toilets & wash stations,portable-toilets-wash
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Temporary fencing,temporary-fencing
+14,"Scaffolding, Shoring & Site Support",scaffolding-shoring-site-support,OSHA 1926 subpart L,Barricades,barricades
+15,Cleaning & Waste Equipment,cleaning-waste-equipment,,Floor scrubbers & sweepers,floor-scrubbers-sweepers
+15,Cleaning & Waste Equipment,cleaning-waste-equipment,,HEPA & wet/dry vacuums,hepa-wet-dry-vacuums
+15,Cleaning & Waste Equipment,cleaning-waste-equipment,,Dumpsters & roll-offs,dumpsters-roll-offs
+15,Cleaning & Waste Equipment,cleaning-waste-equipment,,Compactors & balers,compactors-balers
+15,Cleaning & Waste Equipment,cleaning-waste-equipment,,Spill containment,spill-containment
+15,Cleaning & Waste Equipment,cleaning-waste-equipment,,Sweeper attachments,sweeper-attachments

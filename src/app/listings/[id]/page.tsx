@@ -18,6 +18,10 @@ import { makeOfferAction } from "@/app/actions/offers";
 import { SaveButton } from "@/components/SaveButton";
 import { ctaForListing, TX_STATUS } from "@/lib/transactions";
 import { categoryLabel } from "@/lib/categories";
+import {
+  categoryLabel as taxonomyCategoryLabel,
+  subcategoryLabel,
+} from "@/lib/taxonomy";
 import { metroLabel } from "@/lib/locations";
 import {
   formatMoney,
@@ -75,6 +79,25 @@ export default async function ListingDetailPage({
 
   const badge = listingBadge(listing.type, listing.tradeKind);
   const tradeName = await categoryLabel(listing.tradeCategory);
+  // Product/Equipment classification labels (src/lib/taxonomy.ts).
+  const kindLabel =
+    listing.itemKind === "product"
+      ? "Product"
+      : listing.itemKind === "equipment"
+        ? "Equipment"
+        : null;
+  const catName =
+    kindLabel && listing.categorySlug
+      ? taxonomyCategoryLabel(listing.categorySlug, listing.itemKind ?? undefined)
+      : null;
+  const subName =
+    catName && listing.categorySlug && listing.subcategorySlug
+      ? subcategoryLabel(
+          listing.categorySlug,
+          listing.subcategorySlug,
+          listing.itemKind ?? undefined,
+        )
+      : null;
   const photos = photosFromJson(listing.photos);
   const owner = listingOwner(listing);
   const sellerRating = owner
@@ -197,6 +220,12 @@ export default async function ListingDetailPage({
               <span className="rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-600">
                 {tradeName}
               </span>
+              {catName && (
+                <span className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800">
+                  {kindLabel} · {catName}
+                  {subName ? ` → ${subName}` : ""}
+                </span>
+              )}
             </div>
 
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">

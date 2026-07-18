@@ -8,17 +8,20 @@ import { saveMediaFiles } from "@/lib/storage";
 import { parseCoord } from "@/lib/form";
 import { canManageListing } from "@/lib/listing-access";
 import { getLeafSlugSet } from "@/lib/categories";
+import { isValidCategory, isValidSubcategory } from "@/lib/taxonomy";
 import {
   createListing,
   updateListing,
   updateListingStatus,
   deleteListing,
   type ListingTypeFields,
+  type ListingClassification,
 } from "@/lib/services/listings";
 import type {
   ListingStatus,
   ListingCondition,
   ListingCloseReason,
+  ItemKind,
 } from "@/generated/prisma/client";
 import type { ListingChoice } from "@/lib/listings";
 
@@ -116,6 +119,31 @@ function readCommon(formData: FormData) {
   };
 }
 
+/**
+ * Product/Equipment classification, validated against the taxonomy. Trade + EITHER
+ * a Product OR an Equipment category (mutually exclusive). If the kind is missing or
+ * its category slug is unknown, the listing is left untagged (all null); an unknown
+ * sub-category is dropped but a valid category is kept.
+ */
+function parseClassification(formData: FormData): ListingClassification {
+  const none: ListingClassification = {
+    itemKind: null,
+    categorySlug: null,
+    subcategorySlug: null,
+  };
+  const kindRaw = String(formData.get("itemKind") ?? "").trim();
+  if (kindRaw !== "product" && kindRaw !== "equipment") return none;
+  const kind = kindRaw as ItemKind;
+  const category = String(formData.get("categorySlug") ?? "").trim();
+  if (!isValidCategory(kind, category)) return none;
+  const sub = String(formData.get("subcategorySlug") ?? "").trim();
+  return {
+    itemKind: kind,
+    categorySlug: category,
+    subcategorySlug: sub && isValidSubcategory(kind, category, sub) ? sub : null,
+  };
+}
+
 function mediaFiles(formData: FormData): File[] {
   return formData
     .getAll("photos")
@@ -161,6 +189,7 @@ export async function createListingAction(formData: FormData) {
     owner: ownerParam,
     common: c,
     typeFields: tf,
+    classification: parseClassification(formData),
     quantity: readQuantity(formData, tf),
     photos,
   });
@@ -199,6 +228,7 @@ export async function updateListingAction(formData: FormData) {
     listingId: id,
     common: c,
     typeFields: tf,
+    classification: parseClassification(formData),
     quantity: readQuantity(formData, tf),
     status,
     photos: [...kept, ...uploaded],

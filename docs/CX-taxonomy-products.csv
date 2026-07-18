@@ -1,0 +1,180 @@
+Category #,Category,Category slug,MasterFormat Div,Sub-category,Sub-category slug
+1,Lumber & Composites,lumber-composites,Div 06,Dimensional lumber,dimensional-lumber
+1,Lumber & Composites,lumber-composites,Div 06,Studs,studs
+1,Lumber & Composites,lumber-composites,Div 06,Timbers & posts,timbers-posts
+1,Lumber & Composites,lumber-composites,Div 06,Pressure-treated lumber,pressure-treated-lumber
+1,Lumber & Composites,lumber-composites,Div 06,"Engineered lumber (LVL, LSL, glulam)",engineered-lumber
+1,Lumber & Composites,lumber-composites,Div 06,I-joists & trusses,i-joists-trusses
+1,Lumber & Composites,lumber-composites,Div 06,Plywood,plywood
+1,Lumber & Composites,lumber-composites,Div 06,OSB & sheathing,osb-sheathing
+1,Lumber & Composites,lumber-composites,Div 06,Wood decking,wood-decking
+1,Lumber & Composites,lumber-composites,Div 06,Composite & PVC decking,composite-pvc-decking
+1,Lumber & Composites,lumber-composites,Div 06,Trim & moulding,trim-moulding
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Ready-mix concrete,ready-mix-concrete
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Bagged concrete & cement,bagged-concrete-cement
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Mortar & grout,mortar-grout
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Rebar & wire mesh,rebar-wire-mesh
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Concrete block (CMU),concrete-block-cmu
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Brick,brick
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Pavers,pavers
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Retaining wall block,retaining-wall-block
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Natural & manufactured stone,natural-manufactured-stone
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Admixtures,admixtures
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Forms & form accessories,forms-accessories
+2,"Concrete, Cement & Masonry",concrete-cement-masonry,"Div 03, 04",Sealers & curing compounds,sealers-curing-compounds
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Drywall panels,drywall-panels
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Cement & tile backer board,backer-board
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Joint compound & tape,joint-compound-tape
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Corner bead,corner-bead
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Metal studs & track,metal-studs-track
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Plaster & stucco,plaster-stucco
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Ceiling tile & grid,ceiling-tile-grid
+3,Drywall & Interior Finishes,drywall-interior-finishes,Div 09,Acoustic panels,acoustic-panels
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Interior paint,interior-paint
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Exterior paint,exterior-paint
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Primers & sealers,primers-sealers
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Stains & wood finishes,stains-wood-finishes
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Industrial & protective coatings,industrial-protective-coatings
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Caulk & sealants,caulk-sealants
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Adhesives,adhesives
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,"Brushes, rollers & sprayer supplies",brushes-rollers-sprayers
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Tape & masking,tape-masking
+4,"Paint, Coatings & Sundries",paint-coatings-sundries,Div 09 90 00,Drop cloths,drop-cloths
+5,Roofing & Siding,roofing-siding,Div 07,Asphalt shingles,asphalt-shingles
+5,Roofing & Siding,roofing-siding,Div 07,Metal roofing,metal-roofing
+5,Roofing & Siding,roofing-siding,Div 07,Tile & slate roofing,tile-slate-roofing
+5,Roofing & Siding,roofing-siding,Div 07,"Low-slope membrane (TPO, EPDM, mod-bit)",low-slope-membrane
+5,Roofing & Siding,roofing-siding,Div 07,Underlayment,roofing-underlayment
+5,Roofing & Siding,roofing-siding,Div 07,Flashing & drip edge,flashing-drip-edge
+5,Roofing & Siding,roofing-siding,Div 07,Gutters & downspouts,gutters-downspouts
+5,Roofing & Siding,roofing-siding,Div 07,Soffit & fascia,soffit-fascia
+5,Roofing & Siding,roofing-siding,Div 07,Vinyl siding,vinyl-siding
+5,Roofing & Siding,roofing-siding,Div 07,Fiber cement siding,fiber-cement-siding
+5,Roofing & Siding,roofing-siding,Div 07,Wood & engineered siding,wood-engineered-siding
+5,Roofing & Siding,roofing-siding,Div 07,Stone veneer,stone-veneer
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Batt insulation,batt-insulation
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Blown-in & loose fill,blown-in-loose-fill
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Rigid foam board,rigid-foam-board
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Spray foam,spray-foam
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Mineral wool,mineral-wool
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Radiant barrier,radiant-barrier
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,House wrap & air barrier,house-wrap-air-barrier
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Vapor barrier,vapor-barrier
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Waterproofing membranes,waterproofing-membranes
+6,Insulation & Weatherproofing,insulation-weatherproofing,Div 07,Weatherstripping,weatherstripping
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Interior doors,interior-doors
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Exterior doors,exterior-doors
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Garage doors,garage-doors
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Hollow metal & commercial doors,hollow-metal-doors
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Windows,windows
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Skylights,skylights
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Door hardware & locksets,door-hardware-locksets
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Frames & jambs,frames-jambs
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Storefront & curtain wall,storefront-curtain-wall
+7,"Doors, Windows & Millwork",doors-windows-millwork,Div 08,Interior trim & casing,interior-trim-casing
+8,"Cabinets, Countertops & Fixtures",cabinets-countertops-fixtures,Div 12,Kitchen cabinets,kitchen-cabinets
+8,"Cabinets, Countertops & Fixtures",cabinets-countertops-fixtures,Div 12,Bath vanities,bath-vanities
+8,"Cabinets, Countertops & Fixtures",cabinets-countertops-fixtures,Div 12,"Countertops (quartz, granite, solid surface, laminate)",countertops
+8,"Cabinets, Countertops & Fixtures",cabinets-countertops-fixtures,Div 12,Closet & storage systems,closet-storage-systems
+8,"Cabinets, Countertops & Fixtures",cabinets-countertops-fixtures,Div 12,Shelving,shelving
+8,"Cabinets, Countertops & Fixtures",cabinets-countertops-fixtures,Div 12,Mirrors & bath accessories,mirrors-bath-accessories
+8,"Cabinets, Countertops & Fixtures",cabinets-countertops-fixtures,Div 12,Commercial casework,commercial-casework
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Wire & cable,wire-cable
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Conduit & fittings,conduit-fittings
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Boxes & enclosures,boxes-enclosures
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Panels & load centers,panels-load-centers
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Breakers,breakers
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Switches & receptacles,switches-receptacles
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Wiring devices & plates,wiring-devices-plates
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Interior lighting,interior-lighting
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Exterior & site lighting,exterior-site-lighting
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Temporary jobsite lighting,temporary-jobsite-lighting
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Transfer switches,transfer-switches
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Low voltage & data,low-voltage-data
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Fire alarm & security,fire-alarm-security
+9,Electrical & Lighting,electrical-lighting,"Div 26, 27, 28",Solar & EV charging,solar-ev-charging
+10,Plumbing,plumbing,Div 22,"Pipe & tubing (PVC, CPVC, PEX, copper)",pipe-tubing
+10,Plumbing,plumbing,Div 22,Fittings & valves,fittings-valves
+10,Plumbing,plumbing,Div 22,Drainage & DWV,drainage-dwv
+10,Plumbing,plumbing,Div 22,Water heaters (tank & tankless),water-heaters
+10,Plumbing,plumbing,Div 22,"Sinks, toilets, tubs & showers",plumbing-fixtures
+10,Plumbing,plumbing,Div 22,Faucets & trim,faucets-trim
+10,Plumbing,plumbing,Div 22,"Pumps (sump, well, booster)",plumbing-pumps
+10,Plumbing,plumbing,Div 22,Water treatment,water-treatment
+10,Plumbing,plumbing,Div 22,Backflow & meters,backflow-meters
+10,Plumbing,plumbing,Div 22,Gas piping,gas-piping
+10,Plumbing,plumbing,Div 22,Pipe insulation,pipe-insulation
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Furnaces,furnaces
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Air conditioners & heat pumps,ac-heat-pumps
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Mini-splits,mini-splits
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Boilers & radiant heat,boilers-radiant-heat
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Rooftop units,rooftop-units
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Air handlers & coils,air-handlers-coils
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Ductwork & fittings,ductwork-fittings
+11,HVAC & Mechanical,hvac-mechanical,Div 23,"Registers, grilles & diffusers",registers-grilles-diffusers
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Ventilation & exhaust fans,ventilation-exhaust-fans
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Thermostats & controls,thermostats-controls
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Filters & indoor air quality,filters-iaq
+11,HVAC & Mechanical,hvac-mechanical,Div 23,Refrigerant & line sets,refrigerant-line-sets
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23",Nails,nails
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23",Screws,screws
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23","Bolts, nuts & washers",bolts-nuts-washers
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23",Concrete & masonry anchors,anchors
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23","Structural connectors (joist hangers, straps, hold-downs)",structural-connectors
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23",Threaded rod,threaded-rod
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23",Rivets,rivets
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23","Chain, rope & rigging hardware",chain-rope-rigging
+12,"Fasteners, Hardware & Structural Connectors",fasteners-hardware-connectors,"Div 05, 06 05 23",Hinges & brackets,hinges-brackets
+13,Metals & Steel,metals-steel,Div 05,"Structural steel (beams, columns)",structural-steel
+13,Metals & Steel,metals-steel,Div 05,"Angle, channel & flat bar",angle-channel-flat-bar
+13,Metals & Steel,metals-steel,Div 05,Metal decking,metal-decking
+13,Metals & Steel,metals-steel,Div 05,Sheet metal,sheet-metal
+13,Metals & Steel,metals-steel,Div 05,Aluminum extrusion,aluminum-extrusion
+13,Metals & Steel,metals-steel,Div 05,Handrail & guardrail,handrail-guardrail
+13,Metals & Steel,metals-steel,Div 05,Fixed stairs & ladders,stairs-ladders
+13,Metals & Steel,metals-steel,Div 05,Expanded & perforated metal,expanded-perforated-metal
+13,Metals & Steel,metals-steel,Div 05,Welding consumables,welding-consumables
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Hardwood,hardwood
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Engineered wood,engineered-wood
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Laminate,laminate
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Luxury vinyl (LVP/LVT) & sheet vinyl,vinyl-flooring
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Carpet & carpet tile,carpet
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Ceramic & porcelain tile,ceramic-porcelain-tile
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Natural stone tile,natural-stone-tile
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Underlayment & subfloor,underlayment-subfloor
+14,Flooring & Tile,flooring-tile,Div 09 60 00,"Thinset, grout & setting materials",thinset-grout-setting
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Epoxy & resinous flooring,epoxy-resinous-flooring
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Polished & sealed concrete,polished-sealed-concrete
+14,Flooring & Tile,flooring-tile,Div 09 60 00,Transitions & trim,transitions-trim
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32","Aggregate, sand & gravel",aggregate-sand-gravel
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Topsoil & fill,topsoil-fill
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32","Erosion control (silt fence, blankets)",erosion-control
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Geotextile & geogrid,geotextile-geogrid
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Drainage pipe & culvert,drainage-pipe-culvert
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Asphalt & paving materials,asphalt-paving-materials
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Sealcoat & striping,sealcoat-striping
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Fencing & gates,fencing-gates
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Retaining wall systems,retaining-wall-systems
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32","Sod, seed & plantings",sod-seed-plantings
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Irrigation,irrigation
+15,"Sitework, Landscape & Hardscape",sitework-landscape-hardscape,"Div 31, 32",Mulch & decorative stone,mulch-decorative-stone
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,"Hard hats, eye & hearing protection",head-eye-hearing-protection
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,Gloves,gloves
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,Hi-vis & workwear,hi-vis-workwear
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,"Fall protection (harnesses, lanyards, anchors)",fall-protection
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,Respiratory protection,respiratory-protection
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,"Traffic control (cones, barricades, signs)",traffic-control
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,Caution & barricade tape,barricade-tape
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,First aid,first-aid
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,Fire extinguishers,fire-extinguishers
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,Temporary fencing & barriers,temporary-fencing-barriers
+16,"Safety, PPE & Jobsite Supplies",safety-ppe-jobsite,Div 01 50 00,Jobsite cleanup supplies,jobsite-cleanup
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,Hand tools,hand-tools
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,Cordless & corded power tools,power-tools
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,Pneumatic tools,pneumatic-tools
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,"Blades, bits & abrasives",blades-bits-abrasives
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,"Layout & measuring (levels, lasers, tape)",layout-measuring
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,Tool storage,tool-storage
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,Ladders & step stools,ladders-step-stools
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,Work lights,work-lights
+17,Tools & Tool Accessories (purchase),tools-accessories,Div 01 54 00,Batteries & chargers,batteries-chargers

@@ -354,6 +354,28 @@ async function main() {
     { owner: { ownerCompany: { connect: { id: carolina.id } } }, title: "Framing crew available - trade for flatwork", tradeCategory: "framing", tradeKind: "service", ...CITY.raleigh, type: "trade", description: "Crew with a gap in the schedule. Trade for concrete flatwork.", createdAt: daysAgo(4) },
   ] as const;
 
+  // Product/Equipment classification for the demo listings (src/lib/taxonomy.ts).
+  // The three service listings are intentionally left untagged (null itemKind).
+  const CLASSIFY: Record<
+    string,
+    { itemKind: "product" | "equipment"; categorySlug: string; subcategorySlug: string }
+  > = {
+    "2019 Bobcat S650 skid steer, 1,200 hrs": { itemKind: "equipment", categorySlug: "earthmoving-excavation", subcategorySlug: "skid-steers-ctl" },
+    "Pallet of 60lb concrete mix (56 bags)": { itemKind: "product", categorySlug: "concrete-cement-masonry", subcategorySlug: "bagged-concrete-cement" },
+    "3-ton condenser unit, new in box": { itemKind: "product", categorySlug: "hvac-mechanical", subcategorySlug: "ac-heat-pumps" },
+    "Commercial zero-turn mower, 60in deck": { itemKind: "equipment", categorySlug: "landscaping-grounds", subcategorySlug: "mowers-brush-cutters" },
+    "Graco airless paint sprayer": { itemKind: "product", categorySlug: "paint-coatings-sundries", subcategorySlug: "brushes-rollers-sprayers" },
+    "Bulk 2x4 SPF studs": { itemKind: "product", categorySlug: "lumber-composites", subcategorySlug: "studs" },
+    "Bucket truck, 40ft boom": { itemKind: "equipment", categorySlug: "trucks-trailers", subcategorySlug: "bucket-boom-trucks" },
+    "Roofing nailer + compressor combo": { itemKind: "product", categorySlug: "tools-accessories", subcategorySlug: "pneumatic-tools" },
+    "Surplus crushed stone (#57)": { itemKind: "product", categorySlug: "sitework-landscape-hardscape", subcategorySlug: "aggregate-sand-gravel" },
+    "Reconditioned 200A panels (lot of 10)": { itemKind: "product", categorySlug: "electrical-lighting", subcategorySlug: "panels-load-centers" },
+    "Job-site office trailer, 20ft": { itemKind: "equipment", categorySlug: "scaffolding-shoring-site-support", subcategorySlug: "portable-offices-trailers" },
+    "Asphalt roller, double drum": { itemKind: "equipment", categorySlug: "compaction-paving", subcategorySlug: "ride-on-rollers" },
+    "Surplus architectural shingles (20 sq)": { itemKind: "product", categorySlug: "roofing-siding", subcategorySlug: "asphalt-shingles" },
+    "R-410A recovery machine": { itemKind: "equipment", categorySlug: "demolition-specialty", subcategorySlug: "hvac-service-recovery" },
+  };
+
   for (const l of listings) {
     const { owner, ...rest } = l;
     // Margin pricing (PRD §7B, corrected model): the listed `price` is the PUBLIC
@@ -367,7 +389,9 @@ async function main() {
             listedAt: rest.createdAt ?? new Date(),
           }
         : {};
-    await prisma.listing.create({ data: { ...rest, ...priceFields, ...owner } });
+    await prisma.listing.create({
+      data: { ...rest, ...priceFields, ...owner, ...(CLASSIFY[rest.title] ?? {}) },
+    });
   }
 
   console.log("Creating posts...");

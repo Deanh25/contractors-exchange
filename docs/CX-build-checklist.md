@@ -89,13 +89,21 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - Photos social features (Step 2, requested): likes + comments per photo, reusing the feed's
     reaction picker + threaded comments. Needs an engagement target for photos (extend Reaction/
     Comment to a photo, or dedicated PhotoReaction/PhotoComment) - decide when we build it.
-  - Posts enhancements (requested 07/11/2026):
-    - (a) Add a **Posts** tab to BOTH workspaces (personal `/me` + company workspace) where the
-      owner sees + manages all their posts (edit/delete), LinkedIn-style - not just the read-only
-      public "View public" Posts. A "Write a post" button redirects to the Feed composer.
-    - (b) When composing a post (as user OR company), **default the Region + Trade** to the author's
-      profile selection (their trades/location) so they aren't re-picking every time; improves the
-      feed algorithm + reduces friction. Still editable per post.
+  - Posts enhancements (requested 07/11/2026) **- ALL BUILT + tested + signed off**:
+    - (a) **Posts** tab on BOTH workspaces (personal `/me` + company workspace): the owner sees +
+      manages all their posts, with a "Write a post" button to the Feed composer. Now also renders
+      the full engagement bar + comment threads, so the owner can moderate from the workspace
+      (commit d61cb2c).
+    - (b) Composing a post (as user OR company) **defaults the Region + Trade** to the author's
+      profile selection. Still editable per post (commit 09d08d8).
+    - (c) Post **Edit/Delete moved onto the post card** as an owner-only "..." menu, so a whole post
+      can be edited/deleted from the **feed** and the **post detail page**, not just the workspace.
+      UI gate mirrors the service rule (author, or a member who may act for the author company);
+      the service re-checks every mutation (commit e4c8282).
+    - (d) **Public profiles are read-only**: no post Edit/Delete menu, and the owner's comment
+      MODERATION delete is hidden on the public Posts tab (it stays in the feed + workspace).
+      Comment authors can still delete their own comment. Display gate only; `deleteComment`
+      re-authorizes server-side (commit e918277).
   - Architecture rule: domain logic in `src/lib/services/profile.ts` (extend), Server Action stays a
     thin shim (parse FormData, save media to URL, call service, revalidate). Pause for review after
     each part. (Full prompt: `docs/CX-profile-system-prompt.md` if saved.)
@@ -115,13 +123,21 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - **Architecture**: domain logic in `src/lib/services/admin-users.ts` (new service, per AGENTS.md);
     `src/app/actions/admin-users.ts` stays a thin shim (resolve actor, parse FormData, call service,
     revalidate). No `FormData`/`redirect`/`cookies()` in the service.
-- [ ] **Marketplace product + equipment categories** *(new - not started; research/approve taxonomy
-  BEFORE building)* - add construction-industry PRODUCT/MATERIAL and EQUIPMENT category taxonomies
-  (distinct from the trade taxonomy) used when (1) a user/company LISTS an item in the marketplace and
-  (2) FILTERS marketplace search. Source from a recognized industry standard, adapted to
-  marketplace-friendly top levels. Deliverable step 1: present the proposed product + equipment
-  category lists and their source for sign-off; then wire into the listing form + marketplace filters
-  (likely extending the existing DB Category tree with a product/equipment classification).
+- **Marketplace product + equipment categories** *(taxonomy signed off 07/16/2026; WRITE side built,
+  BROWSE-page redesign in progress)* - construction-industry PRODUCT/MATERIAL and EQUIPMENT category
+  taxonomies (distinct from the trade taxonomy), two independent 2-level trees, used when a
+  user/company LISTS an item and when a buyer FILTERS the marketplace. A listing is Trade + EITHER one
+  Product OR one Equipment category (mutually exclusive), each with an optional sub-category.
+  - [x] Taxonomy source approved and captured as `docs/CX-taxonomy-products-equipment.md` (+ CSV/XLSX),
+    auto-derived into the framework-agnostic `src/lib/taxonomy.ts` (stable slugs, CSI MasterFormat
+    anchors on products).
+  - [x] **Write side** - `ItemKind` enum + `itemKind`/`categorySlug`/`subcategorySlug` on `Listing`
+    (nullable, indexed); persisted in `src/lib/services/listings.ts`; slugs validated against the
+    taxonomy in the action shim; `ItemClassification` picker on the new + edit forms; classification
+    badge on the listing detail page; demo listings tagged in the seed.
+  - [ ] **Browse side (in progress)** - redesign `src/app/listings/page.tsx` (per the approved mock):
+    Products/Materials + Equipment filter groups as expandable 2-level multi-select trees, a card
+    "kind" tag, instant-apply filters, and a reserved chips row. Add `category`/`itemKind` query params.
 - [ ] **Reports module (`/admin/reports`)** *(new - not started)* - exportable, filterable,
   historical reports that complement the at-a-glance Dashboard. Each report shares: the Dashboard
   time windows (7d/30d/90d/YTD/All) plus a custom date range; filters for category/trade, region

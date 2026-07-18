@@ -5,9 +5,11 @@ import { createListingAction } from "@/app/actions/listing";
 import { ListingTypeFields } from "@/components/ListingTypeFields";
 import { LocationPicker } from "@/components/LocationPicker";
 import { SearchSelect } from "@/components/SearchSelect";
+import { ItemClassification } from "@/components/ItemClassification";
 import { MediaUpload } from "@/components/MediaUpload";
 import { getLeafOptions } from "@/lib/categories";
 import { LISTING_CONDITIONS } from "@/lib/listings";
+import { PRODUCT_CATEGORIES, EQUIPMENT_CATEGORIES } from "@/lib/taxonomy";
 import { getAllCategoryMargins, DEFAULT_MARGIN_PCT } from "@/lib/pricing";
 
 const ERRORS: Record<string, string> = {
@@ -102,6 +104,12 @@ export default async function NewListingPage({
               placeholder="Search a trade…"
             />
           </div>
+
+          {/* Product / Equipment classification (single, mutually exclusive) */}
+          <ItemClassification
+            productCats={PRODUCT_CATEGORIES}
+            equipmentCats={EQUIPMENT_CATEGORIES}
+          />
 
           {/* Location */}
           <LocationPicker

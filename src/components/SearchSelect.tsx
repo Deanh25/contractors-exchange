@@ -23,6 +23,7 @@ export function SearchSelect({
   emptyText = "No matches",
   primaryName,
   defaultPrimary,
+  onChange,
 }: {
   name: string;
   options: Option[];
@@ -33,6 +34,9 @@ export function SearchSelect({
   /** When set (multi-select), enables a star to mark one item as primary. */
   primaryName?: string;
   defaultPrimary?: string;
+  /** Fires with the full selection whenever it changes (e.g. to drive a dependent
+   *  picker). Optional; the hidden-input contract is unchanged. */
+  onChange?: (selected: string[]) => void;
 }) {
   const [selected, setSelected] = useState<string[]>(defaultValue);
   const [query, setQuery] = useState("");
@@ -80,12 +84,17 @@ export function SearchSelect({
 
   function choose(value: string) {
     if (multiple) {
-      setSelected((prev) =>
-        prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
-      );
+      setSelected((prev) => {
+        const next = prev.includes(value)
+          ? prev.filter((v) => v !== value)
+          : [...prev, value];
+        onChange?.(next);
+        return next;
+      });
       setQuery("");
     } else {
       setSelected([value]);
+      onChange?.([value]);
       setQuery("");
       setOpen(false);
     }

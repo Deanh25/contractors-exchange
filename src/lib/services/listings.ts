@@ -8,7 +8,19 @@ import type {
   ListingStatus,
   ListingCondition,
   ListingCloseReason,
+  ItemKind,
 } from "@/generated/prisma/client";
+
+/**
+ * Product/Equipment classification (src/lib/taxonomy.ts), already validated by the
+ * caller. Mutually exclusive with itself: itemKind picks which tree; a null itemKind
+ * means an untagged listing or a service, and category/subcategory are null too.
+ */
+export type ListingClassification = {
+  itemKind: ItemKind | null;
+  categorySlug: string | null;
+  subcategorySlug: string | null;
+};
 
 /**
  * Listing SERVICE (PRD §3 + §7B). Framework-agnostic: no FormData/redirect/
@@ -84,6 +96,7 @@ export type CreateListingParams = {
   owner: { type: "user" | "company"; id: string };
   common: ListingCommon;
   typeFields: ListingTypeFields;
+  classification: ListingClassification;
   quantity: number;
   /** Already-saved media URLs (the caller persists uploads). */
   photos: string[];
@@ -93,7 +106,7 @@ export type CreateListingParams = {
 export async function createListing(
   params: CreateListingParams,
 ): Promise<{ listingId: string }> {
-  const { common: c, typeFields: tf, owner, photos, quantity } = params;
+  const { common: c, typeFields: tf, classification: cls, owner, photos, quantity } = params;
   const pricing = await pricingData(tf, c.tradeCategory);
 
   const data: Prisma.ListingCreateInput = {
@@ -109,6 +122,9 @@ export async function createListing(
     condition: c.condition,
     manufacturer: c.manufacturer || null,
     photos: photos.length > 0 ? photos : undefined,
+    itemKind: cls.itemKind,
+    categorySlug: cls.itemKind ? cls.categorySlug : null,
+    subcategorySlug: cls.itemKind ? cls.subcategorySlug : null,
     type: tf.type,
     tradeKind: tf.tradeKind,
     price: pricing.price,
@@ -132,6 +148,7 @@ export type UpdateListingParams = {
   listingId: string;
   common: ListingCommon;
   typeFields: ListingTypeFields;
+  classification: ListingClassification;
   quantity: number;
   status: ListingStatus;
   /** Final media set: kept existing URLs + newly uploaded, in order. */
@@ -140,7 +157,7 @@ export type UpdateListingParams = {
 
 /** Edit a listing's fields, pricing, status, and media. */
 export async function updateListing(params: UpdateListingParams): Promise<void> {
-  const { listingId, common: c, typeFields: tf, quantity, status, photos } = params;
+  const { listingId, common: c, typeFields: tf, classification: cls, quantity, status, photos } = params;
   const pricing = await pricingData(tf, c.tradeCategory);
 
   await prisma.listing.update({
@@ -157,6 +174,9 @@ export async function updateListing(params: UpdateListingParams): Promise<void> 
       freightNote: c.freightNote || null,
       condition: c.condition,
       manufacturer: c.manufacturer || null,
+      itemKind: cls.itemKind,
+      categorySlug: cls.itemKind ? cls.categorySlug : null,
+      subcategorySlug: cls.itemKind ? cls.subcategorySlug : null,
       type: tf.type,
       tradeKind: tf.tradeKind,
       price: pricing.price,
