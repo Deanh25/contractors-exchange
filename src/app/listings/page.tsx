@@ -367,45 +367,9 @@ export default async function ListingsPage({
                 ))}
               </RailGroup>
 
-              <RailGroup label="Products / Materials" open={productsOpen}>
-                <TaxonomyFilter
-                  categories={PRODUCT_CATEGORIES as TaxCategory[]}
-                  selectedCats={catSet}
-                  selectedSubs={subSet}
-                />
-              </RailGroup>
-
-              <RailGroup label="Equipment" open={equipmentOpen}>
-                <TaxonomyFilter
-                  categories={EQUIPMENT_CATEGORIES as TaxCategory[]}
-                  selectedCats={catSet}
-                  selectedSubs={subSet}
-                />
-              </RailGroup>
-
-              <RailGroup label="Trade" open={trades.length > 0}>
-                <div className="max-h-72 overflow-y-auto">
-                  {leafGroups.map((g) => (
-                    <div key={g.category} className="mb-2">
-                      <p className="px-0.5 py-1 text-xs font-semibold uppercase tracking-wide text-white/40">
-                        {g.category}
-                      </p>
-                      {g.leaves.map((l) => (
-                        <CheckRow
-                          key={l.slug}
-                          name="trade"
-                          value={l.slug}
-                          label={l.label}
-                          checked={trades.includes(l.slug)}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </RailGroup>
-
-              {/* Location + distance search sits on a white panel so the linked
-                  state/city control and radius stay legible on the navy rail. */}
+              {/* Location + distance search. The mock uses plain state checkboxes
+                  with no distance search; we keep the linked state/city control +
+                  radius on a light panel so it stays legible on the navy rail. */}
               <RailGroup label="Location & distance" open={!!city || radiusActive}>
                 <div className="rounded-lg bg-white p-3 text-slate-700">
                   <LocationPicker
@@ -486,6 +450,43 @@ export default async function ListingsPage({
                   </div>
                 </RailGroup>
               )}
+
+              <RailGroup label="Trade" open={trades.length > 0}>
+                <div className="max-h-72 overflow-y-auto">
+                  {leafGroups.map((g) => (
+                    <div key={g.category} className="mb-2">
+                      <p className="px-0.5 py-1 text-xs font-semibold uppercase tracking-wide text-white/40">
+                        {g.category}
+                      </p>
+                      {g.leaves.map((l) => (
+                        <CheckRow
+                          key={l.slug}
+                          name="trade"
+                          value={l.slug}
+                          label={l.label}
+                          checked={trades.includes(l.slug)}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </RailGroup>
+
+              <RailGroup label="Products / Materials" open={productsOpen}>
+                <TaxonomyFilter
+                  categories={PRODUCT_CATEGORIES as TaxCategory[]}
+                  selectedCats={catSet}
+                  selectedSubs={subSet}
+                />
+              </RailGroup>
+
+              <RailGroup label="Equipment" open={equipmentOpen}>
+                <TaxonomyFilter
+                  categories={EQUIPMENT_CATEGORIES as TaxCategory[]}
+                  selectedCats={catSet}
+                  selectedSubs={subSet}
+                />
+              </RailGroup>
 
               {/* No-JS fallback: without the client interceptor, this submits. */}
               <noscript>

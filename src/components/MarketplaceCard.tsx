@@ -80,7 +80,7 @@ export async function MarketplaceCard({
       )}
 
       <Link href={`/listings/${listing.id}`} className="block">
-        <div className="relative aspect-[4/3] bg-slate-100">
+        <div className="relative aspect-[4/3] border-b border-slate-100 bg-gradient-to-b from-brand-50/70 to-slate-50">
           {photo ? (
             isVideoUrl(photo) ? (
               <>
@@ -94,8 +94,14 @@ export async function MarketplaceCard({
               <img src={photo} alt={listing.title} className="h-full w-full object-cover" />
             )
           ) : (
-            <div className="grid h-full w-full place-items-center text-slate-300">
-              <span className="text-4xl">🏗️</span>
+            // Branded "image coming soon" placeholder (matches the marketplace mock).
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-500 text-[17px] font-black tracking-wide text-white shadow-[0_3px_8px_rgba(247,148,30,.4)]">
+                CX
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                Image coming soon
+              </span>
             </div>
           )}
           <span
