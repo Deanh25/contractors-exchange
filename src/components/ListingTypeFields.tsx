@@ -85,6 +85,14 @@ export function ListingTypeFields({
   const hasWhatIf = whatIfNum > 0;
   const whatIfNet = hasWhatIf ? whatIfNum / (1 + marginPct / 100) : 0;
   const whatIfMargin = hasWhatIf ? whatIfNum - whatIfNet : 0;
+  // Until the seller types their own, show a worked example (a close at 2x the
+  // reserve) so the "what a higher close earns you" strip is never empty.
+  const exampleNet = hasReserve ? reserveNum * 2 : 0;
+  const exampleGross = exampleNet * (1 + marginPct / 100);
+  const wiGross = hasWhatIf ? whatIfNum : exampleGross;
+  const wiNet = hasWhatIf ? whatIfNet : exampleNet;
+  const wiMargin = hasWhatIf ? whatIfMargin : exampleGross - exampleNet;
+  const showWhatIf = hasWhatIf || hasReserve;
 
   return (
     <div ref={rootRef} className="space-y-4">
@@ -303,34 +311,37 @@ export function ListingTypeFields({
               climb above the reserve, your net climbs with them.
             </p>
 
-            {/* Optional what-if: net at a hypothetical winning bid (not saved). */}
+            {/* Optional what-if: net at a hypothetical winning bid (not saved).
+                Shows a worked example until the seller types their own bid. */}
             <div className="mt-3 rounded-md border border-dashed border-slate-300 bg-white p-2.5">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Estimate your take at a winning bid
-              </label>
-              <input
-                inputMode="decimal"
-                value={whatIfBid}
-                onChange={(e) => setWhatIfBid(e.target.value)}
-                placeholder="e.g. 2240"
-                className={`mt-1 ${inputCls}`}
-              />
-              {hasWhatIf && (
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Optional - what a higher close earns you
+              </p>
+              {showWhatIf && (
                 <div className="mt-2 space-y-1 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-700">You net</span>
-                    <span className="font-semibold text-slate-900">
-                      {usd(whatIfNet)}
+                    <span className="text-slate-700">
+                      {!hasWhatIf && "e.g. "}If it closes at a {usd(wiGross)} bid
+                    </span>
+                    <span className="font-semibold text-emerald-700">
+                      you net {usd(wiNet)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">
                       CX margin ({marginPct}%)
                     </span>
-                    <span className="text-slate-600">{usd(whatIfMargin)}</span>
+                    <span className="text-slate-600">{usd(wiMargin)}</span>
                   </div>
                 </div>
               )}
+              <input
+                inputMode="decimal"
+                value={whatIfBid}
+                onChange={(e) => setWhatIfBid(e.target.value)}
+                placeholder="Try your own winning bid, e.g. 2240"
+                className={`mt-2 ${inputCls}`}
+              />
             </div>
           </div>
         </div>
