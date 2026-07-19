@@ -92,17 +92,43 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     gap -> priority), feeding new roadmap items. Sources gathered: materialsmarket.com
     /how-it-works, /trade-credit, /returns, /faqs.
 
-- [ ] **Account & credential management** *(new - QUEUED, not started)* - self-service
-  account security for signed-in users and a signed-out recovery flow:
-  - **Password reset (forgot password):** signed-out "forgot password" -> email a
-    time-limited, single-use reset link -> set a new password. Needs a transactional
-    email sender (shares the provider decision with Admin notifications).
-  - **Change password:** signed-in, requires the current password, then set a new one.
-  - **Change login email:** signed-in; verify the new address (confirmation link)
-    before switching; notify the old address. Keep email unique.
-  - Nice-to-have later: sessions/"sign out everywhere", 2FA. Architecture: a
-    `src/lib/services/account.ts` service + thin action/route shims; tokens hashed,
-    single-use, expiring; never log or email raw passwords.
+- [ ] **Real authentication + account/credential management** *(new - QUEUED, DECISIONS
+  LOCKED; big foundational build; do in phases)*
+  - **FINDING:** CX has NO real auth today. `src/app/actions/auth.ts` is a passwordless
+    DEV STUB (type an email -> find-or-create -> signed in). No password on `User`, no
+    hashing, no email verification. Session is a stateless HMAC-signed cookie
+    (`src/lib/session.ts`), no DB session table, no revocation. So "reset password" etc.
+    require building the credential layer first.
+  - **DECIDED sign-in methods (Dean, 07/19):** Email + Password **AND** Google sign-in
+    **AND** Microsoft sign-in (all three). Plus a **real transactional email provider**
+    (Dean chose "pick provider now"; recommend **Resend** - simple, Next-friendly, free
+    tier). Provider also unblocks Admin notifications.
+  - **Recommended approach:** KEEP the existing custom session + acting-as system (it
+    works and integrates with resolveActor); do NOT rip in NextAuth (would ripple through
+    identity). Add: password hashing via Node `crypto.scrypt` (no dep), and OAuth via
+    `arctic` (small lib, Google + Microsoft/Entra providers, BYO session). Token tables
+    for email-verify + password-reset (hashed, single-use, expiring).
+  - **Schema:** `User.passwordHash String?`, `User.emailVerified DateTime?`; new models
+    `VerificationToken`, `PasswordResetToken`; `OAuthAccount` (provider, providerUserId,
+    userId) for Google/Microsoft links. Reseed dev users with a known password.
+  - **Phases (each: build -> test -> commit):**
+    1. Email+password: signup sets a password, signin verifies it (scrypt); update seed.
+    2. Email verification at signup (needs Resend key).
+    3. Forgot/reset password (emailed single-use link).
+    4. Signed-in: change password (needs current), change login email (re-verify new,
+       notify old), keep email unique.
+    5. Google OAuth sign-in (arctic).
+    6. Microsoft OAuth sign-in (arctic).
+    7. Later: sessions list / "sign out everywhere", login rate-limit/lockout, 2FA,
+       self-service account deactivate/delete, Terms acceptance at signup.
+  - **Dean's external setup (needed before phases 2-6):** create a Resend account -> API
+    key; create a Google OAuth client (client id/secret + redirect URI); create a
+    Microsoft Entra app registration (client id/secret + redirect URI). All go in `.env`
+    (never committed). I'll give exact steps when we start.
+  - **Architecture:** `src/lib/services/account.ts` + `src/lib/services/auth.ts` services
+    (framework-agnostic) + thin action/route shims; never log or email raw passwords/tokens.
+  - **Also surfaced as missing standard account features** (queue as we go): notification
+    preferences (email/SMS opt-in), block/report another user, account deactivate/delete.
 
 - [ ] **Payments module (buyer payment methods + Stripe processing)** *(new - QUEUED, not
   started; later)* - two connected pieces:
