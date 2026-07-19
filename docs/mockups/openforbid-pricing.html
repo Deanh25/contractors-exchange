@@ -1,0 +1,188 @@
+<style>
+  :root {
+    --bg: #eef1f6; --chrome-ink: #1a2233; --chrome-soft: #55617a; --chrome-hair: #dbe1ec;
+    --brand: #f7941e; --brand-deep: #b35f00; --brand-50: #fff5e8;
+    /* The listing form is a light product surface, same in both themes. */
+    --card: #ffffff; --ink: #1a2233; --soft: #6b7688; --faint: #97a1b2;
+    --hair: #e3e8f0; --panel: #f7f9fc; --panel-hair: #e6ebf3;
+    --good: #0f7a52;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0f17; --chrome-ink: #eef2f8; --chrome-soft: #9aa6bd; --chrome-hair: #232c3d; }
+  }
+  :root[data-theme="dark"] { --bg: #0b0f17; --chrome-ink: #eef2f8; --chrome-soft: #9aa6bd; --chrome-hair: #232c3d; }
+  :root[data-theme="light"] { --bg: #eef1f6; --chrome-ink: #1a2233; --chrome-soft: #55617a; --chrome-hair: #dbe1ec; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .wrap { font-family: var(--font); background: var(--bg); color: var(--chrome-ink); min-height: 100vh; padding: clamp(20px,4vw,56px); -webkit-font-smoothing: antialiased; }
+  .inner { max-width: 1080px; margin: 0 auto; }
+
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-deep); }
+  @media (prefers-color-scheme: dark){ .eyebrow{ color:#fb9d33; } }
+  :root[data-theme="dark"] .eyebrow{ color:#fb9d33; }
+  :root[data-theme="light"] .eyebrow{ color:var(--brand-deep); }
+  .eyebrow::before { content:""; width:22px; height:2px; background:var(--brand); border-radius:2px; }
+  h1 { font-size: clamp(25px,3.3vw,36px); line-height:1.09; letter-spacing:-0.02em; text-wrap:balance; margin:14px 0 10px; font-weight:800; }
+  .lede { max-width: 64ch; color: var(--chrome-soft); font-size:16px; line-height:1.55; margin:0; }
+
+  .cols { margin-top: 38px; display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
+  .cap { margin-bottom: 12px; }
+  .cap .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color: var(--chrome-soft); }
+  .cap .tag.keep { color: var(--good); }
+  .cap .tag.new { color: var(--brand-deep); }
+  @media (prefers-color-scheme: dark){ .cap .tag.new{ color:#fb9d33; } }
+  :root[data-theme="dark"] .cap .tag.new{ color:#fb9d33; }
+  .cap h2 { font-size: 17px; margin: 5px 0 4px; letter-spacing:-0.01em; color: var(--chrome-ink); }
+  .cap p { font-size: 13.5px; line-height:1.5; color: var(--chrome-soft); margin:0; }
+
+  /* ---- the form card (light, faithful to the real listing form) ---- */
+  .card { background: var(--card); color: var(--ink); border: 1px solid var(--hair); border-radius: 14px; padding: 18px; box-shadow: 0 14px 34px -24px rgba(20,30,60,0.4); }
+  .flabel { font-size: 13px; font-weight: 600; color: #33405a; }
+  .flabel .muted { font-weight: 400; color: var(--faint); }
+  .fld { width:100%; margin-top:6px; border:1px solid #cfd7e3; border-radius:8px; padding:9px 11px; font-size:14px; color:var(--ink); background:#fff; font-family:var(--font); }
+  .fld.ph { color: var(--faint); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .mt { margin-top: 14px; }
+
+  /* type selector mini (just the selected chip for context) */
+  .typebar { display:flex; gap:8px; margin-bottom:14px; }
+  .type { flex:1; border:1px solid var(--hair); border-radius:9px; padding:9px 11px; font-size:12.5px; }
+  .type .pill { display:inline-block; font-weight:700; font-size:11.5px; padding:2px 9px; border-radius:999px; }
+  .type .sub { display:block; color:var(--faint); font-size:11px; margin-top:3px; }
+  .type.on { border-color: var(--brand); background: var(--brand-50); }
+  .pill.price { color:#b35f00; background:#ffe6c2; }
+  .pill.bid { color:#b35f00; background:#ffe6c2; }
+
+  /* pricing panel (mirrors the real one) */
+  .pricing { margin-top: 12px; border:1px solid var(--panel-hair); background: var(--panel); border-radius:10px; padding:12px; }
+  .pricing .top { display:flex; align-items:center; justify-content:space-between; }
+  .pricing .ttl { font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--faint); }
+  .pricing .switch { font-size:12px; font-weight:500; color:var(--brand-deep); }
+  .row { display:flex; align-items:center; justify-content:space-between; font-size:14px; margin-top:7px; }
+  .row .k { color:#4a566d; }
+  .row .k.mut { color:#7b8598; }
+  .row .v { font-weight:600; color:var(--ink); font-variant-numeric: tabular-nums; }
+  .row .v.mut { font-weight:500; color:#59657a; }
+  .total { display:flex; align-items:center; justify-content:space-between; margin-top:9px; padding-top:9px; border-top:1px solid var(--panel-hair); }
+  .total .k { font-weight:700; color:var(--ink); }
+  .total .v { font-weight:800; font-size:19px; color:var(--ink); font-variant-numeric: tabular-nums; }
+  .fine { margin-top:9px; font-size:12px; line-height:1.45; color:var(--faint); }
+  .net-hl { color: var(--good); font-weight:700; }
+
+  .whatif { margin-top:10px; border:1px dashed #cbd5e1; border-radius:9px; padding:10px 11px; background:#fff; }
+  .whatif .lab { font-size:11.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--faint); }
+  .whatif .line { display:flex; align-items:center; justify-content:space-between; font-size:13.5px; margin-top:6px; }
+  .whatif .line .v { font-weight:700; font-variant-numeric:tabular-nums; }
+
+  .note { margin-top: 30px; padding:18px 20px; border-radius:12px; border:1px solid var(--chrome-hair); background: var(--card); color: var(--ink); }
+  .note h3 { margin:0 0 8px; font-size:15px; }
+  .note p { margin:0 0 8px; font-size:13.5px; line-height:1.6; color:#4a566d; }
+  .note .q { border-left:3px solid var(--brand); padding-left:12px; color:var(--ink); }
+  .note b { font-weight:700; }
+</style>
+
+<div class="wrap">
+  <div class="inner">
+    <div class="eyebrow">Listing type &middot; mockup</div>
+    <h1>An earnings breakdown for Open for bid</h1>
+    <p class="lede">
+      Set price already gives the seller a clear net / margin / buyer-pays breakdown. This brings the
+      same panel to Open for bid so a seller sees what a sale would earn them before they list. Set price
+      is shown on the left, unchanged, so you can see the flow is identical. Trade goods and trade
+      services are unaffected.
+    </p>
+
+    <div class="cols">
+
+      <!-- SET PRICE (reference, unchanged) -->
+      <div>
+        <div class="cap">
+          <span class="tag keep">Keep exactly as is</span>
+          <h2>Set price &middot; today</h2>
+          <p>The reference. Seller enters their net; the panel shows margin and what the buyer pays.</p>
+        </div>
+        <div class="card">
+          <div class="typebar">
+            <div class="type on"><span class="pill price">Set price</span><span class="sub">Fixed price, buy now.</span></div>
+            <div class="type"><span class="pill" style="color:#5b6472;background:#eef1f6;">Open for bid</span><span class="sub">Starting bid + close date.</span></div>
+          </div>
+
+          <label class="flabel">Your net price (USD) <span class="muted">- what you take home</span></label>
+          <input class="fld" value="2500.00" readonly />
+
+          <div class="pricing">
+            <div class="top"><span class="ttl">Pricing</span><span class="switch">What the buyer sees</span></div>
+            <div class="row"><span class="k">Your net</span><span class="v">$2,500.00</span></div>
+            <div class="row"><span class="k mut">CX margin (12%)</span><span class="v mut">$300.00</span></div>
+            <div class="total"><span class="k">Buyer pays</span><span class="v">$2,800.00</span></div>
+            <p class="fine">The 12% category margin is fixed and always applies. You keep your full net.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPEN FOR BID (new) -->
+      <div>
+        <div class="cap">
+          <span class="tag new">New &middot; proposed</span>
+          <h2>Open for bid &middot; proposed</h2>
+          <p>Same panel, driven by the reserve. The seller reads their net floor, the margin, and the buyer's opening bid.</p>
+        </div>
+        <div class="card">
+          <div class="typebar">
+            <div class="type"><span class="pill" style="color:#5b6472;background:#eef1f6;">Set price</span><span class="sub">Fixed price, buy now.</span></div>
+            <div class="type on"><span class="pill bid">Open for bid</span><span class="sub">Starting bid + close date.</span></div>
+          </div>
+
+          <div class="grid2">
+            <div>
+              <label class="flabel">Your reserve (USD) <span class="muted">- your net floor</span></label>
+              <input class="fld" value="1000.00" readonly />
+            </div>
+            <div>
+              <label class="flabel">Closes at</label>
+              <input class="fld ph" value="mm/dd/yyyy --:--" readonly />
+            </div>
+          </div>
+
+          <div class="pricing">
+            <div class="top"><span class="ttl">Potential earnings</span><span class="switch">What the buyer sees</span></div>
+            <div class="row"><span class="k">Your net at reserve</span><span class="v net-hl">$1,000.00</span></div>
+            <div class="row"><span class="k mut">CX margin (12%)</span><span class="v mut">$120.00</span></div>
+            <div class="total"><span class="k">Bidding opens at</span><span class="v">$1,120.00</span></div>
+            <p class="fine">
+              Your reserve is the floor, what you take home if it sells at the minimum. The 12% category
+              margin is fixed. As winning bids climb above the reserve, your net climbs with them.
+            </p>
+
+            <div class="whatif">
+              <span class="lab">Optional &middot; what a higher close earns you</span>
+              <div class="line"><span>If it closes at a $2,240 bid</span><span class="v net-hl">you net $2,000.00</span></div>
+              <div class="line"><span style="color:#7b8598;">CX margin (12%)</span><span class="v" style="color:#59657a;">$240.00</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="note">
+      <h3>How it works and the one thing to confirm</h3>
+      <p>
+        To match Set price exactly, the reserve is treated as the seller's <b>net floor</b> (what they take
+        home), not the buyer-facing number. The panel then mirrors Set price: net, the fixed 12% margin, and
+        the buyer figure, here labeled <b>"Bidding opens at"</b> since it is the minimum a buyer can bid.
+      </p>
+      <p>
+        The dashed <b>"what a higher close earns you"</b> strip is an optional extra: it makes the "potential"
+        part concrete by showing the take at a sample winning bid. In the real form it can update live if the
+        seller types a hypothetical bid, or we can drop it and keep only the reserve breakdown.
+      </p>
+      <p class="q">
+        Confirm for me: (1) reserve = seller's net floor, matching Set price, good? and (2) keep the optional
+        "higher close" strip, or show only the reserve breakdown? Then I will build it into the form.
+      </p>
+    </div>
+  </div>
+</div>

@@ -247,7 +247,7 @@ export default async function ListingDetailPage({
               {listing.type === "bid" && (
                 <div>
                   <p className="text-2xl font-extrabold text-slate-900">
-                    {formatMoney(listing.startReserve)}
+                    {formatMoney(listing.price ?? listing.startReserve)}
                     <span className="ml-1 text-sm font-medium text-slate-500">
                       starting bid
                     </span>

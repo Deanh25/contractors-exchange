@@ -67,28 +67,46 @@ type PricingData = {
   listedAt: Date | null;
 };
 
-/** Margin pricing for set-price listings; nulls for bid/trade. */
+/**
+ * Margin pricing per listing type. Set-price: the seller enters their NET and the
+ * public price = net x (1 + category margin). Open-for-bid mirrors this: the reserve
+ * IS the seller's net floor, so the public opening bid = reserve x (1 + margin); we
+ * store that in `price` (what buyers see) and keep `startReserve` as the private net.
+ * Trades carry no pricing.
+ */
 async function pricingData(
   tf: ListingTypeFields,
   category: string,
 ): Promise<PricingData> {
-  if (tf.type !== "price" || tf.sellerNet === undefined) {
+  if (tf.type === "price" && tf.sellerNet !== undefined) {
+    const marginPct = await getCategoryMargin(category);
+    const p = computeListingPricing(tf.sellerNet, marginPct, new Date());
     return {
-      price: tf.price,
+      price: p.price,
+      sellerNet: p.sellerNet,
+      marginPct: p.marginPct,
+      acceptsOffers: tf.acceptsOffers ?? true,
+      listedAt: p.listedAt,
+    };
+  }
+  if (tf.type === "bid" && tf.startReserve !== null) {
+    const marginPct = await getCategoryMargin(category);
+    // Reserve is the seller's net floor; buyers bid the gross (net + margin).
+    const opening = computeListingPricing(tf.startReserve, marginPct, new Date());
+    return {
+      price: opening.price,
       sellerNet: null,
-      marginPct: null,
+      marginPct,
       acceptsOffers: false,
       listedAt: null,
     };
   }
-  const marginPct = await getCategoryMargin(category);
-  const p = computeListingPricing(tf.sellerNet, marginPct, new Date());
   return {
-    price: p.price,
-    sellerNet: p.sellerNet,
-    marginPct: p.marginPct,
-    acceptsOffers: tf.acceptsOffers ?? true,
-    listedAt: p.listedAt,
+    price: tf.price,
+    sellerNet: null,
+    marginPct: null,
+    acceptsOffers: false,
+    listedAt: null,
   };
 }
 

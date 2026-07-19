@@ -156,7 +156,7 @@ export default async function CheckoutPage({
                   )}
                   {type === "bid" && (
                     <p className="text-xs text-slate-500">
-                      Starting bid {formatMoney(listing.startReserve)}
+                      Starting bid {formatMoney(listing.price ?? listing.startReserve)}
                     </p>
                   )}
                 </div>

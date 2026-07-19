@@ -54,6 +54,26 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
 
 ## C. Remaining build work (not yet started / in progress)
 
+- **Listing + media changes (07/19/2026 requests)** - work in the order below; each is
+  built, tested, then committed on its own.
+  - [x] **1. Open-for-bid earnings breakdown** - bring the set-price net / CX margin /
+    buyer-pays panel to Open-for-bid listings so the seller sees the potential take.
+    DECIDED: the reserve IS the seller's NET floor (mirrors set price), so the public
+    opening bid = reserve x (1 + category margin); the service stores that in `price`
+    and buyers see it. Includes the optional "estimate your take at a winning bid"
+    what-if strip. Mockup: `docs/mockups/openforbid-pricing.html`. *(Built; awaiting test.)*
+  - [ ] **2. Listing photos - drag-and-drop main photo + preview** - let the seller
+    reorder photos in the listing form (first = main/cover) by drag-and-drop, and
+    preview them. Reuse the drag pattern from `src/app/admin/categories` and the
+    lightbox from `ProfilePhotos`/`MediaGallery`. Component: `MediaUpload.tsx`.
+  - [ ] **3. Feed - multiple photos/videos + drag-drop main + preview (LinkedIn parity)**
+    - the feed composer today takes ONE image (`MediaInput name="image"`). Make it a
+    LinkedIn-style multi-media post: multiple photos AND videos, drag-and-drop to pick
+    the main one, and a preview. Post cards render a carousel (N/total counter + prev/next
+    arrows, per Dean's LinkedIn screenshot). SCHEMA CHANGE: `Post.imageUrl` (single) ->
+    a media list; ripples through post create/edit, feed cards, profile Posts tab, and
+    engagement. This is the biggest of the three - do it last.
+
 - [ ] **Profile system (LinkedIn-style, users + companies)** *(new — QUEUED, not started; do
   not begin until the Codespaces sign-in issue is resolved)* — shared profile layout with two
   variants (`/u/[id]` users, `/company/[slug]` companies; reuse existing routes, do not create

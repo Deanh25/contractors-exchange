@@ -40,6 +40,8 @@ export function ListingTypeFields({
   const rootRef = useRef<HTMLDivElement>(null);
   const [choice, setChoice] = useState<ListingChoice>(defaultChoice);
   const [net, setNet] = useState(defaultSellerNet);
+  const [reserve, setReserve] = useState(defaultStartReserve);
+  const [whatIfBid, setWhatIfBid] = useState("");
   const [category, setCategory] = useState("");
   const [showBuyerView, setShowBuyerView] = useState(false);
 
@@ -71,6 +73,18 @@ export function ListingTypeFields({
   const hasNet = netNum > 0;
   const buyerPrice = hasNet ? netNum * (1 + marginPct / 100) : 0;
   const marginAmt = hasNet ? buyerPrice - netNum : 0;
+
+  // Open-for-bid mirrors set-price: the reserve is the seller's NET floor, so the
+  // public opening bid = reserve x (1 + margin). The what-if goes the other way,
+  // from a hypothetical winning (gross) bid back to the seller's net.
+  const reserveNum = Number(String(reserve).replace(/[^0-9.]/g, ""));
+  const hasReserve = reserveNum > 0;
+  const reserveMargin = hasReserve ? reserveNum * (marginPct / 100) : 0;
+  const opensAt = hasReserve ? reserveNum * (1 + marginPct / 100) : 0;
+  const whatIfNum = Number(String(whatIfBid).replace(/[^0-9.]/g, ""));
+  const hasWhatIf = whatIfNum > 0;
+  const whatIfNet = hasWhatIf ? whatIfNum / (1 + marginPct / 100) : 0;
+  const whatIfMargin = hasWhatIf ? whatIfNum - whatIfNet : 0;
 
   return (
     <div ref={rootRef} className="space-y-4">
@@ -206,31 +220,118 @@ export function ListingTypeFields({
       )}
 
       {choice === "bid" && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              Starting / reserve bid (USD)
-            </label>
-            <input
-              name="startReserve"
-              required
-              inputMode="decimal"
-              defaultValue={defaultStartReserve}
-              placeholder="1000.00"
-              className={inputCls}
-            />
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Your reserve (USD){" "}
+                <span className="font-normal text-slate-400">
+                  - your net floor
+                </span>
+              </label>
+              <input
+                name="startReserve"
+                required
+                inputMode="decimal"
+                value={reserve}
+                onChange={(e) => setReserve(e.target.value)}
+                placeholder="1000.00"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Closes at
+              </label>
+              <input
+                name="closesAt"
+                required
+                type="datetime-local"
+                defaultValue={defaultClosesAt}
+                className={inputCls}
+              />
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              Closes at
-            </label>
-            <input
-              name="closesAt"
-              required
-              type="datetime-local"
-              defaultValue={defaultClosesAt}
-              className={inputCls}
-            />
+
+          {/* Potential-earnings breakdown: same flow as the set-price calculator. */}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Potential earnings
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowBuyerView((v) => !v)}
+                className="text-xs font-medium text-brand-700 hover:underline"
+              >
+                {showBuyerView ? "Show full breakdown" : "What the buyer sees"}
+              </button>
+            </div>
+
+            {showBuyerView ? (
+              <div className="mt-2">
+                <p className="text-xs text-slate-500">Bidding opens at:</p>
+                <p className="text-2xl font-extrabold text-slate-900">
+                  {hasReserve ? usd(opensAt) : "$-"}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Your reserve and the margin are never shown to buyers.
+                </p>
+              </div>
+            ) : (
+              <dl className="mt-2 space-y-1 text-sm">
+                <Row
+                  label="Your net at reserve"
+                  value={hasReserve ? usd(reserveNum) : "$-"}
+                />
+                <Row
+                  label={`CX margin (${marginPct}%)`}
+                  value={hasReserve ? usd(reserveMargin) : "$-"}
+                  muted
+                />
+                <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1">
+                  <dt className="font-semibold text-slate-900">Bidding opens at</dt>
+                  <dd className="text-lg font-extrabold text-slate-900">
+                    {hasReserve ? usd(opensAt) : "$-"}
+                  </dd>
+                </div>
+              </dl>
+            )}
+            <p className="mt-2 text-xs text-slate-400">
+              Your reserve is the floor, what you take home if it sells at the
+              minimum. The {marginPct}% category margin is fixed. As winning bids
+              climb above the reserve, your net climbs with them.
+            </p>
+
+            {/* Optional what-if: net at a hypothetical winning bid (not saved). */}
+            <div className="mt-3 rounded-md border border-dashed border-slate-300 bg-white p-2.5">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Estimate your take at a winning bid
+              </label>
+              <input
+                inputMode="decimal"
+                value={whatIfBid}
+                onChange={(e) => setWhatIfBid(e.target.value)}
+                placeholder="e.g. 2240"
+                className={`mt-1 ${inputCls}`}
+              />
+              {hasWhatIf && (
+                <div className="mt-2 space-y-1 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-700">You net</span>
+                    <span className="font-semibold text-slate-900">
+                      {usd(whatIfNet)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">
+                      CX margin ({marginPct}%)
+                    </span>
+                    <span className="text-slate-600">{usd(whatIfMargin)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
