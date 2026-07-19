@@ -1,0 +1,19 @@
+{
+  "// note": "Reduce editor memory/CPU on small Codespaces (2-core/8GB, no swap): stop watching/indexing generated + vendored trees, and cap the TS server heap.",
+  "files.watcherExclude": {
+    "**/.next/**": true,
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/dist/**": true
+  },
+  "search.exclude": {
+    "**/.next": true,
+    "**/node_modules": true,
+    "**/dist": true
+  },
+  "files.exclude": {
+    "**/.next": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 2048,
+  "typescript.disableAutomaticTypeAcquisition": true
+}
