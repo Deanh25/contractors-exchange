@@ -432,7 +432,12 @@ export default async function ListingsPage({
                   radius on a light panel so it stays legible on the navy rail. */}
               <RailGroup label="Location & distance" open={!!city || radiusActive}>
                 <div className="rounded-lg bg-white p-3 text-slate-700">
+                  {/* Key on the committed location so the picker remounts fresh
+                      when the URL clears it (e.g. "Clear all"); it seeds its inputs
+                      from the defaults only on mount, so without this it keeps the
+                      old State/City after the results have already reset. */}
                   <LocationPicker
+                    key={`loc:${state}:${city}:${hasCenter ? `${lat},${lng}` : ""}`}
                     mode="filter"
                     submitOnChange
                     defaultCity={city}
