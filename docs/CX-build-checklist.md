@@ -73,6 +73,37 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     `PostCard` renders `PostMediaCarousel` (N/total counter, prev/next, dots, lightbox)
     for >1 item. Shared `src/lib/media-order.ts` builds the drag-order for posts + listings.
 
+- [ ] **Competitive gap analysis vs LinkedIn + Materials Market** *(new - QUEUED, research
+  task; do a bit later)* - map CX's current features against the two references and produce
+  a prioritized "missing features/workflows" list.
+  - **LinkedIn side (social/professional):** connections vs our follow-only model, articles
+    /long-form, events, jobs board, groups, newsletters, polls, endorsements/skills,
+    recommendations, company pages analytics, saved posts, reshare/repost, notifications
+    depth, search (people/companies/content), messaging (attachments, read receipts).
+    LinkedIn is auth-walled (can't crawl); compare against its known feature set.
+  - **Materials Market side (marketplace):** already researched - smart ORDER-MATCHING
+    (route an order to eligible suppliers by delivery radius + product range, best-performer
+    priority, accept within ~30 min); "Beat My Quote" price-beat; TRADE CREDIT / trade
+    accounts (pay end of following month, 30 days EOM); multiple payment methods (cards,
+    Apple/Google Pay, PayPal, Klarna/Clearpay); DELIVERY options (standard ~2 days, express
+    /next-day) with SMS+email order tracking + status page; RETURNS/refunds policy window;
+    supplier network/branches. Compare each to CX's buy/bid/offer + Orders + net/margin model.
+  - Deliverable: `docs/CX-competitive-gap-analysis.md` (their feature -> do we have it? ->
+    gap -> priority), feeding new roadmap items. Sources gathered: materialsmarket.com
+    /how-it-works, /trade-credit, /returns, /faqs.
+
+- [ ] **Account & credential management** *(new - QUEUED, not started)* - self-service
+  account security for signed-in users and a signed-out recovery flow:
+  - **Password reset (forgot password):** signed-out "forgot password" -> email a
+    time-limited, single-use reset link -> set a new password. Needs a transactional
+    email sender (shares the provider decision with Admin notifications).
+  - **Change password:** signed-in, requires the current password, then set a new one.
+  - **Change login email:** signed-in; verify the new address (confirmation link)
+    before switching; notify the old address. Keep email unique.
+  - Nice-to-have later: sessions/"sign out everywhere", 2FA. Architecture: a
+    `src/lib/services/account.ts` service + thin action/route shims; tokens hashed,
+    single-use, expiring; never log or email raw passwords.
+
 - [ ] **Payments module (buyer payment methods + Stripe processing)** *(new - QUEUED, not
   started; later)* - two connected pieces:
   - **Buyer payment sources (frontend):** let a user add and store payment methods
