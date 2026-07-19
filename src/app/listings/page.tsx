@@ -115,10 +115,13 @@ export default async function ListingsPage({
   const radius = Number(radiusRaw);
   const hasCenter =
     Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
-  // A numeric radius filters to a distance ring; "nationwide" keeps every listing
-  // but still uses the chosen city as the center for the Nearest sort + "~N mi".
+  // A numeric radius filters to a distance ring; "Any distance" and "Nationwide"
+  // keep every listing but still use the chosen city as the Nearest-sort center.
   const radiusActive = !!city && hasCenter && Number.isFinite(radius) && radius > 0;
-  const geoCenter = !!city && hasCenter && (radiusActive || nationwide);
+  // Any city with coordinates is a distance center. "Any distance" (no radius, not
+  // nationwide) simply removes the distance cap AND the exact-city text match: it
+  // shows everything in the chosen State (if any), ranked nearest-first.
+  const geoCenter = !!city && hasCenter;
 
   // Multi-select facets (checkbox groups), each validated against its vocabulary.
   const types = arr(sp.type).filter((t) => TYPE_VALUES.has(t as ListingChoice));
@@ -167,13 +170,18 @@ export default async function ListingsPage({
         };
       })()
     : nationwide
-      ? // Nationwide: ignore the location text filter entirely, show everything.
+      ? // Nationwide: ignore location entirely (even the State), show everything.
         baseWhere
-      : {
-          ...baseWhere,
-          ...(city ? { city: { contains: city } } : {}),
-          ...(state ? { state } : {}),
-        };
+      : geoCenter
+        ? // "Any distance" from a picked city: no distance cap and no exact-city
+          // text match; keep the State filter, and the Nearest sort centers on it.
+          { ...baseWhere, ...(state ? { state } : {}) }
+        : // No usable center: fall back to coarse city/state text matching.
+          {
+            ...baseWhere,
+            ...(city ? { city: { contains: city } } : {}),
+            ...(state ? { state } : {}),
+          };
 
   const [raw, viewer] = await Promise.all([
     prisma.listing.findMany({
