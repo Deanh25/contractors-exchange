@@ -361,7 +361,13 @@ export default async function ListingsPage({
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           {/* ---- Navy filter rail (instant apply, no Apply button) ----------- */}
           <aside className="lg:sticky lg:top-20 lg:self-start">
-            <FilterForm className="overflow-hidden rounded-2xl bg-slate-900 text-white shadow-sm">
+            {/* The rail is its OWN scroll container on desktop: capped to the
+                viewport, it scrolls internally while hovered and only chains to the
+                page once it hits an end (default overscroll = scroll chaining), like
+                Materials Market. overflow-anchor keeps a category's position stable
+                when it expands, so an opened group grows DOWNWARD instead of yanking
+                the page up. */}
+            <FilterForm className="overflow-y-auto rounded-2xl bg-slate-900 text-white shadow-sm lg:max-h-[calc(100vh-6rem)] [scrollbar-color:rgba(255,255,255,0.28)_transparent] [scrollbar-width:thin]">
               {/* q + sort ride along so a filter change preserves them. */}
               {q && <input type="hidden" name="q" value={q} />}
               {sort && <input type="hidden" name="sort" value={sort} />}

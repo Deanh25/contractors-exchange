@@ -1,0 +1,320 @@
+<style>
+  :root {
+    --bg: #eef1f6;
+    --surface: #ffffff;
+    --ink: #1a2233;
+    --ink-soft: #55617a;
+    --hair: #dbe1ec;
+    --brand: #f7941e;
+    --brand-deep: #b35f00;
+    /* The rail is a fixed product surface: always navy, both themes. */
+    --rail: #0f172a;
+    --rail-2: #111c33;
+    --rail-row: #e2e8f0;
+    --rail-hair: rgba(255,255,255,0.10);
+    --rail-mute: rgba(255,255,255,0.45);
+    --rail-amber: #fb9d33;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0f17;
+      --surface: #141b28;
+      --ink: #eef2f8;
+      --ink-soft: #9aa6bd;
+      --hair: #232c3d;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f6; --surface: #ffffff; --ink: #1a2233; --ink-soft: #55617a; --hair: #dbe1ec;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0f17; --surface: #141b28; --ink: #eef2f8; --ink-soft: #9aa6bd; --hair: #232c3d;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .wrap {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: clamp(20px, 4vw, 56px);
+    -webkit-font-smoothing: antialiased;
+  }
+  .inner { max-width: 1180px; margin: 0 auto; }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--brand-deep);
+  }
+  @media (prefers-color-scheme: dark) { .eyebrow { color: var(--rail-amber); } }
+  :root[data-theme="dark"] .eyebrow { color: var(--rail-amber); }
+  :root[data-theme="light"] .eyebrow { color: var(--brand-deep); }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--brand); border-radius: 2px; }
+
+  h1 {
+    font-size: clamp(26px, 3.4vw, 38px); line-height: 1.08; letter-spacing: -0.02em;
+    text-wrap: balance; margin: 14px 0 10px; font-weight: 800;
+  }
+  .lede { max-width: 62ch; color: var(--ink-soft); font-size: 16px; line-height: 1.55; margin: 0; }
+  .scope {
+    margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 10px;
+  }
+  .scope span {
+    font-size: 13px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--hair);
+    background: var(--surface); color: var(--ink-soft);
+  }
+  .scope span b { color: var(--ink); font-weight: 650; }
+
+  .grid {
+    margin-top: 40px;
+    display: grid; gap: 22px;
+    grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+  }
+  .col { display: flex; flex-direction: column; }
+  .cap { margin-bottom: 12px; }
+  .cap .tag {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .cap .tag.now { color: var(--brand-deep); }
+  :root[data-theme="dark"] .cap .tag.now { color: var(--rail-amber); }
+  @media (prefers-color-scheme: dark) { .cap .tag.now { color: var(--rail-amber); } }
+  .cap h2 { font-size: 17px; margin: 5px 0 4px; letter-spacing: -0.01em; }
+  .cap p { font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); margin: 0; min-height: 42px; }
+
+  /* ---- The navy rail (faithful to the product) ---- */
+  .rail {
+    background: var(--rail);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px -22px rgba(0,0,0,0.55);
+    font-size: 14px;
+    color: var(--rail-row);
+  }
+  .rail .head {
+    padding: 15px 20px 11px;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--rail-mute); border-bottom: 1px solid var(--rail-hair);
+  }
+  .sec {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 20px; color: #fff; font-weight: 650; font-size: 15px;
+    border-bottom: 1px solid var(--rail-hair);
+  }
+  .sec svg { margin-left: auto; width: 15px; height: 15px; color: var(--rail-mute); }
+  .cats { padding: 6px 12px 12px; }
+
+  /* Base category row (shared skeleton) */
+  .cat {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 8px; border-radius: 9px; cursor: pointer;
+    color: var(--rail-row);
+  }
+  .cat:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .cat .chev { margin-left: auto; width: 14px; height: 14px; color: var(--rail-mute); flex: none; }
+
+  /* Expanded subcategory block — IDENTICAL in every option (do not change). */
+  .subs {
+    margin: 2px 0 8px 12px; padding-left: 14px; border-left: 1px solid var(--rail-hair);
+  }
+  .sub {
+    display: flex; align-items: center; gap: 11px; padding: 6px 6px; border-radius: 8px;
+    font-size: 13.5px; color: #cbd5e1;
+  }
+  .sub:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .box { width: 16px; height: 16px; border: 1.6px solid rgba(255,255,255,0.35); border-radius: 4px; flex: none; }
+  .box.on { background: var(--brand); border-color: var(--brand); position: relative; }
+  .box.on::after { content: ""; position: absolute; inset: 3px 3px; border-bottom: 2px solid #0f172a; border-right: 2px solid #0f172a; width: 4px; height: 8px; left: 5px; top: 1px; transform: rotate(40deg); }
+  .sub .all { color: var(--rail-amber); font-weight: 600; }
+
+  /* ============ OPTION A — Uppercase eyebrow headers ============ */
+  .A .cat { text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.09em;
+    color: rgba(255,255,255,0.62); font-weight: 700; padding-top: 11px; padding-bottom: 7px; }
+  .A .cat + .cat, .A .subs + .cat { border-top: 1px solid var(--rail-hair); }
+  .A .cat:hover { color: #fff; background: none; }
+
+  /* ============ OPTION B — Weighted rows + dividers ============ */
+  .B .cats { padding: 4px 12px 12px; }
+  .B .cat { font-weight: 650; font-size: 14.5px; color: #f1f5f9; padding: 12px 8px; }
+  .B .cat + .cat, .B .subs + .cat { border-top: 1px solid var(--rail-hair); }
+  .B .cat .chev { color: var(--brand); }
+
+  /* ===== OPTION C — Orange tick + small gray label (not uppercase) ===== */
+  .C .cat {
+    position: relative; padding-left: 15px;
+    font-weight: 500; font-size: 12.5px; letter-spacing: 0.02em; color: #cbd5e1;
+  }
+  .C .cat::before {
+    content: ""; position: absolute; left: 3px; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 14px; border-radius: 2px; background: var(--brand);
+  }
+  .C .cat:hover { color: #fff; }
+  .C .cat .chev { color: var(--rail-amber); }
+
+  .foot {
+    margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--hair);
+    font-size: 13.5px; color: var(--ink-soft); max-width: 74ch; line-height: 1.6;
+  }
+  .foot b { color: var(--ink); font-weight: 650; }
+</style>
+
+<div class="wrap">
+  <div class="inner">
+    <div class="eyebrow">Marketplace filter &middot; mockup</div>
+    <h1>Making categories stand out from subcategories</h1>
+    <p class="lede">
+      The top-level categories in the filter rail currently read as one long, even list,
+      so the eye can't find the boundaries. Below are the baseline and three ways to give
+      the category level its own weight. This is the <b>only</b> thing that changes.
+    </p>
+    <div class="scope">
+      <span><b>Unchanged:</b> the navy rail, colors, and header</span>
+      <span><b>Unchanged:</b> the expanded subcategory list (Plumbing shown open in each)</span>
+      <span><b>Changes:</b> only the category row treatment</span>
+    </div>
+
+    <div class="grid">
+
+      <!-- BASELINE -->
+      <div class="col">
+        <div class="cap">
+          <span class="tag now">Now &middot; baseline</span>
+          <h2>One flat list</h2>
+          <p>Every category is the same weight and there are no dividers, so they blur together, the issue you flagged.</p>
+        </div>
+        <div class="rail">
+          <div class="head">Filters</div>
+          <div class="sec">Products / Materials
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="cats" id="base">
+            <div class="cat">Lumber &amp; Composites<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Concrete, Cement &amp; Masonry<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Drywall &amp; Interior Finishes<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Electrical &amp; Lighting<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Plumbing<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg)"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="subs">
+              <div class="sub"><span class="box"></span><span class="all">All Plumbing</span></div>
+              <div class="sub"><span class="box on"></span>Pipe &amp; tubing (PVC, CPVC, PEX, copper)</div>
+              <div class="sub"><span class="box"></span>Fittings &amp; valves</div>
+              <div class="sub"><span class="box"></span>Drainage &amp; DWV</div>
+              <div class="sub"><span class="box"></span>Water heaters (tank &amp; tankless)</div>
+            </div>
+            <div class="cat">HVAC &amp; Mechanical<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Metals &amp; Steel<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Flooring &amp; Tile<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPTION A -->
+      <div class="col A">
+        <div class="cap">
+          <span class="tag">Option A</span>
+          <h2>Section headers</h2>
+          <p>Categories become quiet uppercase headers with a hairline between each, they read as labels, not options.</p>
+        </div>
+        <div class="rail">
+          <div class="head">Filters</div>
+          <div class="sec">Products / Materials
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="cats">
+            <div class="cat">Lumber &amp; Composites<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Concrete, Cement &amp; Masonry<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Drywall &amp; Interior Finishes<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Electrical &amp; Lighting<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Plumbing<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg)"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="subs">
+              <div class="sub"><span class="box"></span><span class="all">All Plumbing</span></div>
+              <div class="sub"><span class="box on"></span>Pipe &amp; tubing (PVC, CPVC, PEX, copper)</div>
+              <div class="sub"><span class="box"></span>Fittings &amp; valves</div>
+              <div class="sub"><span class="box"></span>Drainage &amp; DWV</div>
+              <div class="sub"><span class="box"></span>Water heaters (tank &amp; tankless)</div>
+            </div>
+            <div class="cat">HVAC &amp; Mechanical<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Metals &amp; Steel<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Flooring &amp; Tile<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPTION B -->
+      <div class="col B">
+        <div class="cap">
+          <span class="tag">Option B</span>
+          <h2>Weighted rows + dividers</h2>
+          <p>Taller, bolder category rows split by hairlines, with an orange chevron. Each category becomes its own block.</p>
+        </div>
+        <div class="rail">
+          <div class="head">Filters</div>
+          <div class="sec">Products / Materials
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="cats">
+            <div class="cat">Lumber &amp; Composites<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Concrete, Cement &amp; Masonry<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Drywall &amp; Interior Finishes<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Electrical &amp; Lighting<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Plumbing<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg)"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="subs">
+              <div class="sub"><span class="box"></span><span class="all">All Plumbing</span></div>
+              <div class="sub"><span class="box on"></span>Pipe &amp; tubing (PVC, CPVC, PEX, copper)</div>
+              <div class="sub"><span class="box"></span>Fittings &amp; valves</div>
+              <div class="sub"><span class="box"></span>Drainage &amp; DWV</div>
+              <div class="sub"><span class="box"></span>Water heaters (tank &amp; tankless)</div>
+            </div>
+            <div class="cat">HVAC &amp; Mechanical<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Metals &amp; Steel<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Flooring &amp; Tile<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPTION C -->
+      <div class="col C">
+        <div class="cap">
+          <span class="tag">Option C</span>
+          <h2>Orange tick + muted label</h2>
+          <p>A short brand-orange bar marks the parent level, with the category text small and gray (not uppercase). The quietest option.</p>
+        </div>
+        <div class="rail">
+          <div class="head">Filters</div>
+          <div class="sec">Products / Materials
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="cats">
+            <div class="cat">Lumber &amp; Composites<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Concrete, Cement &amp; Masonry<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Drywall &amp; Interior Finishes<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Electrical &amp; Lighting<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Plumbing<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg)"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="subs">
+              <div class="sub"><span class="box"></span><span class="all">All Plumbing</span></div>
+              <div class="sub"><span class="box on"></span>Pipe &amp; tubing (PVC, CPVC, PEX, copper)</div>
+              <div class="sub"><span class="box"></span>Fittings &amp; valves</div>
+              <div class="sub"><span class="box"></span>Drainage &amp; DWV</div>
+              <div class="sub"><span class="box"></span>Water heaters (tank &amp; tankless)</div>
+            </div>
+            <div class="cat">HVAC &amp; Mechanical<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Metals &amp; Steel<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+            <div class="cat">Flooring &amp; Tile<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="foot">
+      <b>Option C</b> is now the muted version you described: the orange tick with a small gray label,
+      no uppercase, the quietest of the set while the bar still signals the category level.
+      <b>Option B</b> matches the "Categories" list on Materials Market you referenced, its dividers
+      give the eye a clear stop per category and it stays calm at 17 rows. <b>Option A</b> is the most
+      distinct but 17 uppercase headers can feel heavy. Tell me which to build, they can also be
+      combined (e.g. B's dividers with C's tick).
+    </p>
+  </div>
+</div>

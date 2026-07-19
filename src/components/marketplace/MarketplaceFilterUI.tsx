@@ -7,6 +7,19 @@ import type { TaxCategory } from "@/lib/taxonomy";
  * client state lives here. `defaultChecked` reflects the active query params.
  */
 
+/**
+ * A category-level row (a Trade group, or a Product/Equipment category). The
+ * orange level-tick + small, muted, normal-case label make the PARENT level read
+ * distinct from the checkbox sub-rows nested under it, without touching the
+ * subcategory list itself (07/19 request). Shared here so Trade and both taxonomy
+ * trees stay identical.
+ */
+const catSummaryCls =
+  "-mx-2 relative flex cursor-pointer list-none items-center gap-2 rounded-lg py-2 pl-[15px] pr-2 " +
+  "text-[12.5px] font-medium tracking-[0.02em] text-slate-300 select-none hover:bg-white/5 hover:text-white " +
+  "group-open/cat:text-white before:absolute before:left-[3px] before:top-1/2 before:h-3.5 before:w-[3px] " +
+  "before:-translate-y-1/2 before:rounded before:bg-brand-500 before:content-['']";
+
 const chevron = (
   <svg
     className="ml-auto h-4 w-4 text-white/45 transition-transform duration-200 group-open:rotate-90"
@@ -77,7 +90,7 @@ export function CheckRow({
 function catChevron(scope: string) {
   return (
     <svg
-      className={`ml-auto h-3.5 w-3.5 text-white/40 transition-transform duration-200 ${scope}`}
+      className={`ml-auto h-3.5 w-3.5 flex-none text-brand-400 transition-transform duration-200 ${scope}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -109,7 +122,7 @@ export function TradeFilter({
         const anyOn = g.leaves.some((l) => selected.includes(l.slug));
         return (
           <details key={g.category} open={anyOn} className="group/cat">
-            <summary className="-mx-2 flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-slate-200 select-none hover:bg-white/5 group-open/cat:text-white">
+            <summary className={catSummaryCls}>
               {g.category}
               {catChevron("group-open/cat:rotate-90")}
             </summary>
@@ -153,20 +166,9 @@ export function TaxonomyFilter({
         const anySub = cat.subcategories.some((s) => selectedSubs.has(s.slug));
         return (
           <details key={cat.slug} open={catOn || anySub} className="group/cat">
-            <summary className="-mx-2 flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-slate-200 select-none hover:bg-white/5 group-open/cat:text-white">
+            <summary className={catSummaryCls}>
               {cat.label}
-              <svg
-                className="ml-auto h-3.5 w-3.5 text-white/40 transition-transform duration-200 group-open/cat:rotate-90"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.25"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <polyline points="9 6 15 12 9 18" />
-              </svg>
+              {catChevron("group-open/cat:rotate-90")}
             </summary>
             <div className="mb-2 ml-2.5 border-l border-white/10 pl-3.5">
               <CheckRow
