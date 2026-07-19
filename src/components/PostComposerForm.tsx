@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createPostAction } from "@/app/actions/post";
 import { Avatar } from "@/components/Avatar";
-import { MediaInput } from "@/components/MediaInput";
+import { MediaUpload } from "@/components/MediaUpload";
 import { PostTagPicker } from "@/components/PostTagPicker";
 
 const selectCls =
@@ -128,14 +128,17 @@ export function PostComposerForm({
               ))}
             </select>
 
-            <MediaInput name="image" label="📷 Photo / video" />
-
             <button
               type="submit"
               className="ml-auto rounded-md bg-brand-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-600"
             >
               Post
             </button>
+          </div>
+
+          {/* Multiple photos/videos, drag to set the main one, click to preview. */}
+          <div className="mt-3">
+            <MediaUpload />
           </div>
         </div>
       </div>

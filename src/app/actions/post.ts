@@ -5,8 +5,16 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { resolveActor } from "@/lib/identity";
-import { saveMedia } from "@/lib/storage";
+import { saveMediaFiles } from "@/lib/storage";
+import { orderedMediaFromForm } from "@/lib/media-order";
 import { createPost, updatePost, deletePost } from "@/lib/services/posts";
+
+/** New post/video files from a MediaUpload submission (field name "photos"). */
+function mediaFiles(formData: FormData): File[] {
+  return formData
+    .getAll("photos")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+}
 
 /**
  * Web transport shim over the feed-post SERVICE (src/lib/services/posts.ts). Owns
@@ -36,9 +44,10 @@ export async function createPostAction(formData: FormData) {
     author = { type: "company", id: owner };
   }
 
-  const image = formData.get("image");
-  const imageUrl =
-    image instanceof File && image.size > 0 ? await saveMedia(image) : null;
+  const mediaUrls = orderedMediaFromForm(
+    formData,
+    await saveMediaFiles(mediaFiles(formData)),
+  );
 
   await createPost({
     actorUserId: user.id,
@@ -47,7 +56,7 @@ export async function createPostAction(formData: FormData) {
     body,
     tradeRaw: String(formData.get("tradeTag") ?? "").trim(),
     regionRaw: String(formData.get("regionTag") ?? "").trim(),
-    imageUrl,
+    mediaUrls,
     tagIdsRaw: String(formData.get("tagIds") ?? ""),
   });
 
@@ -65,16 +74,12 @@ export async function updatePostAction(formData: FormData) {
   const postId = String(formData.get("postId") ?? "");
   const back = safeBack(formData.get("back"), "/me?tab=posts");
 
-  // Media: a new upload replaces; else `imageRemove=1` clears; else keep as-is.
-  const image = formData.get("image");
-  const uploaded =
-    image instanceof File && image.size > 0 ? await saveMedia(image) : undefined;
-  const imageUrl =
-    uploaded !== undefined
-      ? uploaded
-      : formData.get("imageRemove") === "1"
-        ? null
-        : undefined;
+  // The composer always submits the full desired media set (existing + new) in
+  // drag order, so we rebuild the complete list from the manifest.
+  const media = orderedMediaFromForm(
+    formData,
+    await saveMediaFiles(mediaFiles(formData)),
+  );
 
   const result = await updatePost({
     party: actor.party,
@@ -82,7 +87,7 @@ export async function updatePostAction(formData: FormData) {
     body: String(formData.get("body") ?? ""),
     tradeRaw: String(formData.get("tradeTag") ?? "").trim(),
     regionRaw: String(formData.get("regionTag") ?? "").trim(),
-    imageUrl,
+    media,
   });
   if (result.status === "empty") redirect(`/posts/${postId}/edit?error=empty`);
 

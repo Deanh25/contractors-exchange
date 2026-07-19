@@ -7,7 +7,8 @@ import { canManagePost } from "@/lib/posts";
 import { updatePostAction } from "@/app/actions/post";
 import { getLeafGroups } from "@/lib/categories";
 import { usStates } from "@/lib/cities";
-import { PostMediaInput } from "@/components/PostMediaInput";
+import { MediaUpload } from "@/components/MediaUpload";
+import { postMedia } from "@/lib/posts";
 
 const selectCls =
   "rounded-md border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700";
@@ -30,6 +31,7 @@ export default async function EditPostPage({
       body: true,
       tradeTag: true,
       regionTag: true,
+      media: true,
       imageUrl: true,
       authorUserId: true,
       authorCompanyId: true,
@@ -79,7 +81,7 @@ export default async function EditPostPage({
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Photo / video <span className="text-slate-400">(optional)</span>
             </label>
-            <PostMediaInput current={post.imageUrl} />
+            <MediaUpload existing={postMedia(post)} />
           </div>
 
           <textarea

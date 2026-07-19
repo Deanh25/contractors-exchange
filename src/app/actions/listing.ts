@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { saveMediaFiles } from "@/lib/storage";
+import { orderedMediaFromForm } from "@/lib/media-order";
 import { parseCoord } from "@/lib/form";
 import { canManageListing } from "@/lib/listing-access";
 import { getLeafSlugSet } from "@/lib/categories";
@@ -150,39 +151,9 @@ function mediaFiles(formData: FormData): File[] {
     .filter((f): f is File => f instanceof File && f.size > 0);
 }
 
-/**
- * Final ordered photo list. The MediaUpload picker sends a `photoOrder` manifest
- * (drag order) of tokens: "e:<url>" for a kept existing photo, "n" for the next
- * newly-uploaded file (in file order). Index 0 is the listing's main/cover photo.
- * Falls back to kept-then-uploaded when the manifest is absent (e.g. no JS).
- */
-function orderedPhotos(formData: FormData, savedNew: string[]): string[] {
-  const raw = String(formData.get("photoOrder") ?? "");
-  if (raw) {
-    try {
-      const order = JSON.parse(raw);
-      if (Array.isArray(order)) {
-        const out: string[] = [];
-        let ni = 0;
-        for (const tok of order) {
-          if (typeof tok !== "string") continue;
-          if (tok.startsWith("e:")) {
-            const url = tok.slice(2);
-            if (url) out.push(url);
-          } else if (tok === "n") {
-            const url = savedNew[ni++];
-            if (url) out.push(url);
-          }
-        }
-        return out;
-      }
-    } catch {
-      /* malformed manifest: fall through to the kept-then-new fallback */
-    }
-  }
-  const kept = formData.getAll("existingPhotos").map(String).filter(Boolean);
-  return [...kept, ...savedNew];
-}
+/** Listing photos in the seller's drag order; index 0 is the cover. See
+ *  orderedMediaFromForm (shared with the post composer). */
+const orderedPhotos = orderedMediaFromForm;
 
 /** Quantity available - only meaningful for set-price listings (else 1). */
 function readQuantity(formData: FormData, tf: ListingTypeFields): number {

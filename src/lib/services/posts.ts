@@ -36,8 +36,8 @@ export type CreatePostParams = {
   body: string;
   tradeRaw: string;
   regionRaw: string;
-  /** Already-saved media URL, if any (the caller handles upload). */
-  imageUrl: string | null;
+  /** Already-saved media URLs in display order, [0] = cover (caller uploads). */
+  mediaUrls: string[];
   /** Raw "tagIds" composer field. */
   tagIdsRaw: string;
 };
@@ -57,11 +57,13 @@ export async function createPost(
     ? params.regionRaw.toUpperCase().slice(0, 2)
     : null;
 
+  const media = params.mediaUrls;
   const data: Prisma.PostCreateInput = {
     body: params.body,
     tradeTag,
     regionTag,
-    imageUrl: params.imageUrl,
+    media,
+    imageUrl: media[0] ?? null,
     ...(authorCompanyId
       ? { authorCompany: { connect: { id: authorCompanyId } } }
       : { authorUser: { connect: { id: authorUserId! } } }),
@@ -152,8 +154,9 @@ export type UpdatePostParams = {
   body: string;
   tradeRaw: string;
   regionRaw: string;
-  /** Media: undefined = keep as-is, null = remove, string = replace (saved URL). */
-  imageUrl?: string | null;
+  /** Full desired media list in display order ([0] = cover); the composer always
+   *  sends the complete set, so undefined = leave media untouched. */
+  media?: string[];
 };
 export type PostMutationResult = {
   status: "ok" | "forbidden" | "not_found" | "empty";
@@ -187,7 +190,9 @@ export async function updatePost(
       body,
       tradeTag,
       regionTag,
-      ...(params.imageUrl !== undefined ? { imageUrl: params.imageUrl } : {}),
+      ...(params.media !== undefined
+        ? { media: params.media, imageUrl: params.media[0] ?? null }
+        : {}),
     },
   });
   return { status: "ok" };

@@ -426,6 +426,10 @@ model Post {
   authorCompanyId String?
 
   body      String  @db.Text
+  // Ordered post media (LinkedIn-style): JSON array of public URL strings, [0] is
+  // the main/cover. `imageUrl` is kept as the cover mirror (media[0]) for legacy
+  // reads and posts created before multi-media. See src/lib/posts.ts postMedia().
+  media     Json?
   imageUrl  String?
   tradeTag  String? // optional trade slug (controlled vocab in src/lib/trades.ts)
   regionTag String? // optional region: a state code (e.g. "AZ") for simple matching

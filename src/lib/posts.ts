@@ -1,6 +1,20 @@
 import type { Post, User, Company } from "@/generated/prisma/client";
+import { photosFromJson } from "@/lib/listings";
 
 type PostTagRel = { taggedUser: User | null; taggedCompany: Company | null };
+
+/**
+ * A post's ordered media URLs ([0] = cover). Reads the `media` JSON array, and
+ * falls back to the legacy single `imageUrl` for posts made before multi-media.
+ */
+export function postMedia(post: {
+  media?: unknown;
+  imageUrl: string | null;
+}): string[] {
+  const list = photosFromJson(post.media);
+  if (list.length > 0) return list;
+  return post.imageUrl ? [post.imageUrl] : [];
+}
 
 /** A post with its polymorphic author + tagged parties included. */
 export type PostWithAuthor = Post & {

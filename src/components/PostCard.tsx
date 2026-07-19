@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { postAuthor, postTags, type PostWithAuthor } from "@/lib/posts";
+import { postAuthor, postMedia, postTags, type PostWithAuthor } from "@/lib/posts";
 import { categoryLabel } from "@/lib/categories";
-import { isVideoUrl } from "@/lib/listings";
 import { timeAgo } from "@/lib/time";
 import { PostEngagementBar } from "@/components/PostEngagementBar";
+import { PostMediaCarousel } from "@/components/PostMediaCarousel";
 import { deletePostAction } from "@/app/actions/post";
 import type { PostEngagement } from "@/lib/engagement";
 
@@ -104,21 +104,7 @@ export async function PostCard({
         </p>
       )}
 
-      {post.imageUrl &&
-        (isVideoUrl(post.imageUrl) ? (
-          <video
-            src={post.imageUrl}
-            controls
-            className="mt-3 max-h-96 w-full rounded-lg border border-slate-200 object-contain"
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.imageUrl}
-            alt=""
-            className="mt-3 max-h-96 w-full rounded-lg border border-slate-200 object-cover"
-          />
-        ))}
+      <PostMediaCarousel media={postMedia(post)} />
 
       {(post.tradeTag || post.regionTag) && (
         <div className="mt-3 flex flex-wrap gap-2">
