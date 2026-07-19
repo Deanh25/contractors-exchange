@@ -66,13 +66,26 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     reorder photos in the listing form (first = main/cover) by drag-and-drop, and
     preview them. Reuse the drag pattern from `src/app/admin/categories` and the
     lightbox from `ProfilePhotos`/`MediaGallery`. Component: `MediaUpload.tsx`.
-  - [ ] **3. Feed - multiple photos/videos + drag-drop main + preview (LinkedIn parity)**
-    - the feed composer today takes ONE image (`MediaInput name="image"`). Make it a
-    LinkedIn-style multi-media post: multiple photos AND videos, drag-and-drop to pick
-    the main one, and a preview. Post cards render a carousel (N/total counter + prev/next
-    arrows, per Dean's LinkedIn screenshot). SCHEMA CHANGE: `Post.imageUrl` (single) ->
-    a media list; ripples through post create/edit, feed cards, profile Posts tab, and
-    engagement. This is the biggest of the three - do it last.
+  - [x] **3. Feed - multiple photos/videos + drag-drop main + preview (LinkedIn parity)**
+    *(BUILT + tested + signed off, commit ecfe45c)* - composer + edit reuse the listing
+    `MediaUpload` picker (multi photo/video, drag to set main, click to preview); posts
+    got a `media` JSON array (`imageUrl` kept as the cover mirror so legacy posts render);
+    `PostCard` renders `PostMediaCarousel` (N/total counter, prev/next, dots, lightbox)
+    for >1 item. Shared `src/lib/media-order.ts` builds the drag-order for posts + listings.
+
+- [ ] **Payments module (buyer payment methods + Stripe processing)** *(new - QUEUED, not
+  started; later)* - two connected pieces:
+  - **Buyer payment sources (frontend):** let a user add and store payment methods
+    (card / bank) on their account, and pick one at checkout when making a purchase.
+    Store only Stripe tokens/references, never raw card numbers (PCI: use Stripe
+    Elements / SetupIntents; card data never touches our server or DB).
+  - **Payment processing (backend):** integrate Stripe for customer payments - connect
+    via the Stripe API (PaymentIntents for a set-price buy / won bid), webhooks for
+    payment status, and refunds. Ties into the existing net/margin model (buyer pays
+    the gross; CX keeps the margin) and the Orders flow. Likely Stripe Connect so seller
+    payouts route correctly. Decide test-vs-live keys + who holds the Stripe account.
+  - Architecture: a `src/lib/services/payments.ts` service (framework-agnostic) with the
+    Stripe SDK; thin action/route shims; secrets in env, never committed.
 
 - [ ] **Profile system (LinkedIn-style, users + companies)** *(new — QUEUED, not started; do
   not begin until the Codespaces sign-in issue is resolved)* — shared profile layout with two
