@@ -37,6 +37,12 @@ const CONDITION_VALUES = new Set(LISTING_CONDITIONS.map((c) => c.value));
 const TYPE_VALUES = new Set(LISTING_CHOICES.map((c) => c.value));
 
 const RADII = [10, 25, 50, 100, 250];
+// Grid pagination: cards per page, and the upper bound of rows we scan+sort in
+// memory (distance/price sorting happens in JS, so we page the sorted array). At
+// SCAN_LIMIT results the tail is not shown; that is far above any realistic
+// filtered set today and can move to keyset pagination if the catalog outgrows it.
+const PAGE_SIZE = 12;
+const SCAN_LIMIT = 480;
 const SORTS = [
   { value: "", label: "Newest" },
   { value: "nearest", label: "Nearest" },
@@ -95,6 +101,7 @@ export default async function ListingsPage({
 
   const q = one(sp.q);
   const sort = one(sp.sort);
+  const pageParam = Math.max(1, Math.floor(Number(one(sp.page))) || 1);
   const priceMinStr = one(sp.priceMin);
   const priceMaxStr = one(sp.priceMax);
 
@@ -173,7 +180,7 @@ export default async function ListingsPage({
       where,
       include: ownerInclude,
       orderBy: { createdAt: "desc" },
-      take: geoCenter ? 300 : 200,
+      take: SCAN_LIMIT,
     }),
     getCurrentUser(),
   ]);
@@ -211,7 +218,13 @@ export default async function ListingsPage({
   } else {
     rows.sort(byNewest);
   }
-  const visible = rows.slice(0, 60);
+  // Page the fully-sorted result set (sort ran in JS, so the order is stable
+  // across pages). Any filter/search/sort change drops the page param -> page 1.
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(pageParam, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const visible = rows.slice(pageStart, pageStart + PAGE_SIZE);
 
   // Viewer saves + the sellers' overall ratings (batched) for the cards.
   const sellerParties = visible
@@ -266,6 +279,13 @@ export default async function ListingsPage({
   function toHref(u: URLSearchParams): string {
     const s = u.toString();
     return s ? `/listings?${s}` : "/listings";
+  }
+  // Pagination links carry every active filter/sort but only add page for p > 1,
+  // so page 1 stays a clean URL and every other control resets to it.
+  function pageHref(p: number): string {
+    const u = currentUSP();
+    if (p > 1) u.set("page", String(p));
+    return toHref(u);
   }
   function hrefRemoving(key: string, value?: string): string {
     const u = currentUSP();
@@ -345,7 +365,18 @@ export default async function ListingsPage({
     ...subs.map((s) => SUB_LABEL.get(s) ?? s),
   ];
   const crumb = crumbLabels.length ? crumbLabels.join(" · ") : "All listings";
-  const countText = `${visible.length} listing${visible.length === 1 ? "" : "s"}`;
+  const countText = `${total} listing${total === 1 ? "" : "s"}`;
+  // Compact page window: first, last, and the current page +/-1, with gaps elided.
+  const pageWindow: (number | "gap")[] = [];
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1) {
+      pageWindow.push(p);
+    } else if (pageWindow[pageWindow.length - 1] !== "gap") {
+      pageWindow.push("gap");
+    }
+  }
+  const rangeFrom = total === 0 ? 0 : pageStart + 1;
+  const rangeTo = Math.min(pageStart + PAGE_SIZE, total);
   const sortSelected = effectiveSort === "newest" ? "" : effectiveSort;
 
   const productsOpen = PRODUCT_CATEGORIES.some(
@@ -613,25 +644,91 @@ export default async function ListingsPage({
                 )}
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {visible.map((row) => {
-                  const op = listingOwnerParty(row.listing);
-                  const rating = op
-                    ? sellerRatings.get(`${op.type}:${op.id}`) ?? null
-                    : null;
-                  return (
-                    <MarketplaceCard
-                      key={row.listing.id}
-                      listing={row.listing}
-                      distanceMi={row.distanceMi}
-                      saved={viewer ? savedMap.has(row.listing.id) : undefined}
-                      currentCollectionId={savedMap.get(row.listing.id) ?? null}
-                      collections={collections}
-                      sellerRating={rating}
-                    />
-                  );
-                })}
-              </div>
+              <>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {visible.map((row) => {
+                    const op = listingOwnerParty(row.listing);
+                    const rating = op
+                      ? sellerRatings.get(`${op.type}:${op.id}`) ?? null
+                      : null;
+                    return (
+                      <MarketplaceCard
+                        key={row.listing.id}
+                        listing={row.listing}
+                        distanceMi={row.distanceMi}
+                        saved={viewer ? savedMap.has(row.listing.id) : undefined}
+                        currentCollectionId={savedMap.get(row.listing.id) ?? null}
+                        collections={collections}
+                        sellerRating={rating}
+                      />
+                    );
+                  })}
+                </div>
+
+                {totalPages > 1 && (
+                  <nav
+                    aria-label="Marketplace pages"
+                    className="mt-8 flex flex-col items-center gap-3"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      {currentPage > 1 ? (
+                        <Link
+                          href={pageHref(currentPage - 1)}
+                          rel="prev"
+                          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          ‹ Prev
+                        </Link>
+                      ) : (
+                        <span className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-300">
+                          ‹ Prev
+                        </span>
+                      )}
+
+                      {pageWindow.map((p, i) =>
+                        p === "gap" ? (
+                          <span key={`gap-${i}`} className="px-2 text-sm text-slate-400">
+                            …
+                          </span>
+                        ) : p === currentPage ? (
+                          <span
+                            key={p}
+                            aria-current="page"
+                            className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white"
+                          >
+                            {p}
+                          </span>
+                        ) : (
+                          <Link
+                            key={p}
+                            href={pageHref(p)}
+                            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          >
+                            {p}
+                          </Link>
+                        ),
+                      )}
+
+                      {currentPage < totalPages ? (
+                        <Link
+                          href={pageHref(currentPage + 1)}
+                          rel="next"
+                          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Next ›
+                        </Link>
+                      ) : (
+                        <span className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-300">
+                          Next ›
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Showing {rangeFrom}-{rangeTo} of {total}
+                    </p>
+                  </nav>
+                )}
+              </>
             )}
           </div>
         </div>
