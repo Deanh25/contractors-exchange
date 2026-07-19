@@ -62,7 +62,7 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     opening bid = reserve x (1 + category margin); the service stores that in `price`
     and buyers see it. Includes the optional "estimate your take at a winning bid"
     what-if strip. Mockup: `docs/mockups/openforbid-pricing.html`. *(Built; awaiting test.)*
-  - [ ] **2. Listing photos - drag-and-drop main photo + preview** - let the seller
+  - [x] **2. Listing photos - drag-and-drop main photo + preview** *(built + tested + signed off)* - let the seller
     reorder photos in the listing form (first = main/cover) by drag-and-drop, and
     preview them. Reuse the drag pattern from `src/app/admin/categories` and the
     lightbox from `ProfilePhotos`/`MediaGallery`. Component: `MediaUpload.tsx`.

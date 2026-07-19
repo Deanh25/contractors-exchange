@@ -150,6 +150,40 @@ function mediaFiles(formData: FormData): File[] {
     .filter((f): f is File => f instanceof File && f.size > 0);
 }
 
+/**
+ * Final ordered photo list. The MediaUpload picker sends a `photoOrder` manifest
+ * (drag order) of tokens: "e:<url>" for a kept existing photo, "n" for the next
+ * newly-uploaded file (in file order). Index 0 is the listing's main/cover photo.
+ * Falls back to kept-then-uploaded when the manifest is absent (e.g. no JS).
+ */
+function orderedPhotos(formData: FormData, savedNew: string[]): string[] {
+  const raw = String(formData.get("photoOrder") ?? "");
+  if (raw) {
+    try {
+      const order = JSON.parse(raw);
+      if (Array.isArray(order)) {
+        const out: string[] = [];
+        let ni = 0;
+        for (const tok of order) {
+          if (typeof tok !== "string") continue;
+          if (tok.startsWith("e:")) {
+            const url = tok.slice(2);
+            if (url) out.push(url);
+          } else if (tok === "n") {
+            const url = savedNew[ni++];
+            if (url) out.push(url);
+          }
+        }
+        return out;
+      }
+    } catch {
+      /* malformed manifest: fall through to the kept-then-new fallback */
+    }
+  }
+  const kept = formData.getAll("existingPhotos").map(String).filter(Boolean);
+  return [...kept, ...savedNew];
+}
+
 /** Quantity available - only meaningful for set-price listings (else 1). */
 function readQuantity(formData: FormData, tf: ListingTypeFields): number {
   if (tf.type !== "price") return 1;
@@ -183,8 +217,8 @@ export async function createListingAction(formData: FormData) {
   const tf = parseTypeFields(formData, c.choice);
   if ("error" in tf) return fail(tf.error);
 
-  // Validations passed: persist media, then create.
-  const photos = await saveMediaFiles(mediaFiles(formData));
+  // Validations passed: persist media, then create (in the seller's drag order).
+  const photos = orderedPhotos(formData, await saveMediaFiles(mediaFiles(formData)));
   const { listingId } = await createListing({
     owner: ownerParam,
     common: c,
@@ -220,8 +254,7 @@ export async function updateListingAction(formData: FormData) {
   const statusRaw = String(formData.get("status") ?? "");
   const status = (EDITABLE_STATUS.has(statusRaw) ? statusRaw : listing.status) as ListingStatus;
 
-  // Media = kept existing URLs + newly uploaded files, in order.
-  const kept = formData.getAll("existingPhotos").map(String).filter(Boolean);
+  // Media in the seller's drag order (existing + new interleaved); [0] = cover.
   const uploaded = await saveMediaFiles(mediaFiles(formData));
 
   await updateListing({
@@ -231,7 +264,7 @@ export async function updateListingAction(formData: FormData) {
     classification: parseClassification(formData),
     quantity: readQuantity(formData, tf),
     status,
-    photos: [...kept, ...uploaded],
+    photos: orderedPhotos(formData, uploaded),
   });
 
   revalidatePath(`/listings/${id}`);
