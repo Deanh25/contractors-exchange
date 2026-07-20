@@ -114,7 +114,12 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - **Phases (each: build -> test -> commit):**
     1. Email+password: signup sets a password, signin verifies it (scrypt); update seed.
     2. Email verification at signup (needs Resend key).
-    3. Forgot/reset password (emailed single-use link).
+    3. Forgot/reset password (emailed single-use link) - add a "Forgot password?"
+       link on the sign-in page -> enter email -> emailed reset link -> set new password.
+       ALSO "forgot email" account recovery (ANALYZE): the login email IS the identifier,
+       so recovery needs another signal - look up the account by a verified PHONE number
+       (would need to start collecting phone), or a support-assisted lookup by name +
+       business. Decide the approach before building; may depend on adding phone to signup.
     4. Signed-in: change password (needs current), change login email (re-verify new,
        notify old), keep email unique.
     5. Google OAuth sign-in (arctic).
