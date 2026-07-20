@@ -1,12 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { setSession, clearSession } from "@/lib/session";
 import { writeActingCookie } from "@/lib/identity";
+import { signInWithPassword, signUpWithPassword } from "@/lib/services/auth";
 
-// Fresh sign-ins land on the Marketplace, acting as themselves, not on their
-// personal profile page.
+/**
+ * Auth transport shim over the auth SERVICE (src/lib/services/auth.ts). Owns web
+ * concerns only: parse the form, set the session cookie, and map results to
+ * redirects. Email + password (Phase 1). OAuth (Google/Microsoft) lands later.
+ */
+
+// Fresh sign-ins land on the Marketplace, acting as themselves.
 const DEFAULT_LANDING = "/listings";
 
 function safeNext(next: FormDataEntryValue | null): string {
@@ -17,40 +22,54 @@ function safeNext(next: FormDataEntryValue | null): string {
     : DEFAULT_LANDING;
 }
 
-/**
- * Passwordless dev sign-in (PRD §8 friction-killer). Find-or-create by email,
- * set the session cookie, and continue. New users must provide a name.
- */
-export async function signInAction(formData: FormData) {
-  const email = String(formData.get("email") ?? "")
-    .trim()
-    .toLowerCase();
-  const name = String(formData.get("name") ?? "").trim();
-  const next = safeNext(formData.get("next"));
-
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    redirect(`/signin?error=email&next=${encodeURIComponent(next)}`);
-  }
-
-  let user = await prisma.user.findUnique({ where: { email } });
-  let isNew = false;
-  if (!user) {
-    if (!name) {
-      redirect(
-        `/signin?error=name&email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`,
-      );
-    }
-    user = await prisma.user.create({ data: { email, name } });
-    isNew = true;
-  }
-
-  await setSession(user.id);
-  // Always start signed-in sessions acting as the user (personal), never a stale
-  // company identity left over from a previous session.
+/** Start a signed-in session acting as the user (never a stale company). */
+async function startSession(userId: string): Promise<void> {
+  await setSession(userId);
   await writeActingCookie(null);
-  // Send brand-new accounts through onboarding (PRD §5) unless they were headed
-  // somewhere specific (e.g. a "List something" link set next to a real path).
-  redirect(isNew && next === DEFAULT_LANDING ? "/welcome" : next);
+}
+
+/** Sign in with email + password. */
+export async function signInAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const next = safeNext(formData.get("next"));
+  const back = (code: string) =>
+    redirect(
+      `/signin?error=${code}&email=${encodeURIComponent(email.trim())}&next=${encodeURIComponent(next)}`,
+    );
+
+  const result = await signInWithPassword(email, password);
+  if (result.status === "invalid_credentials") back("credentials");
+  if (result.status === "suspended") back("suspended");
+
+  if (result.status === "ok") {
+    await startSession(result.userId);
+    redirect(next);
+  }
+}
+
+/** Create an account with email + password + name, then sign in. */
+export async function signUpAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const next = safeNext(formData.get("next"));
+  const back = (code: string) =>
+    redirect(
+      `/signin?mode=signup&error=${code}&email=${encodeURIComponent(email.trim())}&name=${encodeURIComponent(name.trim())}&next=${encodeURIComponent(next)}`,
+    );
+
+  const result = await signUpWithPassword({ email, password, name });
+  if (result.status === "invalid_email") back("email");
+  if (result.status === "missing_name") back("name");
+  if (result.status === "weak_password") back("weak");
+  if (result.status === "email_taken") back("taken");
+
+  if (result.status === "ok") {
+    await startSession(result.userId);
+    // New accounts go through onboarding unless headed somewhere specific.
+    redirect(next === DEFAULT_LANDING ? "/welcome" : next);
+  }
 }
 
 export async function signOutAction() {

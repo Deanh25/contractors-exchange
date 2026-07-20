@@ -20,6 +20,11 @@ datasource db {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
+  // Credentials (real auth). passwordHash is null for OAuth-only accounts or
+  // legacy dev-stub accounts until a password is set. emailVerified is the time
+  // the email was confirmed (null = unverified). See src/lib/services/auth.ts.
+  passwordHash  String?
+  emailVerified DateTime?
   name      String
   title     String? // role / title, e.g. "Owner", "Estimator"
   bio       String?  @db.Text

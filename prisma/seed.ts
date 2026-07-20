@@ -14,6 +14,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { TRADES, TRADE_CATEGORIES } from "../src/lib/trades";
 import { slugify } from "../src/lib/slug";
+import { hashPassword } from "../src/lib/password";
 
 function buildAdapter() {
   const url = process.env.DATABASE_URL;
@@ -324,6 +325,13 @@ async function main() {
       ...CITY.raleigh,
       memberships: { create: [{ userId: chris.id, role: "owner" }] },
     },
+  });
+
+  // Every seeded account signs in with the shared dev password "cxdev1234"
+  // (real accounts set their own at signup). Verified so sign-in isn't gated.
+  const devHash = await hashPassword("cxdev1234");
+  await prisma.user.updateMany({
+    data: { passwordHash: devHash, emailVerified: new Date() },
   });
 
   console.log("Creating listings...");
