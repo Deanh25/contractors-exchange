@@ -141,6 +141,14 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     payment status, and refunds. Ties into the existing net/margin model (buyer pays
     the gross; CX keeps the margin) and the Orders flow. Likely Stripe Connect so seller
     payouts route correctly. Decide test-vs-live keys + who holds the Stripe account.
+  - **High-value payments - ACH / bank + wire (ANALYZE FIRST):** big-ticket equipment
+    (e.g. a $50k+ tractor/paver) usually will NOT go on a card (limits + ~3% fees). Add
+    bank rails: Stripe **ACH debit** (via Financial Connections / bank account, lower fee,
+    but slow + reversible) and a **wire / manual bank transfer** option (fast for large
+    sums, non-reversible) for the biggest deals. Analysis needed before building: fee
+    model + who absorbs it, escrow/hold until funds clear (ACH can take days and can
+    bounce), verification/limits, and how bid wins settle. Likely a per-listing or
+    per-price-threshold choice of allowed payment methods. Feeds the escrow/Orders design.
   - Architecture: a `src/lib/services/payments.ts` service (framework-agnostic) with the
     Stripe SDK; thin action/route shims; secrets in env, never committed.
 
