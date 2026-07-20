@@ -113,7 +113,14 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     userId) for Google/Microsoft links. Reseed dev users with a known password.
   - **Phases (each: build -> test -> commit):**
     1. Email+password: signup sets a password, signin verifies it (scrypt); update seed.
-    2. Email verification at signup (needs Resend key).
+    2. Email verification at signup (needs Resend key), AND a **Welcome email** on
+       account creation: greeting, a link to the site, and a verify/confirm button.
+       SECURITY: do NOT email a raw password. For self-signup the user already set
+       their own password, so the welcome email carries the site link + verify link,
+       not credentials. For accounts an ADMIN creates for someone (Option B staff, or
+       future bulk invites), send an INVITE / "set your password" link instead of a
+       plaintext password. FUTURE: include the mobile app store links (Apple App Store
+       + Google Play) in the welcome email once the Expo apps ship.
     3. Forgot/reset password (emailed single-use link) - add a "Forgot password?"
        link on the sign-in page -> enter email -> emailed reset link -> set new password.
        ALSO "forgot email" account recovery (ANALYZE): the login email IS the identifier,
@@ -134,6 +141,20 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     (framework-agnostic) + thin action/route shims; never log or email raw passwords/tokens.
   - **Also surfaced as missing standard account features** (queue as we go): notification
     preferences (email/SMS opt-in), block/report another user, account deactivate/delete.
+
+- [ ] **Transactional email suite (STANDARD - build alongside features)** *(new - QUEUED;
+  needs the email provider)* - the standard emails a marketplace/social platform sends.
+  All from one sender service (`src/lib/services/email.ts` wrapping Resend) with shared
+  templates, an unsubscribe/preference honor where relevant, and NEVER raw passwords:
+  - Auth: **Welcome** (site link + verify), email **verification**, **password reset**,
+    password-changed + email-changed security alerts, admin **invite / set-password**.
+  - Commerce: **order confirmation / receipt**, payment received, **bid won / outbid**,
+    offer accepted/declined, shipping/delivery + tracking updates, refund issued.
+  - Social/engagement (respect notification prefs): new follower, new message, mentions,
+    review received, weekly digest.
+  - FUTURE: add Apple App Store + Google Play links to Welcome/receipts once the apps ship.
+  - Guidance standing note: as we build each feature, I proactively flag its companion
+    standard emails + notifications here rather than waiting to be asked.
 
 - [ ] **Payments module (buyer payment methods + Stripe processing)** *(new - QUEUED, not
   started; later)* - two connected pieces:
