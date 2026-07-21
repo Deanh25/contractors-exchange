@@ -73,8 +73,8 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     `PostCard` renders `PostMediaCarousel` (N/total counter, prev/next, dots, lightbox)
     for >1 item. Shared `src/lib/media-order.ts` builds the drag-order for posts + listings.
 
-- [ ] **Order milestone timeline (buying + selling)** *(new 07/21/2026 - BUILT, awaiting your
-  test)* - the vertical "Timeline" list on `/orders/[id]` became a HORIZONTAL milestone rail
+- [x] **Order milestone timeline (buying + selling)** *(BUILT + tested + signed off 07/21/2026,
+  commit b2bad64)* - the vertical "Timeline" list on `/orders/[id]` became a HORIZONTAL milestone rail
   showing the WHOLE process, past and future: done steps solid green with a check, the current
   step ringed in brand orange, future steps outlined, and a red terminal marker when a deal is
   declined/cancelled (the steps that never happened grey out).
@@ -94,6 +94,10 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     `db:push`; additive and non-destructive, no reseed needed.
   - FOLLOW-UP (not built): a mini version of the rail on the Orders list rows and in the message
     thread's deal panel (the messenger mock shows the latter).
+  - SAMPLE DATA: `scripts/seed-timeline-samples.ts` creates one order per timeline scenario
+    (every status, all three tracks, and both viewer roles) with staggered milestone stamps,
+    titled `[TL] 1..9`. Non-destructive and re-runnable; it only removes its own `[TL]` rows.
+  - The mini rail in the message thread SHIPPED with messenger Round 1 (commit 27c486f).
 
 - [ ] **Messenger upgrade (Facebook Messenger + LinkedIn feel)** *(new 07/21/2026 - MOCK APPROVED
   by Dean 07/21; scope = rounds 1-3, inbox power features NOT queued. NEXT UP: build Round 1 when
