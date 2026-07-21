@@ -11,7 +11,8 @@ import { createReviewAction } from "@/app/actions/review";
 import { findThread, controlsParty } from "@/lib/messaging";
 import { getActingCompanies } from "@/lib/identity";
 import { txParties, txPartyInclude, orderPartyDisplay } from "@/lib/orders";
-import { timeAgo } from "@/lib/time";
+import { orderTimeline } from "@/lib/order-timeline";
+import { OrderTimeline } from "@/components/OrderTimeline";
 import {
   TX_STATUS,
   TX_TYPE_LABEL,
@@ -95,18 +96,19 @@ export default async function OrderPage({
   const ghostBtn =
     "rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50";
 
-  // Timeline steps from status/dates.
-  const steps: { label: string; at: Date; done: boolean }[] = [
-    { label: "Requested", at: tx.createdAt, done: true },
-  ];
-  if (tx.status === "accepted" || tx.status === "completed")
-    steps.push({ label: "Accepted by seller", at: tx.updatedAt, done: true });
-  if (tx.status === "completed")
-    steps.push({ label: "Completed", at: tx.updatedAt, done: true });
-  if (tx.status === "declined")
-    steps.push({ label: "Declined by seller", at: tx.updatedAt, done: true });
-  if (tx.status === "cancelled")
-    steps.push({ label: "Cancelled by buyer", at: tx.updatedAt, done: true });
+  // The whole journey (past, present, and what is still ahead), built by the
+  // shared pure model so mobile can render the same tracker.
+  const steps = orderTimeline({
+    type: tx.type,
+    status: tx.status,
+    createdAt: tx.createdAt,
+    updatedAt: tx.updatedAt,
+    acceptedAt: tx.acceptedAt,
+    completedAt: tx.completedAt,
+    closedAt: tx.closedAt,
+    viewerIsBuyer: isBuyer,
+    reviewedAt: myReview?.createdAt ?? null,
+  });
 
   return (
     <main className="flex-1">
@@ -243,23 +245,8 @@ export default async function OrderPage({
               )}
             </section>
 
-            {/* Timeline */}
-            <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                Timeline
-              </h2>
-              <ol className="space-y-2">
-                {steps.map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm">
-                    <span className="h-2 w-2 rounded-full bg-brand-500" />
-                    <span className="text-slate-700">{s.label}</span>
-                    <span className="ml-auto text-xs text-slate-400">
-                      {timeAgo(s.at)}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </section>
+            {/* Milestone tracker: the full buying/selling process */}
+            <OrderTimeline steps={steps} />
           </div>
 
           {/* Protection + parties */}

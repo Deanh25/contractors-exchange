@@ -226,9 +226,17 @@ export async function updateDeal(
 
   if (!next) return { status: "noop" }; // invalid transition
 
+  // Stamp the milestone as well as the status, so the order timeline can show
+  // when each step actually happened (updatedAt only holds the latest one).
+  const now = new Date();
   await prisma.transaction.update({
     where: { id: tx.id },
-    data: { status: next },
+    data: {
+      status: next,
+      ...(next === "accepted" ? { acceptedAt: now } : {}),
+      ...(next === "completed" ? { completedAt: now } : {}),
+      ...(next === "declined" || next === "cancelled" ? { closedAt: now } : {}),
+    },
   });
 
   // On completion of a set-price sale, decrement the listing's stock by the units

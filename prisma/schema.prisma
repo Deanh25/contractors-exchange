@@ -695,6 +695,13 @@ model Transaction {
   status    TransactionStatus @default(pending)
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+  // Per-milestone stamps for the order timeline. `updatedAt` only holds the most
+  // recent transition, so without these every step renders with the same time.
+  // Null on rows created before these existed; the timeline falls back to
+  // updatedAt for those. closedAt covers declined AND cancelled (both terminal).
+  acceptedAt  DateTime?
+  completedAt DateTime?
+  closedAt    DateTime?
 
   listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   buyerUser     User?    @relation("TxBuyerUser", fields: [buyerUserId], references: [id], onDelete: Cascade)

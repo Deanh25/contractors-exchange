@@ -1,0 +1,528 @@
+<style>
+  :root {
+    --bg: #eef1f6; --chrome-ink: #1a2233; --chrome-soft: #55617a; --chrome-hair: #dbe1ec;
+    --brand: #f7941e; --brand-deep: #b35f00; --brand-50: #fff5e8; --brand-100: #ffe6c2;
+    /* The messenger is a light product surface, same in both themes. */
+    --card: #ffffff; --ink: #1a2233; --soft: #6b7688; --faint: #97a1b2;
+    --hair: #e3e8f0; --panel: #f7f9fc; --panel-hair: #e6ebf3;
+    --good: #0f7a52; --good-bg: #dff3e9; --sky: #0369a1; --sky-bg: #e0f2fe;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0f17; --chrome-ink: #eef2f8; --chrome-soft: #9aa6bd; --chrome-hair: #232c3d; }
+  }
+  :root[data-theme="dark"] { --bg: #0b0f17; --chrome-ink: #eef2f8; --chrome-soft: #9aa6bd; --chrome-hair: #232c3d; }
+  :root[data-theme="light"] { --bg: #eef1f6; --chrome-ink: #1a2233; --chrome-soft: #55617a; --chrome-hair: #dbe1ec; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .wrap { font-family: var(--font); background: var(--bg); color: var(--chrome-ink); min-height: 100vh; padding: clamp(20px,4vw,56px); -webkit-font-smoothing: antialiased; }
+  .inner { max-width: 1160px; margin: 0 auto; }
+
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-deep); }
+  @media (prefers-color-scheme: dark){ .eyebrow{ color:#fb9d33; } }
+  :root[data-theme="dark"] .eyebrow{ color:#fb9d33; }
+  :root[data-theme="light"] .eyebrow{ color:var(--brand-deep); }
+  .eyebrow::before { content:""; width:22px; height:2px; background:var(--brand); border-radius:2px; }
+  h1 { font-size: clamp(25px,3.3vw,36px); line-height:1.09; letter-spacing:-0.02em; text-wrap:balance; margin:14px 0 10px; font-weight:800; }
+  .lede { max-width: 66ch; color: var(--chrome-soft); font-size:16px; line-height:1.55; margin:0; }
+
+  .cap { margin: 34px 0 12px; }
+  .cap .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color: var(--chrome-soft); }
+  .cap .tag.new { color: var(--brand-deep); }
+  .cap .tag.fix { color: var(--good); }
+  @media (prefers-color-scheme: dark){ .cap .tag.new{ color:#fb9d33; } .cap .tag.fix{ color:#5fc79b; } }
+  :root[data-theme="dark"] .cap .tag.new{ color:#fb9d33; }
+  :root[data-theme="dark"] .cap .tag.fix{ color:#5fc79b; }
+  :root[data-theme="light"] .cap .tag.new{ color:var(--brand-deep); }
+  :root[data-theme="light"] .cap .tag.fix{ color:var(--good); }
+  .cap h2 { font-size: 18px; margin: 5px 0 4px; letter-spacing:-0.01em; color: var(--chrome-ink); }
+  .cap p { font-size: 13.5px; line-height:1.55; color: var(--chrome-soft); margin:0; max-width: 74ch; }
+
+  /* ---------- the messenger shell (light, faithful to the real app) ---------- */
+  .scroll { overflow-x: auto; }
+  .app { min-width: 900px; background: var(--card); color: var(--ink); border:1px solid var(--hair); border-radius:14px; box-shadow: 0 18px 40px -28px rgba(20,30,60,0.45); overflow:hidden; display:grid; grid-template-columns: 296px 1fr; }
+  .rail { border-right:1px solid var(--hair); background:#fbfcfe; display:flex; flex-direction:column; }
+  .rail-top { padding:14px 14px 10px; border-bottom:1px solid var(--hair); }
+  .rail-top .who { font-size:12px; color:var(--faint); }
+  .rail-top .who b { color:#4a566d; font-weight:600; }
+  .pills { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .pill2 { font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; border:1px solid var(--hair); background:#fff; color:#5b6577; }
+  .pill2.on { background:var(--brand); border-color:var(--brand); color:#fff; }
+  .pill2 .n { opacity:.7; margin-left:4px; font-weight:700; }
+  .search { margin-top:10px; display:flex; align-items:center; gap:7px; border:1px solid #cfd7e3; border-radius:8px; padding:7px 10px; background:#fff; color:var(--faint); font-size:13px; }
+
+  .threads { padding:6px; display:flex; flex-direction:column; gap:2px; }
+  .th { display:flex; gap:10px; padding:9px 9px; border-radius:10px; align-items:flex-start; position:relative; }
+  .th.on { background: var(--brand-50); }
+  .th.unread { background:#fff; }
+  .av { width:38px; height:38px; border-radius:999px; flex:0 0 38px; display:grid; place-items:center; color:#fff; font-size:13px; font-weight:700; letter-spacing:.02em; }
+  .av.sq { border-radius:9px; }
+  .th .body { min-width:0; flex:1; }
+  .th .l1 { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .th .nm { font-size:13.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .th.unread .nm { font-weight:800; }
+  .th .tm { font-size:11px; color:var(--faint); flex:none; }
+  .th .ctx { margin-top:2px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tagx { display:inline-block; font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:1px 5px; border-radius:4px; margin-right:5px; }
+  .tagx.sell { background:var(--good-bg); color:var(--good); }
+  .tagx.buy { background:var(--sky-bg); color:var(--sky); }
+  .th .ctx .re { color:var(--brand-deep); }
+  .th .pv { margin-top:2px; font-size:12.5px; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .th.unread .pv { color:#3d4759; font-weight:600; }
+  .dot { position:absolute; left:38px; top:9px; width:10px; height:10px; border-radius:999px; background:var(--brand); border:2px solid #fff; }
+
+  /* ---------- conversation ---------- */
+  .conv { display:flex; flex-direction:column; min-width:0; }
+  .conv-top { display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--hair); }
+  .conv-top .nm { font-size:14.5px; font-weight:700; }
+  .conv-top .sub { font-size:11.5px; color:var(--faint); }
+  .conv-top .spacer { flex:1; }
+  .ico { width:30px; height:30px; border-radius:8px; display:grid; place-items:center; color:#7b8598; font-size:14px; border:1px solid var(--hair); background:#fff; }
+
+  /* deal panel with the mini milestone rail */
+  .deal { margin:12px 16px 0; border:1px solid var(--brand-100); background:var(--brand-50); border-radius:11px; padding:11px 12px; }
+  .deal .l1 { display:flex; align-items:center; gap:10px; }
+  .deal .thumb { width:34px; height:34px; border-radius:7px; background:#fff; border:1px solid var(--brand-100); display:grid; place-items:center; font-size:15px; }
+  .deal .ttl { font-size:13px; font-weight:700; color:#7a4300; }
+  .deal .meta { font-size:11.5px; color:#96703c; }
+  .deal .spacer { flex:1; }
+  .btn-sm { font-size:12px; font-weight:700; padding:6px 11px; border-radius:7px; background:var(--brand); color:#fff; border:none; }
+  .btn-sm.ghost { background:#fff; color:#5b6577; border:1px solid #d9dfe9; }
+
+  .rail-mini { display:flex; margin-top:11px; padding-top:10px; border-top:1px solid var(--brand-100); }
+  .ms { flex:1; min-width:0; text-align:center; }
+  .ms .line { display:flex; align-items:center; }
+  .ms .seg { height:2px; flex:1; background:#e7d3b4; }
+  .ms .seg.done { background:#10b981; }
+  .ms .seg.now { background:#fb9d33; }
+  .ms .seg.hide { visibility:hidden; }
+  .ms .mk { width:16px; height:16px; border-radius:999px; border:2px solid #d8cbb4; background:#fff; flex:none; display:grid; place-items:center; font-size:9px; line-height:1; color:#fff; }
+  .ms .mk.done { background:#10b981; border-color:#10b981; }
+  .ms .mk.now { border-color:var(--brand); box-shadow:0 0 0 3px #ffe6c2; }
+  .ms .mk.now::after { content:""; width:5px; height:5px; border-radius:999px; background:var(--brand); }
+  .ms .lb { font-size:10.5px; margin-top:5px; color:#a08a63; font-weight:600; }
+  .ms .lb.done { color:#4a566d; }
+  .ms .lb.now { color:var(--ink); font-weight:800; }
+
+  /* messages */
+  .msgs { padding:14px 16px 6px; display:flex; flex-direction:column; gap:3px; background:#fff; }
+  .daysep { display:flex; align-items:center; gap:10px; margin:12px 0 8px; }
+  .daysep .ln { height:1px; flex:1; background:var(--hair); }
+  .daysep span { font-size:11px; font-weight:700; color:var(--faint); letter-spacing:.04em; }
+
+  .evt { align-self:center; max-width:78%; text-align:center; background:var(--panel); border:1px solid var(--panel-hair); color:#5b6577; font-size:12px; line-height:1.45; padding:6px 12px; border-radius:999px; margin:5px 0; }
+  .evt b { color:#3d4759; font-weight:700; }
+  .evt.win { background:var(--good-bg); border-color:#bfe6d3; color:#0b6344; }
+
+  .grp { display:flex; gap:8px; align-items:flex-end; margin-top:9px; }
+  .grp.me { flex-direction:row-reverse; }
+  .grp .avs { width:26px; height:26px; border-radius:999px; flex:none; display:grid; place-items:center; color:#fff; font-size:10px; font-weight:700; }
+  .grp .avs.blank { background:transparent; }
+  .stack { display:flex; flex-direction:column; gap:3px; max-width:66%; }
+  .grp.me .stack { align-items:flex-end; }
+  .bub { font-size:13.5px; line-height:1.45; padding:8px 12px; border-radius:16px; background:var(--panel); color:#2b3446; border:1px solid var(--panel-hair); position:relative; }
+  .grp.me .bub { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .stack .bub:first-child { border-top-left-radius:16px; }
+  .grp:not(.me) .stack .bub:not(:last-child) { border-bottom-left-radius:6px; }
+  .grp:not(.me) .stack .bub:not(:first-child) { border-top-left-radius:6px; }
+  .grp.me .stack .bub:not(:last-child) { border-bottom-right-radius:6px; }
+  .grp.me .stack .bub:not(:first-child) { border-top-right-radius:6px; }
+  .stamp { font-size:10.5px; color:var(--faint); padding:0 4px; }
+  .seen { font-size:10.5px; color:var(--faint); align-self:flex-end; padding:2px 4px 0; display:flex; align-items:center; gap:4px; }
+
+  .quote { border-left:3px solid rgba(255,255,255,.55); padding:2px 0 2px 8px; margin-bottom:5px; font-size:12px; opacity:.85; }
+  .grp:not(.me) .quote { border-left-color:#cbd5e1; }
+  .file { display:flex; align-items:center; gap:9px; border:1px solid var(--panel-hair); background:#fff; border-radius:10px; padding:8px 10px; }
+  .file .ext { width:30px; height:30px; border-radius:6px; background:#fdeaea; color:#c0392b; font-size:9.5px; font-weight:800; display:grid; place-items:center; }
+  .file .fn { font-size:12.5px; font-weight:600; color:var(--ink); }
+  .file .fs { font-size:11px; color:var(--faint); }
+  .rx { position:absolute; bottom:-11px; right:8px; background:#fff; border:1px solid var(--hair); border-radius:999px; padding:1px 6px; font-size:11px; box-shadow:0 2px 6px -2px rgba(20,30,60,.3); white-space:nowrap; }
+  .grp:not(.me) .rx { right:auto; left:8px; }
+  .typing { display:flex; gap:8px; align-items:flex-end; margin-top:9px; }
+  .typing .bub { display:flex; gap:3px; padding:11px 13px; }
+  .typing i { width:5px; height:5px; border-radius:999px; background:#b6c0d0; display:block; }
+
+  .composer { margin:10px 16px 14px; border:1px solid #cfd7e3; border-radius:11px; padding:9px 11px; background:#fff; }
+  .composer .txt { font-size:13.5px; color:var(--faint); }
+  .composer .bar { display:flex; align-items:center; gap:8px; margin-top:9px; }
+  .composer .bar .spacer { flex:1; }
+  .tool { width:28px; height:28px; border-radius:7px; display:grid; place-items:center; font-size:14px; color:#7b8598; }
+  .hintline { font-size:11px; color:var(--faint); margin-left:2px; }
+
+  /* ---------- annotations ---------- */
+  .marks { margin-top:16px; display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); }
+  .mark { border:1px solid var(--chrome-hair); background:var(--card); color:var(--ink); border-radius:12px; padding:14px 15px; }
+  .mark .k { font-size:10.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--brand-deep); }
+  .mark h3 { margin:6px 0 5px; font-size:14.5px; letter-spacing:-0.01em; }
+  .mark p { margin:0; font-size:13px; line-height:1.55; color:#4a566d; }
+  .mark .then { display:block; margin-top:7px; font-size:12px; color:var(--faint); }
+
+  .phases { margin-top:16px; display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); }
+  .ph { border:1px solid var(--chrome-hair); background:var(--card); color:var(--ink); border-radius:12px; padding:14px 15px; }
+  .ph .n { font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); }
+  .ph.now .n { color:var(--brand-deep); }
+  .ph h3 { margin:6px 0 6px; font-size:14.5px; }
+  .ph ul { margin:0; padding-left:17px; }
+  .ph li { font-size:12.5px; line-height:1.6; color:#4a566d; }
+  .ph .tagp { display:inline-block; margin-top:9px; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:999px; background:var(--brand-50); color:var(--brand-deep); }
+  .ph .tagp.later { background:#eef1f6; color:#6b7688; }
+
+  .note { margin-top: 30px; padding:18px 20px; border-radius:12px; border:1px solid var(--chrome-hair); background: var(--card); color: var(--ink); }
+  .note h3 { margin:0 0 8px; font-size:15px; }
+  .note p { margin:0 0 8px; font-size:13.5px; line-height:1.6; color:#4a566d; }
+  .note .q { border-left:3px solid var(--brand); padding-left:12px; color:var(--ink); }
+  .note b { font-weight:700; }
+
+  @media (max-width: 720px) { .app { min-width: 820px; } }
+</style>
+
+<div class="wrap">
+  <div class="inner">
+    <div class="eyebrow">Messages &middot; mockup</div>
+    <h1>The messenger, rebuilt around a real conversation</h1>
+    <p class="lede">
+      Today CX has an inbox page and a separate conversation page, every message sits in its own
+      bubble, and deal events like &ldquo;accepted the request&rdquo; render as your own orange chat
+      bubbles. This is the Messenger and LinkedIn read of the same screen: one persistent split view,
+      messages grouped by sender and day, deal events as their own quiet event chips, and the deal
+      itself pinned to the top with its milestone rail.
+    </p>
+
+    <div class="cap">
+      <span class="tag new">Proposed &middot; the whole screen</span>
+      <h2>One screen: threads on the left, the live conversation on the right</h2>
+      <p>
+        Faithful to CX &mdash; orange for your own messages, the Buying / Selling tags from the current
+        inbox, company identities as rounded squares and people as circles. Everything shown here is
+        real CX data, not placeholder chat.
+      </p>
+    </div>
+
+    <div class="scroll">
+      <div class="app">
+
+        <!-- ============ LEFT RAIL ============ -->
+        <div class="rail">
+          <div class="rail-top">
+            <p class="who">Inbox for <b>you</b> &middot; 3 unread</p>
+            <div class="pills">
+              <span class="pill2 on">All<span class="n">7</span></span>
+              <span class="pill2">Unread<span class="n">3</span></span>
+              <span class="pill2">Buying<span class="n">4</span></span>
+              <span class="pill2">Selling<span class="n">2</span></span>
+            </div>
+            <div class="search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              Search name, listing, or text
+            </div>
+          </div>
+
+          <div class="threads">
+            <div class="th on">
+              <div class="av" style="background:#e07d05;">TB</div>
+              <div class="body">
+                <div class="l1"><span class="nm">Tyler Brooks</span><span class="tm">now</span></div>
+                <div class="ctx"><span class="tagx sell">Selling</span><span class="re">Surplus crushed stone (#57)</span></div>
+                <div class="pv">You: Loading it Thursday morning, gate co&hellip;</div>
+              </div>
+            </div>
+
+            <div class="th unread">
+              <div class="dot"></div>
+              <div class="av sq" style="background:#2d4a7c;">RE</div>
+              <div class="body">
+                <div class="l1"><span class="nm">Rivera Electric</span><span class="tm">18m</span></div>
+                <div class="ctx"><span class="tagx buy">Buying</span><span class="re">2019 Genie S-45 boom lift</span></div>
+                <div class="pv">Can you do $28,400 if we pick up?</div>
+              </div>
+            </div>
+
+            <div class="th unread">
+              <div class="dot"></div>
+              <div class="av" style="background:#0f7a52;">MG</div>
+              <div class="body">
+                <div class="l1"><span class="nm">Maria Guzman</span><span class="tm">2h</span></div>
+                <div class="ctx"><span class="tagx buy">Buying</span><span class="re">Pallet of 8&Prime; CMU block</span></div>
+                <div class="pv">Sent a photo</div>
+              </div>
+            </div>
+
+            <div class="th">
+              <div class="av sq" style="background:#6b3fa0;">LS</div>
+              <div class="body">
+                <div class="l1"><span class="nm">Lone Star Plumbing</span><span class="tm">Yesterday</span></div>
+                <div class="ctx"><span class="tagx sell">Selling</span><span class="re">Ridgid 300 threader</span></div>
+                <div class="pv">You: Sounds good, I&rsquo;ll hold it for you.</div>
+              </div>
+            </div>
+
+            <div class="th unread">
+              <div class="dot"></div>
+              <div class="av" style="background:#b35f00;">DK</div>
+              <div class="body">
+                <div class="l1"><span class="nm">Dale Kimball</span><span class="tm">Mon</span></div>
+                <div class="ctx">General</div>
+                <div class="pv">Thanks for connecting, we do a lot of&hellip;</div>
+              </div>
+            </div>
+
+            <div class="th">
+              <div class="av" style="background:#55617a;">JW</div>
+              <div class="body">
+                <div class="l1"><span class="nm">Janelle Ward</span><span class="tm">Jul 14</span></div>
+                <div class="ctx"><span class="tagx buy">Buying</span><span class="re">Skid steer grapple bucket</span></div>
+                <div class="pv">You: It&rsquo;s still available.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ CONVERSATION ============ -->
+        <div class="conv">
+          <div class="conv-top">
+            <div class="av" style="background:#e07d05;width:34px;height:34px;flex:0 0 34px;font-size:12px;">TB</div>
+            <div>
+              <div class="nm">Tyler Brooks</div>
+              <div class="sub">Brooks Grading &middot; Charlotte, NC</div>
+            </div>
+            <div class="spacer"></div>
+            <div class="ico" title="Conversation details">i</div>
+          </div>
+
+          <!-- deal panel, now carrying the milestone rail -->
+          <div class="deal">
+            <div class="l1">
+              <div class="thumb">&#127959;</div>
+              <div>
+                <div class="ttl">Surplus crushed stone (#57)</div>
+                <div class="meta">Set price &middot; $24.00 &middot; you are selling</div>
+              </div>
+              <div class="spacer"></div>
+              <button class="btn-sm">Mark completed</button>
+              <button class="btn-sm ghost">View order</button>
+            </div>
+
+            <div class="rail-mini">
+              <div class="ms">
+                <div class="line"><span class="seg hide"></span><span class="mk done">&#10003;</span><span class="seg done"></span></div>
+                <div class="lb done">Requested</div>
+              </div>
+              <div class="ms">
+                <div class="line"><span class="seg done"></span><span class="mk done">&#10003;</span><span class="seg now"></span></div>
+                <div class="lb done">Accepted</div>
+              </div>
+              <div class="ms">
+                <div class="line"><span class="seg now"></span><span class="mk now"></span><span class="seg"></span></div>
+                <div class="lb now">Payment</div>
+              </div>
+              <div class="ms">
+                <div class="line"><span class="seg"></span><span class="mk"></span><span class="seg"></span></div>
+                <div class="lb">Handoff</div>
+              </div>
+              <div class="ms">
+                <div class="line"><span class="seg"></span><span class="mk"></span><span class="seg"></span></div>
+                <div class="lb">Completed</div>
+              </div>
+              <div class="ms">
+                <div class="line"><span class="seg"></span><span class="mk"></span><span class="seg hide"></span></div>
+                <div class="lb">Review</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- messages -->
+          <div class="msgs">
+            <div class="daysep"><span class="ln"></span><span>Friday, July 17</span><span class="ln"></span></div>
+
+            <div class="evt">&#128722; <b>Tyler Brooks</b> requested to buy &ldquo;Surplus crushed stone (#57)&rdquo; for <b>$24.00</b> &middot; on-platform, escrow protected</div>
+
+            <div class="grp">
+              <div class="avs" style="background:#e07d05;">TB</div>
+              <div class="stack">
+                <div class="bub">Morning, is the #57 still on the yard?</div>
+                <div class="bub">I need about 6 tons for a driveway base.</div>
+                <span class="stamp">9:12 AM</span>
+              </div>
+            </div>
+
+            <div class="grp me">
+              <div class="avs blank"></div>
+              <div class="stack">
+                <div class="bub">It is, plenty left. 6 tons is no problem.</div>
+                <span class="stamp">9:31 AM</span>
+              </div>
+            </div>
+
+            <div class="daysep"><span class="ln"></span><span>Today</span><span class="ln"></span></div>
+
+            <div class="grp">
+              <div class="avs" style="background:#e07d05;">TB</div>
+              <div class="stack">
+                <div class="bub">
+                  Here&rsquo;s the spec the inspector wants us to hit.
+                  <span class="rx">&#128077; 1</span>
+                </div>
+                <div class="bub" style="padding:8px;">
+                  <div class="file">
+                    <div class="ext">PDF</div>
+                    <div>
+                      <div class="fn">NCDOT-aggregate-spec.pdf</div>
+                      <div class="fs">1.2 MB</div>
+                    </div>
+                  </div>
+                </div>
+                <span class="stamp">6:02 AM</span>
+              </div>
+            </div>
+
+            <div class="evt win">&#9989; <b>You</b> accepted the request &middot; complete on-platform when ready</div>
+
+            <div class="grp me">
+              <div class="avs blank"></div>
+              <div class="stack">
+                <div class="bub">
+                  <div class="quote">Tyler: I need about 6 tons for a driveway base.</div>
+                  That grade is exactly what&rsquo;s stockpiled, you&rsquo;re covered.
+                </div>
+                <div class="bub">Loading it Thursday morning, gate code is 4417.</div>
+                <span class="stamp">6:24 AM</span>
+                <div class="seen">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"></path></svg>
+                  Seen 6:25 AM
+                </div>
+              </div>
+            </div>
+
+            <div class="typing">
+              <div class="avs" style="background:#e07d05;">TB</div>
+              <div class="bub"><i></i><i></i><i></i></div>
+            </div>
+          </div>
+
+          <div class="composer">
+            <div class="txt">Write a message&hellip;</div>
+            <div class="bar">
+              <span class="tool">&#128247;</span>
+              <span class="tool">&#128206;</span>
+              <span class="tool">&#128512;</span>
+              <span class="hintline">Enter sends &middot; Shift+Enter new line</span>
+              <span class="spacer"></span>
+              <button class="btn-sm">Send</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============ WHAT CHANGES ============ -->
+    <div class="cap">
+      <span class="tag fix">What actually changes</span>
+      <h2>Six differences from the messenger you have today</h2>
+      <p>Each one is small on its own; together they are the whole gap between a message log and a conversation.</p>
+    </div>
+
+    <div class="marks">
+      <div class="mark">
+        <span class="k">Deal events</span>
+        <h3>Events become chips, not your bubbles</h3>
+        <p>&ldquo;Accepted the request&rdquo; and &ldquo;Deal marked completed&rdquo; are system events, so they sit centered and quiet.</p>
+        <span class="then">Today they are stored as messages from whoever clicked, so they render as your own orange bubbles.</span>
+      </div>
+      <div class="mark">
+        <span class="k">Layout</span>
+        <h3>One split view, not two pages</h3>
+        <p>Threads stay on the left while you read and reply, so switching conversations never reloads the screen.</p>
+        <span class="then">Today the inbox and a conversation are separate pages. Phones keep that flow.</span>
+      </div>
+      <div class="mark">
+        <span class="k">Rhythm</span>
+        <h3>Grouped by sender and by day</h3>
+        <p>Back-to-back messages stack under one avatar with a single timestamp, under a day divider.</p>
+        <span class="then">Today every message repeats its own timestamp, so a fast exchange reads as clutter.</span>
+      </div>
+      <div class="mark">
+        <span class="k">The deal</span>
+        <h3>The order rides along at the top</h3>
+        <p>The pinned panel carries the same milestone rail as the order page, so the next step is always in view.</p>
+        <span class="then">Today the panel shows the deal but not where it sits in the process.</span>
+      </div>
+      <div class="mark">
+        <span class="k">Presence</span>
+        <h3>Seen receipts and typing</h3>
+        <p>A quiet &ldquo;Seen&rdquo; under your last message, and dots when the other side is writing.</p>
+        <span class="then">The database already records when each side last opened a thread, so receipts need no new fields.</span>
+      </div>
+      <div class="mark">
+        <span class="k">Content</span>
+        <h3>Files, reactions, and replies</h3>
+        <p>Send a spec PDF, react to a message, and quote the line you are answering.</p>
+        <span class="then">Today a message carries one image and nothing else.</span>
+      </div>
+    </div>
+
+    <!-- ============ PHASES ============ -->
+    <div class="cap">
+      <span class="tag new">How it ships</span>
+      <h2>Three rounds, each tested and signed off before the next</h2>
+      <p>Phase 1 is the whole visual change above. Phases 2 and 3 make it live and let it carry real work.</p>
+    </div>
+
+    <div class="phases">
+      <div class="ph now">
+        <span class="n">Round one</span>
+        <h3>Layout and feel</h3>
+        <ul>
+          <li>Split view, with the phone flow unchanged</li>
+          <li>Grouped bubbles and day dividers</li>
+          <li>Deal events as event chips</li>
+          <li>Seen receipts from existing data</li>
+          <li>Enter sends, auto-scroll, sticky composer</li>
+        </ul>
+        <span class="tagp">No schema change</span>
+      </div>
+      <div class="ph">
+        <span class="n">Round two</span>
+        <h3>It goes live</h3>
+        <ul>
+          <li>New messages arrive without a refresh</li>
+          <li>Your own message appears the instant you send</li>
+          <li>Typing indicator</li>
+          <li>New-message email, honoring notification preferences</li>
+        </ul>
+        <span class="tagp later">Adds a polling endpoint</span>
+      </div>
+      <div class="ph">
+        <span class="n">Round three</span>
+        <h3>Richer messages</h3>
+        <ul>
+          <li>Several photos or videos in one message</li>
+          <li>PDF and document attachments</li>
+          <li>Emoji reactions on a message</li>
+          <li>Reply quoting the message above</li>
+        </ul>
+        <span class="tagp later">Adds four small tables/columns</span>
+      </div>
+    </div>
+
+    <div class="note">
+      <h3>What I need from you</h3>
+      <p>
+        The split view is the one structural decision here. Everything else layers on top of it, and the
+        phone experience keeps today&rsquo;s inbox-then-conversation flow either way.
+      </p>
+      <p>
+        The event chips are also a bug fix: deal events are currently written as ordinary messages from
+        whoever clicked the button, which is why your own screen shows &ldquo;Dean Hughes accepted the
+        request&rdquo; as an orange bubble from you. Marking them as events makes them render correctly
+        for both sides.
+      </p>
+      <p class="q">
+        Confirm three things and I&rsquo;ll build Round one: (1) split view on desktop, phone unchanged,
+        good? (2) keep the deal panel pinned with its milestone rail, or leave the rail on the order page
+        only? and (3) anything in Rounds two or three you want pulled forward, or dropped?
+      </p>
+    </div>
+  </div>
+</div>

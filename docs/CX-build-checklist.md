@@ -73,6 +73,65 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     `PostCard` renders `PostMediaCarousel` (N/total counter, prev/next, dots, lightbox)
     for >1 item. Shared `src/lib/media-order.ts` builds the drag-order for posts + listings.
 
+- [ ] **Order milestone timeline (buying + selling)** *(new 07/21/2026 - BUILT, awaiting your
+  test)* - the vertical "Timeline" list on `/orders/[id]` became a HORIZONTAL milestone rail
+  showing the WHOLE process, past and future: done steps solid green with a check, the current
+  step ringed in brand orange, future steps outlined, and a red terminal marker when a deal is
+  declined/cancelled (the steps that never happened grey out).
+  - Steps come from `orderTimeline()` in `src/lib/order-timeline.ts` - pure and framework-
+    agnostic (no Prisma, React, or next/*), so the Expo app renders the same rail. Rendering
+    lives in `src/components/OrderTimeline.tsx`.
+  - Three courses by deal type: purchase and bid run Requested/Bid placed -> Accepted/Awarded ->
+    Payment -> Handoff -> Completed -> Review; a trade has no escrow, so no Payment step and the
+    third step is "Exchange - arrange directly".
+  - Payment and Handoff are shown but labeled "Escrow, stubbed in v1" until the payments module
+    lands; those step keys are the natural hooks for the Stripe/escrow work.
+  - Hints are role-aware: the buyer reads "Waiting on the seller", the seller reads "Your move:
+    accept or decline".
+  - SCHEMA: added `Transaction.acceptedAt / completedAt / closedAt` (nullable) and stamped them in
+    `src/lib/services/transactions.ts`. Without them every step read `updatedAt`, so an accepted
+    and completed order both showed "just now". Legacy rows fall back to `updatedAt`. Applied with
+    `db:push`; additive and non-destructive, no reseed needed.
+  - FOLLOW-UP (not built): a mini version of the rail on the Orders list rows and in the message
+    thread's deal panel (the messenger mock shows the latter).
+
+- [ ] **Messenger upgrade (Facebook Messenger + LinkedIn feel)** *(new 07/21/2026 - MOCK APPROVED
+  by Dean 07/21; scope = rounds 1-3, inbox power features NOT queued. NEXT UP: build Round 1 when
+  Dean gives the green light)* - mock: `docs/mockups/messenger.html` (also published as an
+  artifact). The structural change is a persistent SPLIT VIEW (thread list left, live conversation
+  right) instead of today's separate `/messages` and `/messages/[id]` pages; phones keep the
+  current inbox-then-conversation flow.
+  - **DECIDED (Dean, 07/21/2026), all three mock questions answered:**
+    1. **Split view on desktop, phone flow unchanged - YES.** Build it.
+    2. **Keep the deal panel pinned at the top of the conversation WITH its milestone rail - YES.**
+       So the mini rail from the mock is part of this work; it reuses `orderTimeline()` from the
+       order-timeline task above, in a compact renderer.
+    3. **Rounds 2 and 3 stay exactly as scoped** - nothing pulled forward, nothing dropped.
+  - **Round 1 (no schema change):** split view; consecutive messages grouped under one avatar with
+    a single timestamp; day dividers; deal events rendered as centered event chips; "Seen" receipts
+    built from the existing `Thread.aLastReadAt/bLastReadAt`; Enter sends / Shift+Enter newline;
+    auto-scroll; sticky composer.
+  - **BUG this fixes:** `txCreatedMessage` / `txStatusMessage` (`src/lib/transactions.ts`) write
+    deal events as ordinary `Message` rows authored by whoever clicked, so "Dean Hughes accepted
+    the request" renders as YOUR OWN orange chat bubble. Needs a `Message.kind` (user | event) so
+    both sides render it as a system chip.
+  - **Round 2:** messages arrive without a refresh (polling endpoint first, SSE later), optimistic
+    send, typing indicator. Natural point to wire the standard **new-message email** (respecting
+    notification prefs) from the transactional email suite.
+  - **Round 3:** multiple photos/videos per message (reuse `MediaUpload`), PDF/document
+    attachments (LinkedIn parity), emoji reactions on a message, reply-quoting. Schema:
+    `Message.attachments`, `Message.replyToId`, `Message.kind`, and a `MessageReaction` model.
+  - **NOT queued (deferred by decision):** inbox power features - pin/archive/mute/mark-unread and
+    the LinkedIn-style right info panel with "Media & files", profile card, and report/block.
+  - **RESUME HERE (next working session).** In order:
+    1. Test + sign off the order milestone timeline above (test guide was given 07/21; re-ask for
+       it if needed). Commit it on its own.
+    2. Build messenger **Round 1**. Touches `src/app/messages/page.tsx` (becomes the split shell),
+       `src/app/messages/[id]/page.tsx` (becomes the conversation pane + keeps working standalone
+       on phones), a new grouped message list component, and `Message.kind` for the event chips.
+       Domain logic stays in `src/lib/services/messages.ts` per AGENTS.md; the pages stay thin.
+    3. Then Round 2, then Round 3, each built -> tested -> signed off -> committed separately.
+
 - [ ] **Competitive gap analysis vs LinkedIn + Materials Market** *(new - QUEUED, research
   task; do a bit later)* - map CX's current features against the two references and produce
   a prioritized "missing features/workflows" list.
