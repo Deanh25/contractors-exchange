@@ -107,7 +107,7 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
        So the mini rail from the mock is part of this work; it reuses `orderTimeline()` from the
        order-timeline task above, in a compact renderer.
     3. **Rounds 2 and 3 stay exactly as scoped** - nothing pulled forward, nothing dropped.
-  - **Round 1 (no schema change):** split view; consecutive messages grouped under one avatar with
+  - [x] **Round 1 (BUILT + tested + signed off 07/21, commit 27c486f)** - split view; consecutive messages grouped under one avatar with
     a single timestamp; day dividers; deal events rendered as centered event chips; "Seen" receipts
     built from the existing `Thread.aLastReadAt/bLastReadAt`; Enter sends / Shift+Enter newline;
     auto-scroll; sticky composer.
@@ -123,14 +123,13 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     `Message.attachments`, `Message.replyToId`, `Message.kind`, and a `MessageReaction` model.
   - **NOT queued (deferred by decision):** inbox power features - pin/archive/mute/mark-unread and
     the LinkedIn-style right info panel with "Media & files", profile card, and report/block.
-  - **RESUME HERE (next working session).** In order:
-    1. Test + sign off the order milestone timeline above (test guide was given 07/21; re-ask for
-       it if needed). Commit it on its own.
-    2. Build messenger **Round 1**. Touches `src/app/messages/page.tsx` (becomes the split shell),
-       `src/app/messages/[id]/page.tsx` (becomes the conversation pane + keeps working standalone
-       on phones), a new grouped message list component, and `Message.kind` for the event chips.
-       Domain logic stays in `src/lib/services/messages.ts` per AGENTS.md; the pages stay thin.
-    3. Then Round 2, then Round 3, each built -> tested -> signed off -> committed separately.
+  - **RESUME HERE (next working session).** Round 1 is done (commit 27c486f).
+    1. Round 2: live updates (polling endpoint first, SSE later), optimistic send,
+       typing indicator. Natural point to wire the new-message email.
+    2. Then Round 3 (attachments, reactions, reply-quoting). Each built -> tested ->
+       signed off -> committed separately.
+    3. STILL OUTSTANDING: Dean has not yet tested the order milestone timeline
+       (commit b2bad64); it shipped before its test so the work carried machines.
 
 - [ ] **Competitive gap analysis vs LinkedIn + Materials Market** *(new - QUEUED, research
   task; do a bit later)* - map CX's current features against the two references and produce
