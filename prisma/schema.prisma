@@ -631,12 +631,21 @@ model Thread {
   @@index([updatedAt])
 }
 
+// A message is either something a person typed, or a deal EVENT the system posted
+// (order requested/accepted/completed...). Events render as a centered system chip
+// for BOTH sides instead of a chat bubble owned by whoever clicked the button.
+enum MessageKind {
+  user
+  event
+}
+
 model Message {
   id              String   @id @default(cuid())
   threadId        String
   // The human who typed it, plus the identity they acted as (company), if any.
   senderUserId    String
   senderCompanyId String? // null = sent as themselves; set = sent as this company
+  kind            MessageKind @default(user)
   body            String   @db.Text
   imageUrl        String?
   createdAt       DateTime @default(now())
