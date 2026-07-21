@@ -181,6 +181,8 @@ export async function createDeal(
       threadId: thread.id,
       senderUserId: actor.userId,
       senderCompanyId: buyer.type === "company" ? buyer.id : null,
+      // A deal event, not chat: both sides see a centered system chip.
+      kind: "event",
       body: txCreatedMessage(type, amount, listing.title),
     },
   });
@@ -266,6 +268,8 @@ export async function updateDeal(
       threadId: thread.id,
       senderUserId: actor.userId,
       senderCompanyId: actingSide.type === "company" ? actingSide.id : null,
+      // A deal event, not chat: both sides see a centered system chip.
+      kind: "event",
       body: txStatusMessage(next, actorName),
     },
   });
