@@ -18,16 +18,15 @@ import { getActiveOffer } from "@/lib/offers";
 import { ownerInclude } from "@/lib/listings";
 import { orderTimeline } from "@/lib/order-timeline";
 import {
-  groupThreadMessages,
+  chatSenderInclude,
   type ChatMessage,
 } from "@/lib/services/messages";
 import { TransactionPanel } from "@/components/TransactionPanel";
 import { NegotiationPanel } from "@/components/NegotiationPanel";
 import { MarkThreadRead } from "@/components/MarkThreadRead";
 import { ThreadList, parseFolder } from "@/components/messages/ThreadList";
-import { MessageList } from "@/components/messages/MessageList";
 import { MiniOrderRail } from "@/components/messages/MiniOrderRail";
-import { Composer } from "@/components/messages/Composer";
+import { Conversation } from "@/components/messages/Conversation";
 
 /**
  * Conversation pane (messenger Round 1). On desktop it sits beside the thread
@@ -52,7 +51,8 @@ export default async function ConversationPage({
       listing: { include: ownerInclude },
       messages: {
         orderBy: { createdAt: "asc" },
-        include: { senderUser: true, senderCompany: true },
+        // Narrow on purpose: these rows are handed to a client component.
+        include: chatSenderInclude,
       },
     },
   });
@@ -93,9 +93,13 @@ export default async function ConversationPage({
     }
   }
 
-  // Grouped rows (day dividers, event chips, message runs) + the read cursor
-  // of the OTHER side, which drives the "Seen" receipt on my last message.
-  const items = groupThreadMessages(thread.messages as ChatMessage[], myParty);
+  // The conversation renders itself from here (grouping included), so it can
+  // append polled messages without a round trip. Dates cross the boundary as
+  // ISO strings. The OTHER side's read cursor drives the "Seen" receipt.
+  const initialMessages = (thread.messages as ChatMessage[]).map((m) => ({
+    ...m,
+    createdAt: m.createdAt.toISOString(),
+  }));
   const otherLastReadAt =
     mySide === "a" ? thread.bLastReadAt : thread.aLastReadAt;
 
@@ -191,14 +195,15 @@ export default async function ConversationPage({
               </div>
             )}
 
-            {/* Messages */}
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <MessageList items={items} otherLastReadAt={otherLastReadAt} />
-              <div id="cx-thread-end" />
-            </div>
-
-            <Composer
+            {/* Messages + composer: live from here down (Round 2). Keyed by
+                thread so switching conversations in the split view starts a
+                fresh poll cursor instead of inheriting the previous one. */}
+            <Conversation
+              key={thread.id}
               threadId={thread.id}
+              myParty={myParty}
+              initialMessages={initialMessages}
+              initialOtherLastReadAt={otherLastReadAt?.toISOString() ?? null}
               replyingAs={
                 myParty.type === "company"
                   ? partyDisplay(thread, mySide).name

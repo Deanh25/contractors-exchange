@@ -613,6 +613,11 @@ model Thread {
   // side this is shared across the team (first reader clears it) - v1 simplification.
   aLastReadAt DateTime?
   bLastReadAt DateTime?
+  // Last keystroke per side, for the typing indicator (messenger Round 2). The
+  // client throttles the writes and the stamp expires on its own, so there is
+  // nothing to clear when someone stops typing or closes the tab.
+  aTypingAt DateTime?
+  bTypingAt DateTime?
 
   aUser     User?    @relation("ThreadAUser", fields: [aUserId], references: [id], onDelete: Cascade)
   aCompany  Company? @relation("ThreadACompany", fields: [aCompanyId], references: [id], onDelete: Cascade)

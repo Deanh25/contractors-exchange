@@ -10,6 +10,7 @@ import {
   sendMessage,
   markThreadRead,
 } from "@/lib/services/messages";
+import type { ChatMessage } from "@/lib/chat";
 
 /**
  * Web transport shim over the messaging SERVICE (src/lib/services/messages.ts).
@@ -73,6 +74,47 @@ export async function sendMessageAction(formData: FormData) {
   revalidatePath("/", "layout");
   redirect(`/messages/${threadId}`);
 }
+
+/**
+ * Send from the LIVE conversation (messenger Round 2). Same service call as
+ * sendMessageAction, but it returns the created message instead of redirecting,
+ * so the client can swap its optimistic bubble for the real row. No revalidate
+ * here either: the conversation appends the message itself, and the client
+ * refreshes the surrounding server components (thread list, deal panel, unread
+ * badge) once the send lands.
+ */
+export async function sendChatMessageAction(
+  formData: FormData,
+): Promise<
+  | { status: "sent"; message: SerializedChatMessage }
+  | { status: "empty" }
+  | { status: "error"; code: string }
+> {
+  const actor = await resolveActor("/messages");
+  const threadId = String(formData.get("threadId") ?? "");
+
+  const image = formData.get("image");
+  const imageUrl =
+    image instanceof File && image.size > 0 ? await saveMedia(image) : null;
+
+  const r = await sendMessage(actor, {
+    threadId,
+    body: String(formData.get("body") ?? ""),
+    imageUrl,
+  });
+
+  if (r.status === "error") return { status: "error", code: r.code };
+  if (r.status === "empty") return { status: "empty" };
+  return {
+    status: "sent",
+    message: { ...r.message, createdAt: r.message.createdAt.toISOString() },
+  };
+}
+
+/** A ChatMessage as it crosses the server-action boundary (Date -> ISO string). */
+export type SerializedChatMessage = Omit<ChatMessage, "createdAt"> & {
+  createdAt: string;
+};
 
 /** Mark a thread read for the viewer's side (called when they open it). */
 export async function markThreadReadAction(threadId: string) {

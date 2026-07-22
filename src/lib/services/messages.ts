@@ -6,11 +6,11 @@ import {
   threadParties,
   partiesEqual,
   controlsParty,
-  messageFromParty,
   type Party,
 } from "@/lib/messaging";
 import { createNotification } from "@/lib/notifications";
 import type { Actor } from "@/lib/services/actor";
+import type { ChatMessage } from "@/lib/chat";
 
 /**
  * Messaging SERVICE (PRD §6 + company-as-actor). Framework-agnostic: no FormData,
@@ -61,7 +61,8 @@ export type SendMessageInput = {
 };
 
 export type SendMessageResult =
-  | { status: "sent"; threadId: string }
+  /** `message` lets a live client swap its optimistic bubble for the real row. */
+  | { status: "sent"; threadId: string; message: ChatMessage }
   | { status: "empty"; threadId: string }
   | { status: "error"; code: "no_thread" | "not_participant" };
 
@@ -91,7 +92,7 @@ export async function sendMessage(
   const imageUrl = input.imageUrl ?? null;
   if (!body && !imageUrl) return { status: "empty", threadId: input.threadId };
 
-  await prisma.message.create({
+  const created = await prisma.message.create({
     data: {
       threadId: input.threadId,
       senderUserId: actor.userId,
@@ -99,6 +100,7 @@ export async function sendMessage(
       body,
       imageUrl,
     },
+    include: chatSenderInclude,
   });
   // Bump the thread (inbox sort) and mark it read for the sender's side.
   const senderRead =
@@ -128,7 +130,11 @@ export async function sendMessage(
     threadId: input.threadId,
   });
 
-  return { status: "sent", threadId: input.threadId };
+  return {
+    status: "sent",
+    threadId: input.threadId,
+    message: created as ChatMessage,
+  };
 }
 
 /** Mark a thread read for the actor's side. Returns whether anything changed. */
@@ -148,150 +154,145 @@ export async function markThreadRead(
   if (!mySide) return { marked: false };
   await prisma.thread.update({
     where: { id: threadId },
-    data:
-      mySide === "a" ? { aLastReadAt: new Date() } : { bLastReadAt: new Date() },
+    data: {
+      ...(mySide === "a"
+        ? { aLastReadAt: new Date() }
+        : { bLastReadAt: new Date() }),
+      // Reading a thread is not activity in it: preserve @updatedAt so simply
+      // opening a conversation doesn't jump it to the top of the inbox.
+      updatedAt: thread.updatedAt,
+    },
   });
   return { marked: true };
 }
 
-// --- Conversation view model (Round 1 messenger) -----------------------------
+// --- Conversation view model -------------------------------------------------
+//
+// The model itself lives in src/lib/chat.ts (pure, client-safe) because the live
+// conversation regroups messages in the browser as polling delivers them. Server
+// callers keep importing it from here.
 
-/** A message as the conversation view needs it (sender identity resolved). */
-export type ChatMessage = {
-  id: string;
-  kind: "user" | "event";
-  body: string;
-  imageUrl: string | null;
-  createdAt: Date;
-  senderUserId: string;
-  senderCompanyId: string | null;
-  senderUser: { id: string; name: string; avatarUrl: string | null };
-  senderCompany: { name: string; slug: string; logoUrl: string | null } | null;
-};
-
-export type ChatSender = {
-  name: string;
-  avatarUrl: string | null;
-  href: string;
-  kind: "user" | "company";
-  /** For company-sent messages: which human actually typed it. */
-  attribution: string | null;
-};
+export {
+  groupThreadMessages,
+  chatMessageIsOwn,
+  type ChatMessage,
+  type ChatSender,
+  type ChatItem,
+  type ChatEntry,
+} from "@/lib/chat";
 
 /**
- * One rendered row of the conversation: a day divider, a centered deal-event
- * chip, or a GROUP of consecutive messages from the same identity (one avatar +
- * one timestamp, Messenger-style).
+ * The ONLY sender fields a conversation needs. Use this everywhere a message is
+ * loaded for display: since Round 2 the conversation is a client component and
+ * messages also travel over the poll endpoint, so `include: { senderUser: true }`
+ * would ship the whole User row (password hash, email, address) to the browser.
  */
-export type ChatItem =
-  | { type: "day"; key: string; at: Date }
-  | { type: "event"; key: string; body: string; at: Date }
-  | {
-      type: "group";
-      key: string;
-      own: boolean;
-      sender: ChatSender;
-      at: Date;
-      messages: Pick<ChatMessage, "id" | "body" | "imageUrl" | "createdAt">[];
-    };
+export const chatSenderInclude = {
+  senderUser: { select: { id: true, name: true, avatarUrl: true } },
+  senderCompany: { select: { name: true, slug: true, logoUrl: true } },
+} as const;
 
-/** Consecutive messages group only while they stay inside this window. */
-const GROUP_WINDOW_MS = 5 * 60 * 1000;
+// --- Live updates (Round 2) --------------------------------------------------
 
-function sameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+/** How long after a keystroke the other side still counts as "typing". */
+const TYPING_TTL_MS = 6000;
+
+/** What the shape of the thread looks like to one side, right now. */
+export type ThreadUpdates = {
+  /** Messages created after the caller's `since` cursor, oldest first. */
+  messages: ChatMessage[];
+  /** The other side's read cursor, which drives the "Seen" receipt. */
+  otherLastReadAt: Date | null;
+  /** Is the other side typing right now? */
+  otherTyping: boolean;
+  /** Server clock, so the client's next `since` cursor can't drift. */
+  now: Date;
+};
+
+export type ThreadUpdatesResult =
+  | { status: "ok"; updates: ThreadUpdates }
+  | { status: "error"; code: "no_thread" | "not_participant" };
+
+/** Which side of a thread this actor speaks for, or null if neither. */
+async function sideFor(
+  actor: Actor,
+  threadId: string,
+): Promise<{
+  thread: Awaited<ReturnType<typeof prisma.thread.findUnique>>;
+  side: "a" | "b" | null;
+}> {
+  const thread = await prisma.thread.findUnique({ where: { id: threadId } });
+  if (!thread) return { thread: null, side: null };
+  const acting = actor.actingCompanyIds;
+  const { a, b } = threadParties(thread);
+  const side = controlsParty(a, actor.userId, acting)
+    ? "a"
+    : controlsParty(b, actor.userId, acting)
+      ? "b"
+      : null;
+  return { thread, side };
 }
 
-function senderOf(m: ChatMessage): ChatSender {
-  if (m.senderCompany) {
-    return {
-      name: m.senderCompany.name,
-      avatarUrl: m.senderCompany.logoUrl,
-      href: `/company/${m.senderCompany.slug}`,
-      kind: "company",
-      attribution: m.senderUser.name,
-    };
-  }
+/**
+ * Everything that may have changed in a thread since the caller last looked:
+ * new messages, the other side's read cursor, and whether they're typing.
+ * Polled by the web client; a mobile client can poll the same service.
+ */
+export async function getThreadUpdates(
+  actor: Actor,
+  input: { threadId: string; since: Date | null },
+): Promise<ThreadUpdatesResult> {
+  const { thread, side } = await sideFor(actor, input.threadId);
+  if (!thread) return { status: "error", code: "no_thread" };
+  if (!side) return { status: "error", code: "not_participant" };
+
+  const now = new Date();
+  const messages = await prisma.message.findMany({
+    where: {
+      threadId: input.threadId,
+      ...(input.since ? { createdAt: { gt: input.since } } : {}),
+    },
+    orderBy: { createdAt: "asc" },
+    include: chatSenderInclude,
+    // A guard, not a page: only a burst of messages while the tab was hidden
+    // could approach this, and the next poll picks up whatever is left.
+    take: 200,
+  });
+
+  const otherTypingAt = side === "a" ? thread.bTypingAt : thread.aTypingAt;
   return {
-    name: m.senderUser.name,
-    avatarUrl: m.senderUser.avatarUrl,
-    href: `/u/${m.senderUser.id}`,
-    kind: "user",
-    attribution: null,
+    status: "ok",
+    updates: {
+      messages: messages as ChatMessage[],
+      otherLastReadAt: side === "a" ? thread.bLastReadAt : thread.aLastReadAt,
+      otherTyping:
+        !!otherTypingAt &&
+        now.getTime() - otherTypingAt.getTime() < TYPING_TTL_MS,
+      now,
+    },
   };
 }
 
 /**
- * Build the conversation rows: day dividers, deal-event chips, and grouped runs
- * of consecutive messages from one identity. Pure + framework-agnostic so the
- * future mobile client renders the same conversation from the same model.
- * `messages` must be in ascending createdAt order.
+ * Mark the actor's side as typing (the client throttles these). The stamp
+ * expires on its own via TYPING_TTL_MS, so there is nothing to clear.
  */
-export function groupThreadMessages(
-  messages: ChatMessage[],
-  myParty: Party,
-): ChatItem[] {
-  const items: ChatItem[] = [];
-  let lastDay: Date | null = null;
-  // The run we're currently appending to, and the identity that owns it. Both
-  // reset on a day divider or a deal event, so those always break a group.
-  let openGroup: Extract<ChatItem, { type: "group" }> | null = null;
-  let openIdentity: string | null = null;
-
-  for (const m of messages) {
-    if (!lastDay || !sameDay(lastDay, m.createdAt)) {
-      items.push({
-        type: "day",
-        key: `day-${m.createdAt.toISOString().slice(0, 10)}`,
-        at: m.createdAt,
-      });
-      lastDay = m.createdAt;
-      openGroup = null;
-      openIdentity = null;
-    }
-
-    // Deal events are system chips: never grouped, never "owned" by a side.
-    if (m.kind === "event") {
-      items.push({ type: "event", key: m.id, body: m.body, at: m.createdAt });
-      openGroup = null;
-      openIdentity = null;
-      continue;
-    }
-
-    const own = messageFromParty(m, myParty);
-    const identity = m.senderCompanyId ?? m.senderUserId;
-    const entry = {
-      id: m.id,
-      body: m.body,
-      imageUrl: m.imageUrl,
-      createdAt: m.createdAt,
-    };
-
-    if (
-      openGroup &&
-      openIdentity === identity &&
-      openGroup.own === own &&
-      m.createdAt.getTime() - openGroup.at.getTime() <= GROUP_WINDOW_MS
-    ) {
-      openGroup.messages.push(entry);
-      openGroup.at = m.createdAt; // group timestamp = its most recent message
-    } else {
-      openGroup = {
-        type: "group",
-        key: `grp-${m.id}`,
-        own,
-        sender: senderOf(m),
-        at: m.createdAt,
-        messages: [entry],
-      };
-      openIdentity = identity;
-      items.push(openGroup);
-    }
-  }
-
-  return items;
+export async function setTyping(
+  actor: Actor,
+  threadId: string,
+): Promise<{ ok: boolean }> {
+  const { thread, side } = await sideFor(actor, threadId);
+  if (!thread || !side) return { ok: false };
+  await prisma.thread.update({
+    where: { id: threadId },
+    data: {
+      ...(side === "a" ? { aTypingAt: new Date() } : { bTypingAt: new Date() }),
+      // `updatedAt` is @updatedAt, so Prisma would stamp it on this write and
+      // shuffle the thread to the top of the inbox on EVERY keystroke. Passing
+      // the existing value explicitly keeps the inbox order meaning "last
+      // message", which is what it sorts by.
+      updatedAt: thread.updatedAt,
+    },
+  });
+  return { ok: true };
 }

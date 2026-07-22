@@ -2,27 +2,62 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { isVideoUrl } from "@/lib/listings";
 import { clockTime, dayLabel, formatDateTime } from "@/lib/time";
-import type { ChatItem } from "@/lib/services/messages";
+import type { ChatItem } from "@/lib/chat";
 
 /**
- * The conversation body (messenger Round 1, per the approved mock):
- * day dividers, centered deal-event chips, and consecutive messages grouped under
- * one avatar with a single timestamp. Presentation only - the grouping model is
- * built by groupThreadMessages() in the messages service.
+ * The conversation body: day dividers, centered deal-event chips, and
+ * consecutive messages grouped under one avatar with a single timestamp.
+ * Presentation only - the grouping model is built by groupThreadMessages()
+ * (src/lib/chat.ts), on the server for the first paint and on the client for
+ * messages that arrive by polling.
  */
+/**
+ * The other side is composing. Sits where their next bubble will appear, with
+ * the same three-dot rhythm Messenger uses. Announced politely so a screen
+ * reader mentions it once without interrupting.
+ */
+function TypingBubble() {
+  return (
+    <div className="mt-2 flex items-end gap-2">
+      <span className="w-[26px] flex-none" aria-hidden />
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5"
+      >
+        <span className="sr-only">Typing…</span>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            aria-hidden
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 motion-reduce:animate-none"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MessageList({
   items,
   otherLastReadAt,
+  typing = false,
 }: {
   items: ChatItem[];
   /** The other side's read cursor, for the "Seen" receipt on my last message. */
   otherLastReadAt: Date | null;
+  /** Round 2: the other side is typing right now. */
+  typing?: boolean;
 }) {
   if (items.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-slate-400">
-        No messages yet. Say hello.
-      </p>
+      <div className="px-4 py-3">
+        <p className="py-10 text-center text-sm text-slate-400">
+          No messages yet. Say hello.
+        </p>
+        {typing && <TypingBubble />}
+      </div>
     );
   }
 
@@ -92,18 +127,28 @@ export function MessageList({
                 </p>
               )}
 
-              {messages.map((m) => (
+              {messages.map((m) => {
+                const failed = m.pending === "failed";
+                return (
                 // Each message carries its OWN time, revealed on hover beside the
                 // bubble (Messenger-style) so a run of messages sent minutes
                 // apart never looks like it was all sent at once. `title` adds
                 // the full date for a longer hover / assistive tech.
-                <div key={m.id} className="group/msg relative">
+                <div
+                  key={m.id}
+                  className={`group/msg relative ${
+                    // In flight: visibly provisional, but still readable.
+                    m.pending === "sending" ? "opacity-60" : ""
+                  }`}
+                >
                   <div
                     title={formatDateTime(m.createdAt)}
                     className={`rounded-2xl border px-3 py-2 text-sm leading-snug ${
-                      own
-                        ? "border-brand-500 bg-brand-500 text-white"
-                        : "border-slate-200 bg-slate-50 text-slate-800"
+                      failed
+                        ? "border-rose-300 bg-rose-50 text-rose-900"
+                        : own
+                          ? "border-brand-500 bg-brand-500 text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-800"
                     }`}
                   >
                     {m.imageUrl &&
@@ -130,8 +175,14 @@ export function MessageList({
                   >
                     {clockTime(m.createdAt)}
                   </span>
+                  {failed && (
+                    <p className="mt-0.5 text-right text-[10.5px] font-medium text-rose-600">
+                      Not sent. Check your connection and send it again.
+                    </p>
+                  )}
                 </div>
-              ))}
+                );
+              })}
 
               <span className="px-1 text-[10.5px] text-slate-400">
                 {clockTime(item.at)}
@@ -144,6 +195,8 @@ export function MessageList({
       {showSeen && (
         <p className="self-end px-1 pt-0.5 text-[10.5px] text-slate-400">Seen</p>
       )}
+
+      {typing && <TypingBubble />}
     </div>
   );
 }
