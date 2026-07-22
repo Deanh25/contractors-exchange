@@ -212,14 +212,39 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     retro-fitted to what already exists. Treat a missing tooltip as a defect, not a polish
     item.
   - **[NEW TASK] Professional icon set across the ENTIRE software** *(Dean 07/22/2026;
-    MOCKUP FIRST, he wants to approve the icons before they go in)* - replace the current
-    emoji-as-icon buttons (📷 etc.) with a consistent, professional icon set for Attach
-    Photo, Attach File, GIF, and Emoji, all with tooltips, modeled on the LinkedIn and
-    Facebook composers he attached. Applies everywhere these actions appear, not just the
-    messenger: the feed composer, comment composers, and listing forms. CX already depends
-    on `lucide-react`, which is the natural source. NOTE: **GIF is a NEW capability** - we
-    have no GIF support today, so it needs a decision (a Giphy/Tenor picker means an API
-    key and an external dependency).
+    MOCK APPROVED - `docs/mockups/composer-icons.html`. IN PROGRESS, started 07/22, paused
+    immediately after the first file)* - replace the current emoji-as-icon buttons (📷 etc.)
+    with a consistent icon set for Attach Photo, Attach File, and Emoji, all with tooltips,
+    modeled on the LinkedIn and Facebook composers. Icons come from `lucide-react`, which CX
+    already uses, so the app stops mixing emoji-as-buttons with real icons.
+    - **DECIDED (Dean, 07/22/2026):** (1) **Option A - quiet ghost buttons**, the LinkedIn /
+      Messenger treatment: no chrome until hover, then a soft grey pad. (2) Build the
+      **three icons now (photo, file, emoji)** and treat **GIF as its own separate task**.
+    - **DONE SO FAR:** `src/components/Tooltip.tsx` - a CSS-only tooltip that shows on hover
+      AND on keyboard focus, with no JS cost, usable from Server Components. This is the one
+      place the standing tooltip rule lives; everything else wraps its control in it.
+    - **RESUME HERE, in this order:**
+      1. `src/components/IconButton.tsx` - the Option A button style in one place: ~36px,
+         rounded, ghost, `hover:bg-slate-100` + brand text, visible focus ring. Needs TWO
+         variants, because a file picker is a `<label>` wrapping a hidden input, not a
+         `<button>`: `IconButton` and `IconFileButton`. Both wrap `Tooltip`.
+      2. Messenger composer: split today's single paperclip into **Attach photo or video**
+         and **Attach a file**, and ADD an **emoji** button that inserts into the text.
+         NOTE: laying out three buttons forces the attachment tray out of the input row,
+         which is also the fix for punch-list item 5 (attaching must not resize the message
+         box) - do them together: tray ABOVE the input as a fixed-height strip that scrolls
+         sideways, icon row BELOW.
+      3. Roll the same set through the rest of the app, replacing every emoji glyph used as
+         a control and adding tooltips: `MediaInput.tsx` ("📷 Photo / video"),
+         `MediaUpload.tsx` ("📷 Add photos or videos"), `PostMediaInput.tsx`,
+         `PhotoUploader.tsx`, `comments/CommentComposer.tsx` + `comments/EmojiPicker.tsx`
+         (already lucide, but restyle to Option A for consistency), `src/app/me/edit/page.tsx`
+         and `src/app/company/[slug]/edit/page.tsx` ("📷 Change photo", "🖼 Change banner").
+  - **[NEW TASK] GIF support** *(split out by Dean's decision 07/22/2026; NOT started, do
+    after the three icons)* - a GIF button is a new FEATURE, not just an icon: it needs a
+    search picker backed by Giphy or Tenor, which means an external service, an API key in
+    `.env`, and accepting their terms. Decide the provider, then build the picker + how a
+    chosen GIF is stored on a message (likely just its URL as an attachment).
   - **[NEW TASK] Full emoji picker, LinkedIn-style, across the entire software** *(Dean
     07/22/2026)* - the current 6-emoji shortlist is not enough. Build a real picker with a
     SEARCH box, category tabs (people, nature, food, travel, objects, symbols), and a
