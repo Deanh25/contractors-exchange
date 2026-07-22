@@ -167,13 +167,76 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
       which is meaningless in a conversation, and it can't take documents.
     - `sendMessageAction` was deleted: the live composer replaced it and it had no
       remaining callers.
+  - **ROUNDS 2 + 3 TESTED by Dean 07/22/2026. NOT signed off** - source doc:
+    `CX Updates Needed 07_22_2026.pdf`. Rounds 2 and 3 stay OPEN until this punch list is
+    built, retested, and signed off. Work the items in the order below; each is built,
+    tested, then committed.
+    1. **[BLOCKER-ish, live badges] Top-bar Notifications + Messages icons do not
+       auto-refresh.** Dean sent a message as Tyler to Dean; neither the notification bell
+       nor the message icon updated until he manually refreshed the whole page. They must
+       update on their own, WITHOUT a full page reload that interrupts what the user is
+       doing. Round 2's polling only covers an OPEN conversation, so this needs its own
+       lightweight badge poll in the top bar (shared by both icons, one request).
+    2. **Clicking a notification must clear it.** Today clicking one navigates to the
+       target but leaves it unread in the bell. Clicking should mark that single
+       notification read (and drop the badge count) as part of the navigation.
+    3. **[OVERLAP BUG] The emoji/react button covers the message timestamp** ("6:06 AM" is
+       hidden behind it), and the **smiley + reply arrow cover timestamps** generally. The
+       hover actions and the hover timestamp are fighting for the same space beside the
+       bubble. Re-place them so neither ever covers the other.
+    4. **Typing dots in the wrong place.** They currently sit inline in the thread where
+       the next bubble goes; Dean wants them at the BOTTOM by the message area, the way
+       Facebook Messenger and LinkedIn do it. Also asked whether 7s is the right idle
+       timeout - answer: use Messenger's behavior (it clears a few seconds after the last
+       keystroke; our current 6s TTL with a 3s ping is in that range, so keep it and just
+       move the indicator).
+    5. **[LAYOUT BUG] Attaching several files is messy and RESIZES the composer**, which
+       makes it hard to type a message alongside the files. HARD REQUIREMENT: attaching
+       files must NOT change the message area's size at all. Rebuild the attachment tray
+       Facebook-style - a fixed-height strip of small thumbnails ABOVE the input that
+       scrolls sideways if there are many, leaving the input untouched.
+    6. **[BUG] Sending a VIDEO failed** ("Not sent. Check your connection and send it
+       again." on a 0:22 clip). `bodySizeLimit` is already 96mb, so that is NOT the cause.
+       Likely either the 64 MB `MAX_VIDEO_BYTES` cap in `src/lib/storage.ts` or a MIME type
+       outside the mp4/webm/quicktime whitelist. TWO fixes needed: (a) make video sending
+       actually work, and (b) STOP reporting every failure as a connection problem - the
+       error must say WHY ("That video is over the 64 MB limit", "That file type isn't
+       supported"), which means `sendChatMessageAction` returning a real reason and the
+       bubble showing it.
+    7. **[OVERLAP BUG] Reaction pills sit on top of the attachment/bubble corner** (see the
+       last page of the PDF). Give them their own space under the bubble.
+    8. **Bigger emojis once used.** Reactions render too small to read; increase the pill
+       and emoji size.
+  - **STANDING RULE, set by Dean 07/22/2026: EVERY function in the software needs a
+    TOOLTIP** on hover, saying what it does. Applies to everything built from now on, and
+    retro-fitted to what already exists. Treat a missing tooltip as a defect, not a polish
+    item.
+  - **[NEW TASK] Professional icon set across the ENTIRE software** *(Dean 07/22/2026;
+    MOCKUP FIRST, he wants to approve the icons before they go in)* - replace the current
+    emoji-as-icon buttons (📷 etc.) with a consistent, professional icon set for Attach
+    Photo, Attach File, GIF, and Emoji, all with tooltips, modeled on the LinkedIn and
+    Facebook composers he attached. Applies everywhere these actions appear, not just the
+    messenger: the feed composer, comment composers, and listing forms. CX already depends
+    on `lucide-react`, which is the natural source. NOTE: **GIF is a NEW capability** - we
+    have no GIF support today, so it needs a decision (a Giphy/Tenor picker means an API
+    key and an external dependency).
+  - **[NEW TASK] Full emoji picker, LinkedIn-style, across the entire software** *(Dean
+    07/22/2026)* - the current 6-emoji shortlist is not enough. Build a real picker with a
+    SEARCH box, category tabs (people, nature, food, travel, objects, symbols), and a
+    "Frequently used" row, matching LinkedIn's style and behavior. Replace the existing
+    pickers everywhere applicable (messenger reactions, message composer, feed comment
+    composer). Decide when we start: ship a curated emoji dataset locally (no external
+    dependency, no API key) vs pull in an emoji-picker library.
   - **RESUME HERE (next working session).**
-    1. Test + sign off Rounds 2 and 3 (Round 2 is commit 4cb1cf1, Round 3 the one after).
-    2. The order milestone timeline (commit b2bad64) is tested + signed off; sample
+    1. Work the Rounds 2 + 3 punch list above, top to bottom.
+    2. Then the two new tasks (icon set, emoji picker), MOCKUP FIRST for the icons.
+    3. The order milestone timeline (commit b2bad64) is tested + signed off; sample
        orders for every timeline case come from `scripts/seed-timeline-samples.ts`.
-    3. Known gap, not built: the `/messages` index with NO thread open doesn't poll, so a
+    4. Known gap, not built: the `/messages` index with NO thread open doesn't poll, so a
        new conversation arriving while you sit on the empty inbox still needs a refresh.
-       Cheap to add if it bothers you.
+       Item 1 above (top-bar badge polling) partly covers this.
+    5. REMINDER: any schema change means Dean must RESTART his dev server, since the
+       generated Prisma client is loaded at boot.
 
 - [ ] **Competitive gap analysis vs LinkedIn + Materials Market** *(new - QUEUED, research
   task; do a bit later)* - map CX's current features against the two references and produce
