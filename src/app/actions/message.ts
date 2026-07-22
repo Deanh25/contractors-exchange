@@ -3,14 +3,15 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { resolveActor } from "@/lib/identity";
-import { saveMedia } from "@/lib/storage";
+import { saveAttachments } from "@/lib/storage";
 import {
   startPartyThread,
   startListingThread,
   sendMessage,
   markThreadRead,
+  toggleMessageReaction,
 } from "@/lib/services/messages";
-import type { ChatMessage } from "@/lib/chat";
+import type { ChatMessage, ChatReaction } from "@/lib/chat";
 
 /**
  * Web transport shim over the messaging SERVICE (src/lib/services/messages.ts).
@@ -50,31 +51,6 @@ export async function messageCompanyAction(formData: FormData) {
   redirect("/messages");
 }
 
-/** Send a message in a thread (text and/or one image), as the side you control. */
-export async function sendMessageAction(formData: FormData) {
-  const actor = await resolveActor("/messages");
-  const threadId = String(formData.get("threadId") ?? "");
-
-  // Web concern: persist the uploaded File to a URL before handing it to the service.
-  const image = formData.get("image");
-  const imageUrl =
-    image instanceof File && image.size > 0 ? await saveMedia(image) : null;
-
-  const r = await sendMessage(actor, {
-    threadId,
-    body: String(formData.get("body") ?? ""),
-    imageUrl,
-  });
-
-  if (r.status === "error") redirect("/messages");
-  if (r.status === "empty") redirect(`/messages/${r.threadId}`);
-
-  revalidatePath(`/messages/${threadId}`);
-  revalidatePath("/messages");
-  revalidatePath("/", "layout");
-  redirect(`/messages/${threadId}`);
-}
-
 /**
  * Send from the LIVE conversation (messenger Round 2). Same service call as
  * sendMessageAction, but it returns the created message instead of redirecting,
@@ -93,14 +69,30 @@ export async function sendChatMessageAction(
   const actor = await resolveActor("/messages");
   const threadId = String(formData.get("threadId") ?? "");
 
-  const image = formData.get("image");
-  const imageUrl =
-    image instanceof File && image.size > 0 ? await saveMedia(image) : null;
+  // Web concern: persist each picked file before handing URLs to the service.
+  // Round 3 sends several files under `attachments`; `image` is the Round 2
+  // single-file field, still accepted so nothing older breaks.
+  const picked = [
+    ...formData.getAll("attachments"),
+    ...formData.getAll("image"),
+  ].filter((f): f is File => f instanceof File && f.size > 0);
+
+  const saved = await saveAttachments(picked);
+  const attachments = saved.flatMap((url, i) =>
+    url ? [{ url, ...describeFile(picked[i]) }] : [],
+  );
+  // A file the storage layer rejected (wrong type or too large) must not vanish
+  // silently, or the sender thinks it went through.
+  const rejected = saved.filter((url) => url === null).length;
+  if (rejected > 0 && attachments.length === 0 && !String(formData.get("body") ?? "").trim()) {
+    return { status: "error", code: "attachment_rejected" };
+  }
 
   const r = await sendMessage(actor, {
     threadId,
     body: String(formData.get("body") ?? ""),
-    imageUrl,
+    attachments,
+    replyToId: String(formData.get("replyToId") ?? "") || null,
   });
 
   if (r.status === "error") return { status: "error", code: r.code };
@@ -109,6 +101,31 @@ export async function sendChatMessageAction(
     status: "sent",
     message: { ...r.message, createdAt: r.message.createdAt.toISOString() },
   };
+}
+
+/** Classify a picked file for the attachments manifest. */
+function describeFile(file: File): {
+  kind: "image" | "video" | "file";
+  name: string;
+  size: number;
+} {
+  const kind = file.type.startsWith("image/")
+    ? "image"
+    : file.type.startsWith("video/")
+      ? "video"
+      : "file";
+  return { kind, name: file.name || "Attachment", size: file.size };
+}
+
+/** Add, swap, or clear the viewer's emoji reaction on a message. */
+export async function toggleMessageReactionAction(
+  messageId: string,
+  emoji: string,
+): Promise<{ status: "ok"; reactions: ChatReaction[] } | { status: "error" }> {
+  const actor = await resolveActor("/messages");
+  const r = await toggleMessageReaction(actor, { messageId, emoji });
+  if (r.status === "error") return { status: "error" };
+  return { status: "ok", reactions: r.reactions };
 }
 
 /** A ChatMessage as it crosses the server-action boundary (Date -> ISO string). */

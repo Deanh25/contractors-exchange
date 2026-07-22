@@ -1,8 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { isVideoUrl } from "@/lib/listings";
 import { clockTime, dayLabel, formatDateTime } from "@/lib/time";
-import type { ChatItem } from "@/lib/chat";
+import { summarizeReactions, type ChatItem, type ChatReaction } from "@/lib/chat";
+import type { ChatParty } from "@/lib/chat";
+import {
+  Attachments,
+  MessageActions,
+  ReactionPills,
+  ReplyQuote,
+} from "@/components/messages/MessageExtras";
 
 /**
  * The conversation body: day dividers, centered deal-event chips, and
@@ -43,12 +52,21 @@ export function MessageList({
   items,
   otherLastReadAt,
   typing = false,
+  reactions,
+  myParty,
+  onReact,
+  onReply,
 }: {
   items: ChatItem[];
   /** The other side's read cursor, for the "Seen" receipt on my last message. */
   otherLastReadAt: Date | null;
   /** Round 2: the other side is typing right now. */
   typing?: boolean;
+  /** Round 3: every reaction in the thread, keyed by message id. */
+  reactions: Map<string, ChatReaction[]>;
+  myParty: ChatParty;
+  onReact: (messageId: string, emoji: string) => void;
+  onReply: (messageId: string) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -129,6 +147,11 @@ export function MessageList({
 
               {messages.map((m) => {
                 const failed = m.pending === "failed";
+                const mine = reactions.get(m.id) ?? [];
+                const summaries = summarizeReactions(mine, myParty);
+                // An in-flight message has no server id yet, so it can't carry
+                // reactions or be replied to until it lands.
+                const settled = !m.pending;
                 return (
                 // Each message carries its OWN time, revealed on hover beside the
                 // bubble (Messenger-style) so a run of messages sent minutes
@@ -151,7 +174,17 @@ export function MessageList({
                           : "border-slate-200 bg-slate-50 text-slate-800"
                     }`}
                   >
-                    {m.imageUrl &&
+                    {m.replyTo && <ReplyQuote replyTo={m.replyTo} own={own} />}
+
+                    {m.attachments.length > 0 && (
+                      <Attachments attachments={m.attachments} own={own} />
+                    )}
+
+                    {/* Legacy single-image messages (pre-Round 3) and the
+                        optimistic preview both still use imageUrl. Skipped once
+                        the message carries real attachments, which include it. */}
+                    {m.attachments.length === 0 &&
+                      m.imageUrl &&
                       (isVideoUrl(m.imageUrl) ? (
                         <video
                           src={m.imageUrl}
@@ -175,6 +208,20 @@ export function MessageList({
                   >
                     {clockTime(m.createdAt)}
                   </span>
+                  {settled && (
+                    <MessageActions
+                      own={own}
+                      onReact={(emoji) => onReact(m.id, emoji)}
+                      onReply={() => onReply(m.id)}
+                    />
+                  )}
+                  {summaries.length > 0 && (
+                    <ReactionPills
+                      summaries={summaries}
+                      own={own}
+                      onToggle={(emoji) => onReact(m.id, emoji)}
+                    />
+                  )}
                   {failed && (
                     <p className="mt-0.5 text-right text-[10.5px] font-medium text-rose-600">
                       Not sent. Check your connection and send it again.

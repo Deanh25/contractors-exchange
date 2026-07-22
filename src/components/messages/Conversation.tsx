@@ -5,13 +5,16 @@ import { useRouter } from "next/navigation";
 import {
   sendChatMessageAction,
   markThreadReadAction,
+  toggleMessageReactionAction,
   type SerializedChatMessage,
 } from "@/app/actions/message";
 import {
   groupThreadMessages,
   chatMessageIsOwn,
+  reactionsByMessage,
   type ChatMessage,
   type ChatParty,
+  type ChatReaction,
 } from "@/lib/chat";
 import { MessageList } from "@/components/messages/MessageList";
 import { Composer } from "@/components/messages/Composer";
@@ -41,12 +44,14 @@ export function Conversation({
   threadId,
   myParty,
   initialMessages,
+  initialReactions,
   initialOtherLastReadAt,
   replyingAs,
 }: {
   threadId: string;
   myParty: ChatParty;
   initialMessages: SerializedChatMessage[];
+  initialReactions: ChatReaction[];
   initialOtherLastReadAt: string | null;
   replyingAs: string | null;
 }) {
@@ -54,6 +59,13 @@ export function Conversation({
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     initialMessages.map(reviveMessage),
   );
+  const [reactions, setReactions] = useState<ChatReaction[]>(initialReactions);
+  /** The message being replied to, shown above the composer. */
+  const [replyTo, setReplyTo] = useState<{
+    id: string;
+    author: string;
+    excerpt: string;
+  } | null>(null);
   const [otherLastReadAt, setOtherLastReadAt] = useState<Date | null>(
     initialOtherLastReadAt ? new Date(initialOtherLastReadAt) : null,
   );
@@ -139,6 +151,7 @@ export function Conversation({
         if (!res.ok) return schedule();
         const data: {
           messages: SerializedChatMessage[];
+          reactions: ChatReaction[];
           otherLastReadAt: string | null;
           otherTyping: boolean;
           now: string;
@@ -150,6 +163,8 @@ export function Conversation({
         setOtherLastReadAt(
           data.otherLastReadAt ? new Date(data.otherLastReadAt) : null,
         );
+        // Replaced wholesale, so a reaction someone REMOVED disappears here too.
+        setReactions(data.reactions);
 
         if (data.messages.length > 0) {
           const revived = data.messages.map(reviveMessage);
@@ -223,18 +238,34 @@ export function Conversation({
   const onSend = useCallback(
     async (formData: FormData) => {
       const body = String(formData.get("body") ?? "").trim();
-      const file = formData.get("image");
-      const hasFile = file instanceof File && file.size > 0;
-      if (!body && !hasFile) return;
+      const files = formData
+        .getAll("attachments")
+        .filter((f): f is File => f instanceof File && f.size > 0);
+      if (!body && files.length === 0) return;
 
-      // Show it immediately, with a local preview for any attachment.
+      // Show it immediately, with local previews for anything attached.
       const tempId = `tmp-${tempIdRef.current++}`;
-      const previewUrl = hasFile ? URL.createObjectURL(file) : null;
+      const previews = files.map((f) => ({
+        url: URL.createObjectURL(f),
+        kind: f.type.startsWith("image/")
+          ? ("image" as const)
+          : f.type.startsWith("video/")
+            ? ("video" as const)
+            : ("file" as const),
+        name: f.name || "Attachment",
+        size: f.size,
+      }));
+      const quoted = replyTo;
+      if (quoted) formData.set("replyToId", quoted.id);
+      setReplyTo(null);
+
       const optimistic: ChatMessage = {
         id: tempId,
         kind: "user",
         body,
-        imageUrl: previewUrl,
+        imageUrl: null,
+        attachments: previews,
+        replyTo: quoted,
         createdAt: new Date(),
         senderUserId: myParty.type === "user" ? myParty.id : "",
         senderCompanyId: myParty.type === "company" ? myParty.id : null,
@@ -259,7 +290,9 @@ export function Conversation({
       } catch {
         markFailed(tempId);
       } finally {
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        // The saved message renders from its stored URLs now, so the local
+        // object URLs can go back.
+        for (const p of previews) URL.revokeObjectURL(p.url);
       }
 
       function markFailed(id: string) {
@@ -268,10 +301,68 @@ export function Conversation({
         );
       }
     },
-    [myParty, mergeMessages, router],
+    [myParty, mergeMessages, router, replyTo],
+  );
+
+  // --- reactions and replies (Round 3) -------------------------------------
+  const onReact = useCallback(
+    async (messageId: string, emoji: string) => {
+      // Optimistic: reflect the click now, then take the server's answer as
+      // the truth (it also carries anyone else's reactions).
+      setReactions((prev) => {
+        const mineHere = prev.find(
+          (r) =>
+            r.messageId === messageId &&
+            (myParty.type === "company"
+              ? r.companyId === myParty.id
+              : r.userId === myParty.id && r.companyId === null),
+        );
+        const without = prev.filter((r) => r !== mineHere);
+        if (mineHere?.emoji === emoji) return without; // same emoji clears it
+        return [
+          ...without,
+          {
+            messageId,
+            emoji,
+            userId: myParty.type === "user" ? myParty.id : "",
+            companyId: myParty.type === "company" ? myParty.id : null,
+            name: "You",
+          },
+        ];
+      });
+      try {
+        const r = await toggleMessageReactionAction(messageId, emoji);
+        if (r.status === "ok") setReactions(r.reactions);
+      } catch {
+        // The next poll repaints from the server either way.
+      }
+    },
+    [myParty],
+  );
+
+  const onReply = useCallback(
+    (messageId: string) => {
+      const m = messages.find((x) => x.id === messageId);
+      if (!m) return;
+      setReplyTo({
+        id: m.id,
+        author: chatMessageIsOwn(m, myParty)
+          ? "You"
+          : (m.senderCompany?.name ?? m.senderUser.name),
+        excerpt:
+          m.body.trim() ||
+          (m.attachments[0]?.kind === "file"
+            ? m.attachments[0].name
+            : m.attachments.length > 0 || m.imageUrl
+              ? "Photo"
+              : "Message"),
+      });
+    },
+    [messages, myParty],
   );
 
   const items = groupThreadMessages(messages, myParty);
+  const reactionMap = reactionsByMessage(reactions);
 
   return (
     <>
@@ -286,17 +377,23 @@ export function Conversation({
           items={items}
           otherLastReadAt={otherLastReadAt}
           typing={otherTyping}
+          reactions={reactionMap}
+          myParty={myParty}
+          onReact={onReact}
+          onReply={onReply}
         />
         <div ref={endRef} />
       </div>
-      {/* Remounted after each send so the media picker clears its preview. */}
+      {/* Remounted after each send so the file picker clears its previews. */}
       <Composer
         key={composerKey}
         threadId={threadId}
         replyingAs={replyingAs}
         onSend={onSend}
         onTyping={onTyping}
-        autoFocus={composerKey > 0}
+        autoFocus={composerKey > 0 || !!replyTo}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
       />
     </>
   );

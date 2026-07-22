@@ -72,6 +72,7 @@ model User {
   reactions          Reaction[] @relation("ReactionUser") // post reactions this user made
   comments           Comment[] @relation("CommentUser") // post comments this user made
   commentReactions   CommentReaction[] @relation("CommentReactionUser") // comment reactions this user made
+  messageReactions   MessageReaction[] @relation("MessageReactionUser") // message reactions this user made
   commentMentions    Comment[] @relation("CommentMentionUser") // comment replies that mention this user
   profilePhotos      ProfilePhoto[] @relation("UserPhotos") // work/job portfolio photos
 }
@@ -119,6 +120,7 @@ model Company {
   reactions          Reaction[] @relation("ReactionCompany") // post reactions made as this company
   comments           Comment[] @relation("CommentCompany") // post comments made as this company
   commentReactions   CommentReaction[] @relation("CommentReactionCompany") // comment reactions made as this company
+  messageReactions   MessageReaction[] @relation("MessageReactionCompany") // message reactions made as this company
   commentMentions    Comment[] @relation("CommentMentionCompany") // comment replies that mention this company
   follows            Follow[] @relation("FollowFollowerCompany") // people/companies this company follows
   profilePhotos      ProfilePhoto[] @relation("CompanyPhotos") // work/job portfolio photos
@@ -652,15 +654,47 @@ model Message {
   senderCompanyId String? // null = sent as themselves; set = sent as this company
   kind            MessageKind @default(user)
   body            String   @db.Text
+  // Round 3: a message can carry SEVERAL attachments (photos, videos, and
+  // documents like a spec PDF). `imageUrl` is kept as the cover mirror so every
+  // message written before this still renders, exactly as feed posts do with
+  // their `media` array. Shape: [{ url, kind, name, size }].
+  attachments     Json?
   imageUrl        String?
+  // Round 3: the message this one is replying to (quoted above the bubble).
+  // SetNull, not Cascade: deleting a quoted message must not delete the reply.
+  replyToId       String?
   createdAt       DateTime @default(now())
 
   thread        Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
   senderUser    User     @relation("MessageSenderUser", fields: [senderUserId], references: [id], onDelete: Cascade)
   senderCompany Company? @relation("MessageSenderCompany", fields: [senderCompanyId], references: [id], onDelete: SetNull)
+  replyTo       Message?  @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies       Message[] @relation("MessageReply")
+  reactions     MessageReaction[]
 
   @@index([threadId])
   @@index([createdAt])
+  @@index([replyToId])
+}
+
+// Emoji reaction on a message (Round 3). ONE per person per message, like
+// Messenger and LinkedIn: picking a different emoji replaces the previous one,
+// picking the same one clears it. `companyId` records the identity the reaction
+// was made AS, mirroring how a message carries its sender identity.
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  companyId String?
+  emoji     String   @db.VarChar(16)
+  createdAt DateTime @default(now())
+
+  message Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User     @relation("MessageReactionUser", fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation("MessageReactionCompany", fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
 }
 
 // -----------------------------------------------------------------------------

@@ -74,6 +74,43 @@ export async function saveMediaFiles(files: File[]): Promise<string[]> {
   return urls.filter((u): u is string => u !== null);
 }
 
+/**
+ * Message attachments (Round 3): photos and videos like everywhere else, PLUS
+ * the documents trades actually send each other - a spec PDF, a quote, a
+ * takeoff spreadsheet. Extensions come from this whitelist, never from the
+ * uploaded filename, so a file can't choose what it is served as.
+ */
+const ATTACHMENT_TYPES = new Map<string, string>([
+  ["application/pdf", "pdf"],
+  ["application/msword", "doc"],
+  [
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "docx",
+  ],
+  ["application/vnd.ms-excel", "xls"],
+  ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"],
+  ["text/csv", "csv"],
+  ["text/plain", "txt"],
+]);
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB
+
+/** Save one chat attachment (image, video, or document), or null if unusable. */
+export async function saveAttachment(file: File): Promise<string | null> {
+  if (!file || file.size === 0) return null;
+  // Images and videos keep their own (smaller) limits from saveMedia.
+  if (IMAGE_TYPES.has(file.type) || VIDEO_TYPES.has(file.type)) {
+    return saveMedia(file);
+  }
+  const ext = ATTACHMENT_TYPES.get(file.type);
+  if (!ext) return null;
+  return file.size <= MAX_ATTACHMENT_BYTES ? write(file, ext) : null;
+}
+
+/** Save many chat attachments, dropping any unusable ones. Order preserved. */
+export async function saveAttachments(files: File[]): Promise<(string | null)[]> {
+  return Promise.all(files.map(saveAttachment));
+}
+
 /** Save one verification document (PDF or image), or null if invalid/oversized. */
 export async function saveDocument(file: File): Promise<string | null> {
   if (!file || file.size === 0 || file.size > MAX_DOC_BYTES) return null;

@@ -127,13 +127,53 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     `Message.attachments`, `Message.replyToId`, `Message.kind`, and a `MessageReaction` model.
   - **NOT queued (deferred by decision):** inbox power features - pin/archive/mute/mark-unread and
     the LinkedIn-style right info panel with "Media & files", profile card, and report/block.
-  - **RESUME HERE (next working session).** Round 1 is done (commit 27c486f).
-    1. Round 2: live updates (polling endpoint first, SSE later), optimistic send,
-       typing indicator. Natural point to wire the new-message email.
-    2. Then Round 3 (attachments, reactions, reply-quoting). Each built -> tested ->
-       signed off -> committed separately.
-    3. The order milestone timeline (commit b2bad64) is tested + signed off; sample
+  - **ROUND 2 BUILT (commit 4cb1cf1), awaiting your test.** Messages arrive without a
+    refresh: the conversation polls `/api/messages/<id>/updates` every 4s while the tab
+    is visible (immediately on refocus), carrying new messages, the other side's read
+    cursor, and their typing state. The cursor is the SERVER's clock from the previous
+    response, so client clock skew can't skip a message; rows merge by id, so a message
+    delivered by both the poll and the send response appears once. Sending is optimistic
+    (your bubble appears at once, then swaps for the saved row, or turns red with "Not
+    sent"). Typing lives on `Thread.aTypingAt/bTypingAt`, pinged at most every 3s and
+    expiring after 6s, so there's no "stopped typing" call and a closed tab resolves
+    itself.
+    - The grouping model moved to `src/lib/chat.ts` (no `server-only`) so the client
+      regroups polled messages exactly as the server rendered them.
+    - BUGS FIXED along the way: (a) typing and mark-read now preserve `Thread.updatedAt`,
+      which is `@updatedAt` - without that a keystroke, or merely OPENING a thread, would
+      reorder the inbox, since it sorts by last activity; (b) SECURITY - the sender
+      include is narrowed to id/name/avatarUrl (`chatMessageInclude`), because the old
+      `include: { senderUser: true }` would have shipped the whole User row, password
+      hash included, to the browser once the conversation became a client component.
+    - STILL OUTSTANDING in Round 2: the **new-message email**. Blocked on the Resend API
+      key (`.env` has none and `src/lib/services/email.ts` doesn't exist yet).
+  - **ROUND 3 BUILT (commit pending), awaiting your test.** Several photos/videos AND
+    documents per message, emoji reactions, and reply-quoting.
+    - Schema: `Message.attachments` (JSON array of `{url, kind, name, size}`, with
+      `imageUrl` kept as the cover mirror exactly as feed posts do), `Message.replyToId`
+      (SetNull, so deleting a quoted message never deletes the reply), and a
+      `MessageReaction` model with `@@unique([messageId, userId])`.
+    - Reactions are ONE per identity per message, Messenger/LinkedIn style: the same
+      emoji clears it, a different one replaces it. The emoji must come from the offered
+      shortlist server-side, since it is stored and rendered.
+    - Documents: PDF, Word, Excel, CSV, and text via `saveAttachment` (25 MB cap), with
+      extensions from a whitelist rather than the uploaded filename.
+    - A reply may only quote a message from the SAME thread, checked in the service, or
+      it would leak a snippet of a conversation the sender isn't part of.
+    - The poll returns ALL of a thread's reactions rather than a delta, because a removed
+      reaction leaves nothing to send; the client replaces its map outright.
+    - The composer uses a new `AttachmentPicker`, NOT the listing/feed `MediaUpload`:
+      that one is built around drag-to-reorder because order there picks the cover photo,
+      which is meaningless in a conversation, and it can't take documents.
+    - `sendMessageAction` was deleted: the live composer replaced it and it had no
+      remaining callers.
+  - **RESUME HERE (next working session).**
+    1. Test + sign off Rounds 2 and 3 (Round 2 is commit 4cb1cf1, Round 3 the one after).
+    2. The order milestone timeline (commit b2bad64) is tested + signed off; sample
        orders for every timeline case come from `scripts/seed-timeline-samples.ts`.
+    3. Known gap, not built: the `/messages` index with NO thread open doesn't poll, so a
+       new conversation arriving while you sit on the empty inbox still needs a refresh.
+       Cheap to add if it bothers you.
 
 - [ ] **Competitive gap analysis vs LinkedIn + Materials Market** *(new - QUEUED, research
   task; do a bit later)* - map CX's current features against the two references and produce

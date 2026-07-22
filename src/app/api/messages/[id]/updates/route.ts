@@ -30,13 +30,14 @@ export async function GET(
     );
   }
 
-  const { messages, otherLastReadAt, otherTyping, now } = r.updates;
+  const { messages, reactions, otherLastReadAt, otherTyping, now } = r.updates;
   return Response.json(
     {
       messages: messages.map((m) => ({
         ...m,
         createdAt: m.createdAt.toISOString(),
       })),
+      reactions,
       otherLastReadAt: otherLastReadAt?.toISOString() ?? null,
       otherTyping,
       now: now.toISOString(),

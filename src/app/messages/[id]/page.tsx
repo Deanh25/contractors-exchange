@@ -18,8 +18,9 @@ import { getActiveOffer } from "@/lib/offers";
 import { ownerInclude } from "@/lib/listings";
 import { orderTimeline } from "@/lib/order-timeline";
 import {
-  chatSenderInclude,
-  type ChatMessage,
+  chatMessageInclude,
+  toChatMessage,
+  getThreadReactions,
 } from "@/lib/services/messages";
 import { TransactionPanel } from "@/components/TransactionPanel";
 import { NegotiationPanel } from "@/components/NegotiationPanel";
@@ -52,7 +53,7 @@ export default async function ConversationPage({
       messages: {
         orderBy: { createdAt: "asc" },
         // Narrow on purpose: these rows are handed to a client component.
-        include: chatSenderInclude,
+        include: chatMessageInclude,
       },
     },
   });
@@ -96,10 +97,11 @@ export default async function ConversationPage({
   // The conversation renders itself from here (grouping included), so it can
   // append polled messages without a round trip. Dates cross the boundary as
   // ISO strings. The OTHER side's read cursor drives the "Seen" receipt.
-  const initialMessages = (thread.messages as ChatMessage[]).map((m) => ({
-    ...m,
-    createdAt: m.createdAt.toISOString(),
-  }));
+  const initialMessages = thread.messages.map((m) => {
+    const chat = toChatMessage(m);
+    return { ...chat, createdAt: chat.createdAt.toISOString() };
+  });
+  const initialReactions = await getThreadReactions(thread.id);
   const otherLastReadAt =
     mySide === "a" ? thread.bLastReadAt : thread.aLastReadAt;
 
@@ -203,6 +205,7 @@ export default async function ConversationPage({
               threadId={thread.id}
               myParty={myParty}
               initialMessages={initialMessages}
+              initialReactions={initialReactions}
               initialOtherLastReadAt={otherLastReadAt?.toISOString() ?? null}
               replyingAs={
                 myParty.type === "company"
