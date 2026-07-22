@@ -100,8 +100,8 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - The mini rail in the message thread SHIPPED with messenger Round 1 (commit 27c486f).
 
 - [ ] **Messenger upgrade (Facebook Messenger + LinkedIn feel)** *(new 07/21/2026 - MOCK APPROVED
-  by Dean 07/21; scope = rounds 1-3, inbox power features NOT queued. NEXT UP: build Round 1 when
-  Dean gives the green light)* - mock: `docs/mockups/messenger.html` (also published as an
+  by Dean 07/21; scope = rounds 1-3, inbox power features NOT queued. ROUND 1 BUILT + signed off,
+  commit 27c486f; NEXT UP: Round 2)* - mock: `docs/mockups/messenger.html` (also published as an
   artifact). The structural change is a persistent SPLIT VIEW (thread list left, live conversation
   right) instead of today's separate `/messages` and `/messages/[id]` pages; phones keep the
   current inbox-then-conversation flow.
@@ -132,8 +132,8 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
        typing indicator. Natural point to wire the new-message email.
     2. Then Round 3 (attachments, reactions, reply-quoting). Each built -> tested ->
        signed off -> committed separately.
-    3. STILL OUTSTANDING: Dean has not yet tested the order milestone timeline
-       (commit b2bad64); it shipped before its test so the work carried machines.
+    3. The order milestone timeline (commit b2bad64) is tested + signed off; sample
+       orders for every timeline case come from `scripts/seed-timeline-samples.ts`.
 
 - [ ] **Competitive gap analysis vs LinkedIn + Materials Market** *(new - QUEUED, research
   task; do a bit later)* - map CX's current features against the two references and produce
