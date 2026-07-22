@@ -1,0 +1,277 @@
+<style>
+  :root {
+    --bg: #eef1f6; --chrome-ink: #1a2233; --chrome-soft: #55617a; --chrome-hair: #dbe1ec;
+    --brand: #f7941e; --brand-deep: #b35f00; --brand-50: #fff5e8; --brand-100: #ffe6c2;
+    --card: #ffffff; --ink: #1a2233; --soft: #6b7688; --faint: #97a1b2;
+    --hair: #e3e8f0; --panel: #f7f9fc; --panel-hair: #e6ebf3;
+    --good: #0f7a52;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0f17; --chrome-ink: #eef2f8; --chrome-soft: #9aa6bd; --chrome-hair: #232c3d; }
+  }
+  :root[data-theme="dark"] { --bg: #0b0f17; --chrome-ink: #eef2f8; --chrome-soft: #9aa6bd; --chrome-hair: #232c3d; }
+  :root[data-theme="light"] { --bg: #eef1f6; --chrome-ink: #1a2233; --chrome-soft: #55617a; --chrome-hair: #dbe1ec; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .wrap { font-family: var(--font); background: var(--bg); color: var(--chrome-ink); min-height: 100vh; padding: clamp(20px,4vw,56px); -webkit-font-smoothing: antialiased; }
+  .inner { max-width: 1080px; margin: 0 auto; }
+
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-deep); }
+  @media (prefers-color-scheme: dark){ .eyebrow{ color:#fb9d33; } }
+  :root[data-theme="dark"] .eyebrow{ color:#fb9d33; }
+  :root[data-theme="light"] .eyebrow{ color:var(--brand-deep); }
+  .eyebrow::before { content:""; width:22px; height:2px; background:var(--brand); border-radius:2px; }
+  h1 { font-size: clamp(25px,3.3vw,36px); line-height:1.09; letter-spacing:-0.02em; text-wrap:balance; margin:14px 0 10px; font-weight:800; }
+  .lede { max-width: 66ch; color: var(--chrome-soft); font-size:16px; line-height:1.55; margin:0; }
+
+  .cap { margin: 34px 0 12px; }
+  .cap .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color: var(--chrome-soft); }
+  .cap .tag.now { color:#b4231f; }
+  .cap .tag.new { color: var(--brand-deep); }
+  @media (prefers-color-scheme: dark){ .cap .tag.new{ color:#fb9d33; } .cap .tag.now{ color:#ef7b76; } }
+  :root[data-theme="dark"] .cap .tag.new{ color:#fb9d33; }
+  :root[data-theme="dark"] .cap .tag.now{ color:#ef7b76; }
+  .cap h2 { font-size: 18px; margin: 5px 0 4px; letter-spacing:-0.01em; color: var(--chrome-ink); }
+  .cap p { font-size: 13.5px; line-height:1.55; color: var(--chrome-soft); margin:0; max-width: 74ch; }
+
+  .card { background: var(--card); color: var(--ink); border:1px solid var(--hair); border-radius:14px; padding:18px; box-shadow: 0 14px 34px -24px rgba(20,30,60,0.4); }
+
+  /* composer mock */
+  .composer { border:1px solid #cfd7e3; border-radius:12px; padding:10px 12px; background:#fff; }
+  .composer .input { font-size:13.5px; color:var(--faint); padding:6px 2px; }
+  .composer .bar { display:flex; align-items:center; gap:2px; margin-top:8px; padding-top:9px; border-top:1px solid var(--panel-hair); }
+  .composer .bar .spacer { flex:1; }
+  .sendbtn { font-size:12.5px; font-weight:700; padding:7px 15px; border-radius:8px; background:var(--brand); color:#fff; border:none; }
+
+  .tool { position:relative; width:34px; height:34px; border-radius:8px; display:grid; place-items:center; color:#5b6577; background:transparent; border:none; }
+  .tool svg { width:19px; height:19px; }
+  .tool:hover { background:#eef2f7; color:var(--brand-deep); }
+  .gifglyph { font-size:10.5px; font-weight:800; letter-spacing:0.02em; border:2px solid currentColor; border-radius:4px; padding:1px 3px; line-height:1; }
+
+  /* always-on tooltip, so the mock shows the hover state */
+  .tip { position:absolute; bottom:calc(100% + 7px); left:50%; transform:translateX(-50%); background:#1a2233; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 8px; border-radius:6px; pointer-events:none; }
+  .tip::after { content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:4px solid transparent; border-top-color:#1a2233; }
+  .showtip .tool:nth-child(1) .tip { opacity:1; }
+
+  /* variant rows */
+  .opts { margin-top:16px; display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+  .opt { border:1px solid var(--chrome-hair); background:var(--card); color:var(--ink); border-radius:12px; padding:15px 16px; }
+  .opt h3 { margin:0 0 3px; font-size:14.5px; }
+  .opt .why { margin:0 0 12px; font-size:12.5px; line-height:1.5; color:#4a566d; }
+  .opt .rowbar { display:flex; align-items:center; gap:2px; padding:8px; border:1px solid var(--panel-hair); border-radius:9px; background:var(--panel); }
+  .pick { display:inline-block; margin-bottom:8px; font-size:10.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; padding:2px 8px; border-radius:999px; background:var(--brand-50); color:var(--brand-deep); }
+  .pick.alt { background:#eef1f6; color:#6b7688; }
+
+  /* option B: brand tint */
+  .opt.b .tool:hover { background:var(--brand-50); color:var(--brand-deep); }
+  /* option C: solid chip */
+  .opt.c .tool { background:#f1f4f9; margin-right:4px; }
+  .opt.c .tool:hover { background:#e2e8f1; }
+
+  /* before/after strip */
+  .ba { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); margin-top:14px; }
+  .ba .box { border:1px solid var(--chrome-hair); border-radius:11px; padding:14px; background:var(--card); color:var(--ink); }
+  .ba .lab { font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); }
+  .ba .lab.bad { color:#b4231f; }
+  .ba .lab.good { color:var(--good); }
+  .oldrow { display:flex; align-items:center; gap:8px; margin-top:10px; padding:8px; border:1px solid var(--panel-hair); border-radius:9px; background:var(--panel); }
+  .oldbtn { border:1px solid #cfd7e3; border-radius:7px; padding:5px 9px; font-size:13px; background:#fff; }
+  .note-sm { margin:9px 0 0; font-size:12px; line-height:1.5; color:#6b7688; }
+
+  table.sizes { width:100%; border-collapse:collapse; margin-top:12px; font-size:13px; }
+  table.sizes th, table.sizes td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--panel-hair); }
+  table.sizes th { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); }
+  table.sizes td b { font-weight:700; }
+  table.sizes .ico { width:44px; }
+
+  .note { margin-top: 30px; padding:18px 20px; border-radius:12px; border:1px solid var(--chrome-hair); background: var(--card); color: var(--ink); }
+  .note h3 { margin:0 0 8px; font-size:15px; }
+  .note p { margin:0 0 8px; font-size:13.5px; line-height:1.6; color:#4a566d; }
+  .note .q { border-left:3px solid var(--brand); padding-left:12px; color:var(--ink); }
+  .note b { font-weight:700; }
+  .warn { border-left:3px solid #e0a32e; padding-left:12px; }
+</style>
+
+<div class="wrap">
+  <div class="inner">
+    <div class="eyebrow">Composer icons &middot; mockup</div>
+    <h1>Real icons, and a tooltip on every one</h1>
+    <p class="lede">
+      The composer currently uses emoji characters as buttons (&#128247;), which render
+      differently on every machine and read as content rather than controls. These are proper
+      line icons in the LinkedIn / Facebook idiom, at one weight, each with a tooltip naming
+      what it does. Same set everywhere the actions appear: the messenger, the feed composer,
+      and comment composers.
+    </p>
+
+    <!-- ============ THE RECOMMENDED BAR ============ -->
+    <div class="cap">
+      <span class="tag new">Proposed &middot; the composer</span>
+      <h2>What the message box would look like</h2>
+      <p>Tooltips are shown open here so you can read them; in the real thing they appear on hover and on keyboard focus.</p>
+    </div>
+
+    <div class="card">
+      <div class="composer">
+        <div class="input">Write a message&hellip;</div>
+        <div class="bar">
+          <button class="tool" type="button" aria-label="Attach photo or video">
+            <span class="tip">Attach photo or video</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <circle cx="9" cy="9" r="2"></circle>
+              <path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path>
+            </svg>
+          </button>
+
+          <button class="tool" type="button" aria-label="Attach a file">
+            <span class="tip">Attach a file</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+          </button>
+
+          <button class="tool" type="button" aria-label="Add a GIF">
+            <span class="tip">Add a GIF</span>
+            <span class="gifglyph">GIF</span>
+          </button>
+
+          <button class="tool" type="button" aria-label="Add an emoji">
+            <span class="tip">Add an emoji</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+              <line x1="9" y1="9" x2="9.01" y2="9"></line>
+              <line x1="15" y1="9" x2="15.01" y2="9"></line>
+            </svg>
+          </button>
+
+          <span class="spacer"></span>
+          <button class="sendbtn" type="button">Send</button>
+        </div>
+      </div>
+
+      <table class="sizes">
+        <tr><th class="ico"></th><th>Icon</th><th>Tooltip</th><th>What it does</th></tr>
+        <tr>
+          <td><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path></svg></td>
+          <td><b>Image</b></td><td>Attach photo or video</td><td>Opens the picker filtered to photos and videos</td>
+        </tr>
+        <tr>
+          <td><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></td>
+          <td><b>Paperclip</b></td><td>Attach a file</td><td>Documents: PDF, Word, Excel, CSV</td>
+        </tr>
+        <tr>
+          <td><span class="gifglyph" style="font-size:9px;">GIF</span></td>
+          <td><b>GIF</b></td><td>Add a GIF</td><td>Opens a GIF search (new capability, see below)</td>
+        </tr>
+        <tr>
+          <td><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg></td>
+          <td><b>Smile</b></td><td>Add an emoji</td><td>Opens the full emoji picker with search</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ============ BEFORE / AFTER ============ -->
+    <div class="cap">
+      <span class="tag now">Today &middot; what it replaces</span>
+      <h2>Why the current buttons have to go</h2>
+    </div>
+
+    <div class="ba">
+      <div class="box">
+        <span class="lab bad">Today</span>
+        <div class="oldrow">
+          <span class="oldbtn">&#128247;</span>
+          <span style="font-size:12.5px;color:#6b7688;">one button, an emoji character, no label</span>
+        </div>
+        <p class="note-sm">
+          An emoji glyph is drawn by the operating system, so it looks different on Windows,
+          a Mac, and an Android phone, and it can never match a real icon set. Nothing tells
+          you what it does until you click it.
+        </p>
+      </div>
+      <div class="box">
+        <span class="lab good">Proposed</span>
+        <div class="oldrow" style="gap:2px;">
+          <span class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path></svg></span>
+          <span class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></span>
+          <span class="tool"><span class="gifglyph">GIF</span></span>
+          <span class="tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg></span>
+        </div>
+        <p class="note-sm">
+          Four separate actions, one drawing weight, identical on every machine, each naming
+          itself on hover. Photos and documents split apart, so the file picker only ever
+          offers what you actually asked for.
+        </p>
+      </div>
+    </div>
+
+    <!-- ============ STYLE OPTIONS ============ -->
+    <div class="cap">
+      <span class="tag new">Pick one</span>
+      <h2>Three treatments of the same four icons</h2>
+      <p>The icons are identical in all three; only the button around them changes. Hover each row to feel the difference.</p>
+    </div>
+
+    <div class="opts">
+      <div class="opt a">
+        <span class="pick">My recommendation</span>
+        <h3>A &middot; Quiet ghost buttons</h3>
+        <p class="why">No chrome until you hover, then a soft grey pad. Exactly what LinkedIn and Messenger do, and it keeps the eye on the message.</p>
+        <div class="rowbar">
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path></svg></button>
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></button>
+          <button class="tool" type="button"><span class="gifglyph">GIF</span></button>
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg></button>
+        </div>
+      </div>
+
+      <div class="opt b">
+        <span class="pick alt">Option</span>
+        <h3>B &middot; Brand tint on hover</h3>
+        <p class="why">Same shape, but hovering washes the button in CX orange. More clearly ours; slightly busier when four sit in a row.</p>
+        <div class="rowbar">
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path></svg></button>
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></button>
+          <button class="tool" type="button"><span class="gifglyph">GIF</span></button>
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg></button>
+        </div>
+      </div>
+
+      <div class="opt c">
+        <span class="pick alt">Option</span>
+        <h3>C &middot; Always-visible chips</h3>
+        <p class="why">Each icon sits in a permanent grey chip. The most obviously clickable, but it puts four grey blocks under every message box.</p>
+        <div class="rowbar">
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path></svg></button>
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></button>
+          <button class="tool" type="button"><span class="gifglyph">GIF</span></button>
+          <button class="tool" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <h3>Two things to decide, and one you should know about</h3>
+      <p>
+        These icons come from <b>lucide</b>, which CX already uses for the feed reactions and
+        comment controls, so this makes the whole app one icon family instead of emoji in some
+        places and icons in others. The same four go into the feed composer and comment boxes,
+        not just the messenger.
+      </p>
+      <p class="warn">
+        <b>GIF is not a feature we have.</b> The icon is easy; the capability behind it is not.
+        A GIF button means searching a library like Giphy or Tenor, which is an external service
+        with an API key and its own terms. So it is really a small new feature, and I would build
+        the other three now and treat GIF as its own task once you confirm you want it.
+      </p>
+      <p class="q">
+        Tell me: (1) A, B, or C? (2) GIF now, or the other three first and GIF as its own task?
+        Then I will roll the set out everywhere, with a tooltip on every one, per the rule you set.
+      </p>
+    </div>
+  </div>
+</div>
