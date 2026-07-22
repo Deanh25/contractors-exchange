@@ -466,6 +466,26 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   Follow-up (optional): add the geography/trade/type/party global filters beyond the time window.
 - [ ] **Planning brief update** — refresh `docs/CX-Admin-Panel-Planning-Brief.md` to the
   corrected revenue model + category system.
+- [ ] **FULL FRONT-END QA PASS - test every module individually** *(added 07/22/2026, Dean's
+  request; do this ONCE all features and functions are in, near go-live)* - a structured
+  sweep of the live site, module by module, rather than the per-feature testing we do as we
+  build. Each module gets its own numbered walkthrough with expected results, tested as a
+  real user in the browser, and anything broken becomes its own fix task.
+  - **Modules to cover, one at a time:** Marketplace / browse + filters + pagination;
+    Listing detail; Create + edit listing (all four types); Checkout + offers/negotiation;
+    Orders (buying and selling, all timeline states); Messenger (inbox, conversation, live
+    updates, attachments, reactions, replies); Feed (composer, media, reactions, comments);
+    Profiles (user + company, all six tabs, public vs owner view); Company workspace;
+    Network / follows; Saved; Notifications; Insights; Search; Auth (sign up, sign in,
+    reset, verify); Account + credential management; Admin panel (every module, every role).
+  - **Test each module across:** the three admin roles plus a plain customer; acting as
+    yourself vs acting as a company; desktop AND phone widths; and the empty state (a brand
+    new account with no data) as well as a populated one.
+  - **Watch specifically for:** anything a buyer can see that exposes sellerNet or margin;
+    server-side authorization on every mutation (not just a hidden button); broken or
+    missing images; and any page that scrolls sideways on a phone.
+  - Deliverable: a pass/fail list per module, with failures queued as fix tasks here.
+
 - [ ] **Final end-to-end role-gating pass.**
 
 ## E. Platform direction — mobile + architecture (DECIDED this session)
