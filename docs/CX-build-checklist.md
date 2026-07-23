@@ -356,27 +356,37 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
   - Guidance standing note: as we build each feature, I proactively flag its companion
     standard emails + notifications here rather than waiting to be asked.
 
-- [ ] **Payments module (buyer payment methods + Stripe processing)** *(new - QUEUED, not
-  started; later)* - two connected pieces:
-  - **Buyer payment sources (frontend):** let a user add and store payment methods
-    (card / bank) on their account, and pick one at checkout when making a purchase.
-    Store only Stripe tokens/references, never raw card numbers (PCI: use Stripe
-    Elements / SetupIntents; card data never touches our server or DB).
-  - **Payment processing (backend):** integrate Stripe for customer payments - connect
-    via the Stripe API (PaymentIntents for a set-price buy / won bid), webhooks for
-    payment status, and refunds. Ties into the existing net/margin model (buyer pays
-    the gross; CX keeps the margin) and the Orders flow. Likely Stripe Connect so seller
-    payouts route correctly. Decide test-vs-live keys + who holds the Stripe account.
-  - **High-value payments - ACH / bank + wire (ANALYZE FIRST):** big-ticket equipment
-    (e.g. a $50k+ tractor/paver) usually will NOT go on a card (limits + ~3% fees). Add
-    bank rails: Stripe **ACH debit** (via Financial Connections / bank account, lower fee,
-    but slow + reversible) and a **wire / manual bank transfer** option (fast for large
-    sums, non-reversible) for the biggest deals. Analysis needed before building: fee
-    model + who absorbs it, escrow/hold until funds clear (ACH can take days and can
-    bounce), verification/limits, and how bid wins settle. Likely a per-listing or
-    per-price-threshold choice of allowed payment methods. Feeds the escrow/Orders design.
-  - Architecture: a `src/lib/services/payments.ts` service (framework-agnostic) with the
-    Stripe SDK; thin action/route shims; secrets in env, never committed.
+- [ ] **PAYMENT METHODS system (stored methods + buyer-selected card/ACH/wire at checkout)**
+  *(new spec 07/23/2026, REPLACES the earlier Stripe payments task; full build prompt saved at
+  `docs/CX-payments-prompt.md` - use that as the source of truth when we start)* - stored payment
+  methods on user/company accounts, buyer picks card / ACH / wire at checkout, processing costs
+  absorbed INVISIBLY inside the platform markup (never a fee line). Build against existing models,
+  pause for review after each part. Locked decisions:
+  - **Step 0:** survey existing checkout / Transaction / escrow / margin code and REUSE it; report
+    build-vs-reuse before changing anything.
+  - **Part 1:** `PaymentMethod` model owned polymorphically by a party (user OR company, matching the
+    dual-identity pattern); store ONLY a processor token + masked display data (brand, last4, bank
+    name), NEVER raw card/bank/routing numbers; account-settings "Payment methods" UI (add / label /
+    set default / remove), all mutations gated to the owning party. Processor-ready but STUBBED.
+  - **Part 2:** buyer selects the method at checkout (or adds one inline); all three types offered,
+    NOT forced by deal size; FEES ARE INVISIBLE (one price = existing buyerPrice, no surcharge, price
+    never changes by method); wire is buyer-initiated so it generates instructions + a unique
+    reference and an "awaiting wire" state; escrow/buyer-protection representation stays intact.
+  - **Part 3:** admin-configurable (superadmin, beside margin config) "Card payment maximum" dollar
+    threshold above which card is hidden (ACH/wire only), default ~$10k, EDITABLE without code; above
+    it, just present ACH/wire without explaining it as a fee issue; optional soft "recommended: ACH"
+    nudge on large sub-threshold deals.
+  - **Part 4:** extend `Transaction` with paymentMethodType, paymentMethodId, paymentStatus
+    (pending|processing|held_in_escrow|released|failed|refunded), processorReference; store the
+    platform's actual processing cost internally, admin/superadmin ONLY.
+  - **Design-for-later, don't build:** Net-30 / PO / invoice terms (structure `PaymentMethod.type` so
+    a 'terms' type slots in later); live money movement stays stubbed until Dean says to wire a real
+    processor.
+  - **Keep intact:** sellerNet / marginPct stay private, never exposed to buyers including at
+    checkout; marketplace, offers, profiles, feed, messaging, admin all keep working.
+  - **Architecture:** `src/lib/services/payments.ts` (framework-agnostic, processor-ready); thin
+    action/route shims; secrets in env, never committed. Seed accounts with each method type +
+    transactions in different payment states. Commit + push per part.
 
 - [ ] **Profile system (LinkedIn-style, users + companies)** *(new — QUEUED, not started; do
   not begin until the Codespaces sign-in issue is resolved)* — shared profile layout with two
