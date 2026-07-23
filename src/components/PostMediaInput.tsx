@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { isVideoUrl } from "@/lib/listings";
 
 const ACCEPT =
@@ -65,8 +66,9 @@ export function PostMediaInput({ current }: { current?: string | null }) {
           </div>
         )}
       </div>
-      <label className="cursor-pointer rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-        📷 Change photo / video
+      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+        <ImagePlus size={15} aria-hidden />
+        Change photo / video
         <input
           ref={inputRef}
           name="image"

@@ -3,7 +3,8 @@
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { commentOnPostAction } from "@/app/actions/engagement";
-import { EmojiPicker } from "./EmojiPicker";
+import { EmojiButton } from "@/components/EmojiButton";
+import { IconFileButton } from "@/components/IconButton";
 
 /**
  * Inline comment composer (LinkedIn-style): text + emoji + one image. Used for
@@ -98,22 +99,19 @@ export function CommentComposer({
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <EmojiPicker onPick={(e) => setBody((b) => b + e)} />
-          <label
-            className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            aria-label="Attach image"
-            title="Attach image"
+          <EmojiButton onPick={(e) => setBody((b) => b + e)} />
+          <IconFileButton
+            label="Attach a photo"
+            inputProps={{
+              ref: fileRef,
+              name: "image",
+              type: "file",
+              accept: "image/png,image/jpeg,image/webp,image/gif",
+              onChange: pickImage,
+            }}
           >
-            <ImagePlus size={18} />
-            <input
-              ref={fileRef}
-              name="image"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              onChange={pickImage}
-              className="hidden"
-            />
-          </label>
+            <ImagePlus size={19} aria-hidden />
+          </IconFileButton>
         </div>
         <div className="flex items-center gap-2">
           {actingLabel && (

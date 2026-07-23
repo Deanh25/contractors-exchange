@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { isVideoUrl } from "@/lib/listings";
 
 const ACCEPT =
@@ -167,8 +168,9 @@ export function MediaUpload({ existing = [] }: { existing?: string[] }) {
         </div>
       )}
 
-      <label className="inline-block cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
-        📷 Add photos or videos
+      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+        <ImagePlus size={16} aria-hidden />
+        Add photos or videos
         <input
           ref={fileInputRef}
           type="file"

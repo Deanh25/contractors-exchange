@@ -211,6 +211,15 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     TOOLTIP** on hover, saying what it does. Applies to everything built from now on, and
     retro-fitted to what already exists. Treat a missing tooltip as a defect, not a polish
     item.
+    - **UNIFORM LOOK (Dean, refined 07/23/2026):** all tooltips must look the SAME - the
+      dark slate pill with white text produced by `src/components/Tooltip.tsx`. Dean
+      approved that look from the messenger composer. So: (a) use the `Tooltip` component
+      everywhere, and (b) do NOT rely on the browser-native `title=""` attribute for
+      function tooltips, since it renders differently on every OS and breaks uniformity.
+      Existing `title=` usages should be migrated to `Tooltip` over time; new code uses
+      `Tooltip` (directly, or via `IconButton`/`IconFileButton`, which already wrap it).
+      - QUEUED SWEEP: convert remaining `title=` tooltips app-wide to the `Tooltip`
+        component (search `title=` across src/). Not blocking; do opportunistically.
   - **[NEW TASK] Professional icon set across the ENTIRE software** *(Dean 07/22/2026;
     MOCK APPROVED - `docs/mockups/composer-icons.html`. IN PROGRESS, started 07/22, paused
     immediately after the first file)* - replace the current emoji-as-icon buttons (📷 etc.)
@@ -220,26 +229,27 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
     - **DECIDED (Dean, 07/22/2026):** (1) **Option A - quiet ghost buttons**, the LinkedIn /
       Messenger treatment: no chrome until hover, then a soft grey pad. (2) Build the
       **three icons now (photo, file, emoji)** and treat **GIF as its own separate task**.
-    - **DONE SO FAR:** `src/components/Tooltip.tsx` - a CSS-only tooltip that shows on hover
-      AND on keyboard focus, with no JS cost, usable from Server Components. This is the one
-      place the standing tooltip rule lives; everything else wraps its control in it.
-    - **RESUME HERE, in this order:**
-      1. `src/components/IconButton.tsx` - the Option A button style in one place: ~36px,
-         rounded, ghost, `hover:bg-slate-100` + brand text, visible focus ring. Needs TWO
-         variants, because a file picker is a `<label>` wrapping a hidden input, not a
-         `<button>`: `IconButton` and `IconFileButton`. Both wrap `Tooltip`.
-      2. Messenger composer: split today's single paperclip into **Attach photo or video**
-         and **Attach a file**, and ADD an **emoji** button that inserts into the text.
-         NOTE: laying out three buttons forces the attachment tray out of the input row,
-         which is also the fix for punch-list item 5 (attaching must not resize the message
-         box) - do them together: tray ABOVE the input as a fixed-height strip that scrolls
-         sideways, icon row BELOW.
-      3. Roll the same set through the rest of the app, replacing every emoji glyph used as
-         a control and adding tooltips: `MediaInput.tsx` ("📷 Photo / video"),
-         `MediaUpload.tsx` ("📷 Add photos or videos"), `PostMediaInput.tsx`,
-         `PhotoUploader.tsx`, `comments/CommentComposer.tsx` + `comments/EmojiPicker.tsx`
-         (already lucide, but restyle to Option A for consistency), `src/app/me/edit/page.tsx`
-         and `src/app/company/[slug]/edit/page.tsx` ("📷 Change photo", "🖼 Change banner").
+    - **BUILT (07/23/2026), awaiting your test:**
+      - `src/components/Tooltip.tsx` - CSS-only tooltip (hover + keyboard focus, no JS,
+        Server-Component safe). The one source of the uniform tooltip look.
+      - `src/components/IconButton.tsx` - Option A ghost button in one place, two variants:
+        `IconButton` (a `<button>`) and `IconFileButton` (a `<label>` around a hidden file
+        input). Both wrap `Tooltip`.
+      - `src/components/EmojiButton.tsx` - the emoji button + curated popover, Option A +
+        tooltip. Placeholder set until the full LinkedIn-style picker task lands; the
+        button's contract won't change when it does.
+      - Messenger composer (`messages/Composer.tsx`) REBUILT to the Facebook layout: the
+        text input NEVER resizes; picked files go in a FIXED-HEIGHT tray ABOVE the input
+        that scrolls sideways; the action icons (Attach photo or video / Attach a file /
+        emoji) sit in a row BELOW. This also fixes punch-list item 5. `AttachmentPicker.tsx`
+        deleted (folded into the composer).
+      - Rolled the icon+label treatment through the rest of the app, dropping OS emoji
+        glyphs used as controls: `MediaUpload.tsx`, `PostMediaInput.tsx`, `PhotoUploader.tsx`,
+        `ImageInput.tsx` (profile photo/logo/banner), and `comments/CommentComposer.tsx`
+        (now uses the shared `EmojiButton` + `IconFileButton`; old `comments/EmojiPicker.tsx`
+        deleted). `MediaInput.tsx` is now unused (composer replaced its only caller) - left
+        in place for now, can delete later.
+    - **STILL TO DO on the icon set:** none for the three icons; GIF is its own task below.
   - **[NEW TASK] GIF support** *(split out by Dean's decision 07/22/2026; NOT started, do
     after the three icons)* - a GIF button is a new FEATURE, not just an icon: it needs a
     search picker backed by Giphy or Tenor, which means an external service, an API key in

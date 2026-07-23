@@ -58,7 +58,7 @@ export default async function EditCompanyPage({
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Logo <span className="text-slate-400">(optional)</span>
             </label>
-            <ImageInput name="logo" label="🏢 Change logo" current={company.logoUrl} />
+            <ImageInput name="logo" label="Change logo" current={company.logoUrl} />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -66,7 +66,7 @@ export default async function EditCompanyPage({
             </label>
             <ImageInput
               name="banner"
-              label="🖼 Change banner"
+              label="Change banner"
               current={company.bannerUrl}
               aspect="wide"
             />

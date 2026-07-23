@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 
@@ -68,7 +69,8 @@ export function ImageInput({
           </div>
         )}
       </div>
-      <label className="cursor-pointer rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+        <ImagePlus size={15} aria-hidden />
         {label}
         <input
           ref={inputRef}

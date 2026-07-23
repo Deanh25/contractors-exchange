@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ImagePlus } from "lucide-react";
 
 const ACCEPT =
   "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
@@ -56,7 +57,7 @@ export function PhotoUploader({
       {companyId && <input type="hidden" name="companyId" value={companyId} />}
 
       <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center hover:border-brand-400 hover:bg-brand-50/40">
-        <span className="text-2xl">📷</span>
+        <ImagePlus size={26} className="text-slate-400" aria-hidden />
         <span className="text-sm font-medium text-slate-700">Add photos or videos</span>
         <span className="text-xs text-slate-400">
           Images up to 8MB, videos up to 64MB. Select multiple.

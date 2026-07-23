@@ -36,7 +36,7 @@ export default async function EditProfilePage({
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Profile photo <span className="text-slate-400">(optional)</span>
             </label>
-            <ImageInput name="avatar" label="📷 Change photo" current={user.avatarUrl} />
+            <ImageInput name="avatar" label="Change photo" current={user.avatarUrl} />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -44,7 +44,7 @@ export default async function EditProfilePage({
             </label>
             <ImageInput
               name="banner"
-              label="🖼 Change banner"
+              label="Change banner"
               current={user.bannerUrl}
               aspect="wide"
             />
