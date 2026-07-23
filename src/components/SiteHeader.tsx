@@ -9,7 +9,9 @@ import { getActingCompanies, getActingContext } from "@/lib/identity";
 import { timeAgo } from "@/lib/time";
 import { AvatarMenu } from "@/components/AvatarMenu";
 import { NewMenu } from "@/components/NewMenu";
-import { NotificationBell, type BellItem } from "@/components/NotificationBell";
+import { Tooltip } from "@/components/Tooltip";
+import { type BellItem } from "@/components/NotificationBell";
+import { LiveHeaderActions } from "@/components/LiveHeaderActions";
 
 const ICONS: Record<string, string> = {
   saved:
@@ -32,28 +34,29 @@ function IconLink({
   badge?: number;
 }) {
   return (
-    <Link
-      href={href}
-      title={label}
-      aria-label={badge > 0 ? `${label} (${badge} unread)` : label}
-      className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-    >
-      <svg
-        className="h-5 w-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.7}
-        stroke="currentColor"
-        aria-hidden
+    <Tooltip label={label}>
+      <Link
+        href={href}
+        aria-label={badge > 0 ? `${label} (${badge} unread)` : label}
+        className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" d={ICONS[icon]} />
-      </svg>
-      {badge > 0 && (
-        <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold leading-none text-white">
-          {badge > 9 ? "9+" : badge}
-        </span>
-      )}
-    </Link>
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.7}
+          stroke="currentColor"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d={ICONS[icon]} />
+        </svg>
+        {badge > 0 && (
+          <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold leading-none text-white">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        )}
+      </Link>
+    </Tooltip>
   );
 }
 
@@ -171,12 +174,10 @@ export async function SiteHeader() {
             <>
               <div className="hidden items-center sm:flex">
                 <IconLink href="/saved" label="Saved" icon="saved" />
-                <NotificationBell unread={notifUnread} items={bellItems} />
-                <IconLink
-                  href="/messages"
-                  label="Messages"
-                  icon="messages"
-                  badge={unread}
+                <LiveHeaderActions
+                  initialMessages={unread}
+                  initialNotifications={notifUnread}
+                  initialItems={bellItems}
                 />
               </div>
               <NewMenu />

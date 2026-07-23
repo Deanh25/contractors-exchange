@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { markAllNotificationsReadAction } from "@/app/actions/notification";
+import { Tooltip } from "@/components/Tooltip";
 
 export type BellItem = {
   id: string;
@@ -22,15 +22,23 @@ export type BellItem = {
 const BELL =
   "M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0";
 
-/** Top-bar notifications bell with an unread badge and a recent-activity
- * dropdown. Opening it does not auto-clear; "Mark all read" or visiting the
- * page does. */
+/**
+ * Top-bar notifications bell with an unread badge and a recent-activity
+ * dropdown. Controlled by LiveHeaderActions, which keeps the count live and
+ * owns the read actions: clicking an item clears just that one, "Mark all read"
+ * clears them all.
+ */
 export function NotificationBell({
   unread,
   items,
+  onItemRead,
+  onAllRead,
 }: {
   unread: number;
   items: BellItem[];
+  /** Fired when a bell item is clicked (punch-list item 2: clicking clears it). */
+  onItemRead: (id: string) => void;
+  onAllRead: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -45,29 +53,32 @@ export function NotificationBell({
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        title="Notifications"
-        aria-label={unread > 0 ? `Notifications (${unread} unread)` : "Notifications"}
-        className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.7}
-          stroke="currentColor"
-          aria-hidden
+      <Tooltip label="Notifications">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={
+            unread > 0 ? `Notifications (${unread} unread)` : "Notifications"
+          }
+          className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d={BELL} />
-        </svg>
-        {unread > 0 && (
-          <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold leading-none text-white">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
-      </button>
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.7}
+            stroke="currentColor"
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d={BELL} />
+          </svg>
+          {unread > 0 && (
+            <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-500 px-1 text-[10px] font-bold leading-none text-white">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      </Tooltip>
 
       {open && (
         <div className="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -76,14 +87,13 @@ export function NotificationBell({
               Notifications
             </span>
             {unread > 0 && (
-              <form action={markAllNotificationsReadAction}>
-                <button
-                  type="submit"
-                  className="text-xs font-medium text-brand-600 hover:text-brand-700"
-                >
-                  Mark all read
-                </button>
-              </form>
+              <button
+                type="button"
+                onClick={onAllRead}
+                className="text-xs font-medium text-brand-600 hover:text-brand-700"
+              >
+                Mark all read
+              </button>
             )}
           </div>
 
@@ -97,7 +107,11 @@ export function NotificationBell({
                 <li key={n.id}>
                   <Link
                     href={n.href}
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      // Item 2: clicking a notification clears just that one.
+                      if (!n.read) onItemRead(n.id);
+                      setOpen(false);
+                    }}
                     className={`flex gap-3 px-3 py-2.5 hover:bg-slate-50 ${
                       n.read ? "" : "bg-brand-50/50"
                     }`}
