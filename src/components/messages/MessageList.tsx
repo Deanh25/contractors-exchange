@@ -18,40 +18,12 @@ import {
  * consecutive messages grouped under one avatar with a single timestamp.
  * Presentation only - the grouping model is built by groupThreadMessages()
  * (src/lib/chat.ts), on the server for the first paint and on the client for
- * messages that arrive by polling.
+ * messages that arrive by polling. The typing indicator is NOT here; it lives
+ * pinned above the composer (see TypingIndicator, rendered by Conversation).
  */
-/**
- * The other side is composing. Sits where their next bubble will appear, with
- * the same three-dot rhythm Messenger uses. Announced politely so a screen
- * reader mentions it once without interrupting.
- */
-function TypingBubble() {
-  return (
-    <div className="mt-2 flex items-end gap-2">
-      <span className="w-[26px] flex-none" aria-hidden />
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5"
-      >
-        <span className="sr-only">Typing…</span>
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            aria-hidden
-            className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 motion-reduce:animate-none"
-            style={{ animationDelay: `${i * 150}ms` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function MessageList({
   items,
   otherLastReadAt,
-  typing = false,
   reactions,
   myParty,
   onReact,
@@ -60,8 +32,6 @@ export function MessageList({
   items: ChatItem[];
   /** The other side's read cursor, for the "Seen" receipt on my last message. */
   otherLastReadAt: Date | null;
-  /** Round 2: the other side is typing right now. */
-  typing?: boolean;
   /** Round 3: every reaction in the thread, keyed by message id. */
   reactions: Map<string, ChatReaction[]>;
   myParty: ChatParty;
@@ -70,12 +40,9 @@ export function MessageList({
 }) {
   if (items.length === 0) {
     return (
-      <div className="px-4 py-3">
-        <p className="py-10 text-center text-sm text-slate-400">
-          No messages yet. Say hello.
-        </p>
-        {typing && <TypingBubble />}
-      </div>
+      <p className="px-4 py-16 text-center text-sm text-slate-400">
+        No messages yet. Say hello.
+      </p>
     );
   }
 
@@ -224,7 +191,8 @@ export function MessageList({
                   )}
                   {failed && (
                     <p className="mt-0.5 text-right text-[10.5px] font-medium text-rose-600">
-                      Not sent. Check your connection and send it again.
+                      {m.failedReason ??
+                        "Not sent. Check your connection and send it again."}
                     </p>
                   )}
                 </div>
@@ -242,8 +210,6 @@ export function MessageList({
       {showSeen && (
         <p className="self-end px-1 pt-0.5 text-[10.5px] text-slate-400">Seen</p>
       )}
-
-      {typing && <TypingBubble />}
     </div>
   );
 }

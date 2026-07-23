@@ -167,46 +167,31 @@ Each lives on the admin subdomain (`admin.localhost:3000`). Sign in as:
       which is meaningless in a conversation, and it can't take documents.
     - `sendMessageAction` was deleted: the live composer replaced it and it had no
       remaining callers.
-  - **ROUNDS 2 + 3 TESTED by Dean 07/22/2026. NOT signed off** - source doc:
-    `CX Updates Needed 07_22_2026.pdf`. Rounds 2 and 3 stay OPEN until this punch list is
-    built, retested, and signed off. Work the items in the order below; each is built,
-    tested, then committed.
-    1. **[BLOCKER-ish, live badges] Top-bar Notifications + Messages icons do not
-       auto-refresh.** Dean sent a message as Tyler to Dean; neither the notification bell
-       nor the message icon updated until he manually refreshed the whole page. They must
-       update on their own, WITHOUT a full page reload that interrupts what the user is
-       doing. Round 2's polling only covers an OPEN conversation, so this needs its own
-       lightweight badge poll in the top bar (shared by both icons, one request).
-    2. **Clicking a notification must clear it.** Today clicking one navigates to the
-       target but leaves it unread in the bell. Clicking should mark that single
-       notification read (and drop the badge count) as part of the navigation.
-    3. **[OVERLAP BUG] The emoji/react button covers the message timestamp** ("6:06 AM" is
-       hidden behind it), and the **smiley + reply arrow cover timestamps** generally. The
-       hover actions and the hover timestamp are fighting for the same space beside the
-       bubble. Re-place them so neither ever covers the other.
-    4. **Typing dots in the wrong place.** They currently sit inline in the thread where
-       the next bubble goes; Dean wants them at the BOTTOM by the message area, the way
-       Facebook Messenger and LinkedIn do it. Also asked whether 7s is the right idle
-       timeout - answer: use Messenger's behavior (it clears a few seconds after the last
-       keystroke; our current 6s TTL with a 3s ping is in that range, so keep it and just
-       move the indicator).
-    5. **[LAYOUT BUG] Attaching several files is messy and RESIZES the composer**, which
-       makes it hard to type a message alongside the files. HARD REQUIREMENT: attaching
-       files must NOT change the message area's size at all. Rebuild the attachment tray
-       Facebook-style - a fixed-height strip of small thumbnails ABOVE the input that
-       scrolls sideways if there are many, leaving the input untouched.
-    6. **[BUG] Sending a VIDEO failed** ("Not sent. Check your connection and send it
-       again." on a 0:22 clip). `bodySizeLimit` is already 96mb, so that is NOT the cause.
-       Likely either the 64 MB `MAX_VIDEO_BYTES` cap in `src/lib/storage.ts` or a MIME type
-       outside the mp4/webm/quicktime whitelist. TWO fixes needed: (a) make video sending
-       actually work, and (b) STOP reporting every failure as a connection problem - the
-       error must say WHY ("That video is over the 64 MB limit", "That file type isn't
-       supported"), which means `sendChatMessageAction` returning a real reason and the
-       bubble showing it.
-    7. **[OVERLAP BUG] Reaction pills sit on top of the attachment/bubble corner** (see the
-       last page of the PDF). Give them their own space under the bubble.
-    8. **Bigger emojis once used.** Reactions render too small to read; increase the pill
-       and emoji size.
+  - **ROUNDS 2 + 3 TESTED by Dean 07/22/2026. PUNCH LIST BUILT 07/23 (commits dd12dfe +
+     the one after), awaiting Dean's RE-TEST + sign-off** - source doc:
+    `CX Updates Needed 07_22_2026.pdf`. All eight items done:
+    1. [x] **Live top-bar badges** - new `GET /api/badges` + `LiveHeaderActions`; both the
+       notification bell and messages icon refresh on their own (poll every 20s while
+       visible, on refocus, and once per route change), no full page reload. (commit dd12dfe)
+    2. [x] **Clicking a notification clears it** - `NotificationBell` is now controlled;
+       clicking one calls `markNotificationReadAction(id)` and drops the badge. (dd12dfe)
+    3. [x] **Hover actions no longer cover timestamps** - the react/reply toolbar now floats
+       as a small pill ABOVE the bubble's outer-top corner, clear of the side hover-clock
+       and the group time below it.
+    4. [x] **Typing dots moved to the bottom** by the composer (new `TypingIndicator` pinned
+       above the input), not inline in the thread. Kept the 6s TTL / 3s ping (Messenger-like).
+    5. [x] **Attaching files no longer resizes the composer** - done in the earlier composer
+       rebuild (commit caed247): fixed-height tray ABOVE the input that scrolls sideways,
+       input untouched.
+    6. [x] **Video sending fixed + honest errors** - raised `MAX_VIDEO_BYTES` to 100 MB (a
+       20-30s phone clip routinely tops 64 MB) and `bodySizeLimit` to 128 MB; added shared
+       `attachmentError()` validation (client rejects a bad file up front with the exact
+       reason - "That video is too large (max 100.0 MB)", "isn't a supported file type" -
+       and the server enforces the same), and the failed bubble now shows that reason
+       instead of the blanket "check your connection".
+    7. [x] **Reaction pills** sit cleanly BELOW the bubble now (removed the negative margin
+       that pulled them onto the corner).
+    8. [x] **Bigger reaction emojis** - enlarged the pill emoji and the react-picker emojis.
   - **STANDING RULE, set by Dean 07/22/2026: EVERY function in the software needs a
     TOOLTIP** on hover, saying what it does. Applies to everything built from now on, and
     retro-fitted to what already exists. Treat a missing tooltip as a defect, not a polish

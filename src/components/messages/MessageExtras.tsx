@@ -114,7 +114,11 @@ export function Attachments({
   );
 }
 
-/** Reaction pills under a bubble. Clicking yours clears it. */
+/**
+ * Reaction pills, sitting cleanly BELOW the bubble with a small gap (item 7: no
+ * more overlapping the bubble corner). Emojis are enlarged so they read at a
+ * glance (item 8). Clicking yours clears it.
+ */
 export function ReactionPills({
   summaries,
   onToggle,
@@ -126,7 +130,7 @@ export function ReactionPills({
 }) {
   if (summaries.length === 0) return null;
   return (
-    <div className={`-mt-1 flex flex-wrap gap-1 ${own ? "justify-end" : ""}`}>
+    <div className={`mt-1 flex flex-wrap gap-1 ${own ? "justify-end" : ""}`}>
       {summaries.map((s) => (
         <button
           key={s.emoji}
@@ -134,14 +138,18 @@ export function ReactionPills({
           onClick={() => onToggle(s.emoji)}
           title={s.names.join(", ")}
           aria-pressed={s.mine}
-          className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] transition ${
+          className={`flex items-center gap-1 rounded-full border px-2 py-0.5 leading-none transition ${
             s.mine
               ? "border-brand-300 bg-brand-50 text-brand-800"
               : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
           }`}
         >
-          <span aria-hidden>{s.emoji}</span>
-          {s.count > 1 && <span className="font-semibold">{s.count}</span>}
+          <span className="text-base" aria-hidden>
+            {s.emoji}
+          </span>
+          {s.count > 1 && (
+            <span className="text-[11px] font-semibold">{s.count}</span>
+          )}
         </button>
       ))}
     </div>
@@ -149,8 +157,10 @@ export function ReactionPills({
 }
 
 /**
- * Hover actions beside a bubble: react (opens the emoji shortlist) and reply.
- * Kept keyboard-reachable - focus within the group reveals them too.
+ * Hover actions for a bubble: react (opens the emoji shortlist) and reply. They
+ * float as a small toolbar just ABOVE the bubble's outer-top corner (item 3), so
+ * they never cover the hover timestamp beside the bubble or the group time below
+ * it. Kept keyboard-reachable - focus within the group reveals them too.
  */
 export function MessageActions({
   own,
@@ -165,23 +175,20 @@ export function MessageActions({
 
   return (
     <div
-      className={`absolute top-1/2 flex -translate-y-1/2 items-center gap-0.5 ${
-        own ? "right-full mr-8" : "left-full ml-8"
+      className={`absolute -top-4 z-20 ${own ? "right-1" : "left-1"} ${
+        open
+          ? "opacity-100"
+          : "opacity-0 transition-opacity group-hover/msg:opacity-100 group-focus-within/msg:opacity-100"
       }`}
     >
-      <div
-        className={`flex items-center gap-0.5 transition-opacity ${
-          open
-            ? "opacity-100"
-            : "opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100"
-        }`}
-      >
+      <div className="relative flex items-center gap-0.5 rounded-full border border-slate-200 bg-white px-1 py-0.5 shadow-sm">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label="React to this message"
+          title="React"
           aria-expanded={open}
-          className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="grid h-6 w-6 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-brand-600"
         >
           <SmilePlus size={15} aria-hidden />
         </button>
@@ -189,34 +196,37 @@ export function MessageActions({
           type="button"
           onClick={onReply}
           aria-label="Reply to this message"
-          className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          title="Reply"
+          className="grid h-6 w-6 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-brand-600"
         >
           <CornerUpLeft size={15} aria-hidden />
         </button>
-      </div>
 
-      {open && (
-        <div
-          className="absolute bottom-full z-10 mb-1 flex gap-0.5 rounded-full border border-slate-200 bg-white p-1 shadow-lg"
-          role="group"
-          aria-label="Pick a reaction"
-        >
-          {MESSAGE_EMOJI.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => {
-                onReact(emoji);
-                setOpen(false);
-              }}
-              aria-label={`React with ${emoji}`}
-              className="grid h-7 w-7 place-items-center rounded-full text-base transition hover:scale-125 hover:bg-slate-100"
-            >
-              <span aria-hidden>{emoji}</span>
-            </button>
-          ))}
-        </div>
-      )}
+        {open && (
+          <div
+            className={`absolute top-full z-30 mt-1 flex gap-0.5 rounded-full border border-slate-200 bg-white p-1 shadow-lg ${
+              own ? "right-0" : "left-0"
+            }`}
+            role="group"
+            aria-label="Pick a reaction"
+          >
+            {MESSAGE_EMOJI.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  onReact(emoji);
+                  setOpen(false);
+                }}
+                aria-label={`React with ${emoji}`}
+                className="grid h-8 w-8 place-items-center rounded-full text-xl transition hover:scale-125 hover:bg-slate-100"
+              >
+                <span aria-hidden>{emoji}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

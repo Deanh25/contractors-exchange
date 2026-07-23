@@ -8,9 +8,11 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["admin.localhost", "*.app.github.dev"],
   experimental: {
     serverActions: {
-      // Listing media (images and short videos) upload through Server Actions;
-      // the default body limit is 1MB. Allow larger submits for a video or two.
-      bodySizeLimit: "96mb",
+      // Media (images and short videos) upload through Server Actions; the
+      // default body limit is 1MB. A message video can be up to 100MB (see
+      // MAX_VIDEO_BYTES), so allow headroom for that plus form overhead and a
+      // second attachment.
+      bodySizeLimit: "128mb",
       // Server Actions have their own CSRF origin check (separate from
       // allowedDevOrigins): Next aborts when the request `Origin` host differs
       // from `x-forwarded-host`/`host` unless the Origin is whitelisted here.

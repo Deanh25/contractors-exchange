@@ -67,6 +67,8 @@ export type ChatMessage = {
   senderCompany: { name: string; slug: string; logoUrl: string | null } | null;
   /** Round 2: set only on an optimistic message that hasn't been confirmed yet. */
   pending?: "sending" | "failed";
+  /** Why a failed send failed, shown under the bubble (item 6). */
+  failedReason?: string;
 };
 
 export type ChatSender = {
@@ -105,6 +107,8 @@ export type ChatEntry = {
   createdAt: Date;
   /** Round 2: set while an optimistic message is in flight or has failed. */
   pending?: "sending" | "failed";
+  /** Why a failed send failed, shown under the bubble (item 6). */
+  failedReason?: string;
 };
 
 /**
@@ -179,6 +183,65 @@ export function parseAttachments(raw: unknown): ChatAttachment[] {
     });
   }
   return out;
+}
+
+// --- attachment validation (shared client + server) --------------------------
+//
+// One source of truth for what a message may carry, so the composer can reject a
+// bad file with a precise reason BEFORE uploading (item 6: no more "check your
+// connection" for a file that was simply too big or the wrong type), and the
+// server enforces the same limits. Must stay in sync with src/lib/storage.ts.
+
+export const ATTACHMENT_MAX = {
+  image: 8 * 1024 * 1024, // 8 MB
+  video: 100 * 1024 * 1024, // 100 MB
+  file: 25 * 1024 * 1024, // 25 MB (documents)
+} as const;
+
+const IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+const VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+const DOC_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv",
+  "text/plain",
+]);
+
+/** Which bucket a MIME type falls in, or null if it is not an allowed type. */
+export function classifyUpload(
+  type: string,
+): "image" | "video" | "file" | null {
+  if (IMAGE_TYPES.has(type)) return "image";
+  if (VIDEO_TYPES.has(type)) return "video";
+  if (DOC_TYPES.has(type)) return "file";
+  return null;
+}
+
+/**
+ * Why a file can't be sent, as a sentence to show the user, or null if it's
+ * fine. Names the real reason: unsupported type, or too large with the limit.
+ */
+export function attachmentError(file: {
+  name: string;
+  type: string;
+  size: number;
+}): string | null {
+  const kind = classifyUpload(file.type);
+  if (!kind) return `"${file.name}" isn't a supported file type.`;
+  const max = ATTACHMENT_MAX[kind];
+  if (file.size > max) {
+    const noun = kind === "video" ? "video" : kind === "image" ? "image" : "file";
+    return `That ${noun} is too large (max ${formatBytes(max)}).`;
+  }
+  return null;
 }
 
 /** Should this attachment render as a video player? */
@@ -285,6 +348,7 @@ export function groupThreadMessages(
       replyTo: m.replyTo,
       createdAt: m.createdAt,
       ...(m.pending ? { pending: m.pending } : {}),
+      ...(m.failedReason ? { failedReason: m.failedReason } : {}),
     };
 
     if (

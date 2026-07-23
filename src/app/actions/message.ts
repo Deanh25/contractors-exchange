@@ -11,6 +11,7 @@ import {
   markThreadRead,
   toggleMessageReaction,
 } from "@/lib/services/messages";
+import { attachmentError } from "@/lib/chat";
 import type { ChatMessage, ChatReaction } from "@/lib/chat";
 
 /**
@@ -64,7 +65,7 @@ export async function sendChatMessageAction(
 ): Promise<
   | { status: "sent"; message: SerializedChatMessage }
   | { status: "empty" }
-  | { status: "error"; code: string }
+  | { status: "error"; code: string; reason?: string }
 > {
   const actor = await resolveActor("/messages");
   const threadId = String(formData.get("threadId") ?? "");
@@ -77,15 +78,27 @@ export async function sendChatMessageAction(
     ...formData.getAll("image"),
   ].filter((f): f is File => f instanceof File && f.size > 0);
 
+  // Reject with the REAL reason before saving (item 6): the client validates too,
+  // but this is the authoritative check and gives an exact message per file.
+  const badFile = picked
+    .map((f) => attachmentError({ name: f.name, type: f.type, size: f.size }))
+    .find(Boolean);
+  if (badFile) {
+    return { status: "error", code: "attachment_rejected", reason: badFile };
+  }
+
   const saved = await saveAttachments(picked);
   const attachments = saved.flatMap((url, i) =>
     url ? [{ url, ...describeFile(picked[i]) }] : [],
   );
-  // A file the storage layer rejected (wrong type or too large) must not vanish
-  // silently, or the sender thinks it went through.
-  const rejected = saved.filter((url) => url === null).length;
-  if (rejected > 0 && attachments.length === 0 && !String(formData.get("body") ?? "").trim()) {
-    return { status: "error", code: "attachment_rejected" };
+  // Anything that still failed to save (should be rare after the check above)
+  // must not vanish silently.
+  if (saved.some((url) => url === null)) {
+    return {
+      status: "error",
+      code: "attachment_rejected",
+      reason: "One of your files could not be attached. Please try again.",
+    };
   }
 
   const r = await sendMessage(actor, {

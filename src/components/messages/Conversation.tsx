@@ -12,11 +12,13 @@ import {
   groupThreadMessages,
   chatMessageIsOwn,
   reactionsByMessage,
+  attachmentError,
   type ChatMessage,
   type ChatParty,
   type ChatReaction,
 } from "@/lib/chat";
 import { MessageList } from "@/components/messages/MessageList";
+import { TypingIndicator } from "@/components/messages/TypingIndicator";
 import { Composer } from "@/components/messages/Composer";
 
 /**
@@ -277,6 +279,25 @@ export function Conversation({
       setMessages((prev) => [...prev, optimistic]);
       setComposerKey((k) => k + 1);
 
+      const markFailed = (id: string, reason?: string) =>
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id ? { ...m, pending: "failed", failedReason: reason } : m,
+          ),
+        );
+
+      // Validate up front (item 6): catch an oversized or unsupported file here,
+      // with the exact reason, before we even attempt the upload - otherwise a
+      // too-big video fails at the network boundary as a bogus "connection" error.
+      const badFile = files
+        .map((f) => attachmentError({ name: f.name, type: f.type, size: f.size }))
+        .find(Boolean);
+      if (badFile) {
+        markFailed(tempId, badFile);
+        for (const p of previews) URL.revokeObjectURL(p.url);
+        return;
+      }
+
       try {
         const r = await sendChatMessageAction(formData);
         if (r.status === "sent") {
@@ -284,21 +305,20 @@ export function Conversation({
           // The send moved the thread up the inbox and may have changed the
           // deal panel; refresh the server components around us.
           router.refresh();
+        } else if (r.status === "error") {
+          markFailed(tempId, r.reason);
         } else {
           markFailed(tempId);
         }
       } catch {
-        markFailed(tempId);
+        markFailed(
+          tempId,
+          "Couldn't send. Check your connection and try again.",
+        );
       } finally {
         // The saved message renders from its stored URLs now, so the local
         // object URLs can go back.
         for (const p of previews) URL.revokeObjectURL(p.url);
-      }
-
-      function markFailed(id: string) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, pending: "failed" } : m)),
-        );
       }
     },
     [myParty, mergeMessages, router, replyTo],
@@ -376,7 +396,6 @@ export function Conversation({
         <MessageList
           items={items}
           otherLastReadAt={otherLastReadAt}
-          typing={otherTyping}
           reactions={reactionMap}
           myParty={myParty}
           onReact={onReact}
@@ -384,6 +403,8 @@ export function Conversation({
         />
         <div ref={endRef} />
       </div>
+      {/* Pinned above the composer, so the dots always sit by the message area. */}
+      {otherTyping && <TypingIndicator />}
       {/* Remounted after each send so the file picker clears its previews. */}
       <Composer
         key={composerKey}

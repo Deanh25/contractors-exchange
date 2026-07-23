@@ -14,7 +14,10 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "./public/uploads";
 const PUBLIC_PREFIX = "/uploads";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
-const MAX_VIDEO_BYTES = 64 * 1024 * 1024; // 64 MB
+// 100 MB: a ~20-30s phone clip routinely exceeds 64 MB, which was silently
+// bouncing message videos (punch-list item 6). Kept under next.config's
+// serverActions bodySizeLimit so the whole submit still fits.
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB
 const MAX_DOC_BYTES = 16 * 1024 * 1024; // 16 MB (verification docs)
 
 // Verification documents: PDFs + images (license, registration, insurance).
